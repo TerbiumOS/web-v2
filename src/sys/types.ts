@@ -469,6 +469,10 @@ export interface COM {
     };
     system: {
         version(): string | number | unknown;
+        git(): {
+            hash: string;
+            repository: string;
+        }
         openApp(pkg: string): Promise<void>;
         download(url: string, location: string): Promise<void>;
         exportfs(): void;

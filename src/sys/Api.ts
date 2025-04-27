@@ -471,6 +471,9 @@ export default async function Api() {
             version: () => {
                 return system.version("string")
             },
+            git: () => {
+                return system.git();
+            },
             openApp: async (pkg: string) => {
                 const exists = JSON.parse(await Filer.fs.promises.readFile("//apps/web_apps.json", "utf8")).apps.includes(pkg) && fileExists("//apps/web_apps.json");
                 if (exists) {
