@@ -17,6 +17,13 @@
     </body>
     <script>
         document.all.liquor.innerText = "Liquor Version: " + parent.anura.version.pretty
-        document.all.version.innerText = `Version: ${parent.tb.system.version()}`
+        document.all.version.innerText = `Version: ${parent.tb.system.version()} (Getting version info...)`
+        fetch("https://raw.githubusercontent.com/TerbiumOS/web-v2/main/package.json").then(response => response.json()).then(data => {
+                if (data.version == parent.tb.system.version()) {
+                        document.all.version.innerText = `Version: ${parent.tb.system.version()} (Up to date)`
+                } else {
+                        document.all.version.innerText = `Version: ${parent.tb.system.version()} (Update available: ${data.version})`
+                }
+        })
     </script>
 </html>

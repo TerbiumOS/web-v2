@@ -569,7 +569,18 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       const terbiumVersion = tb.system.version();
       console.log("Terbium v:", terbiumVersion);
       ```
-
+  - **git**
+    - Description: Lists the current commit hash and repository
+    - Returns: `Object`: {
+      hash: string;
+      repository: string;
+    }
+    - Example:
+      ```javascript
+      const gitInfo = await tb.system.git();
+      console.log("Current Commit Hash:", gitInfo.hash);
+      console.log("Repository URL:", gitInfo.repository);
+      ```
   - **openApp**
     - Description: Opens a Installed Application
     - Parameters:
