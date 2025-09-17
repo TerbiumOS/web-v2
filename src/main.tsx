@@ -21,6 +21,7 @@ const Root = () => {
 		console.log("[FS] File System Ready");
 		window.tb.fs = Filer.fs;
 		window.tb.sh = new Filer.fs.Shell();
+		window.tb.buffer = Filer.Buffer;
 	}
 	const params = new URLSearchParams(window.location.search);
 	useEffect(() => {

@@ -382,6 +382,7 @@ export interface SysSettings {
 export interface COM {
 	registry: any;
 	sh: any;
+	buffer: any;
 	battery: {
 		showPercentage(): void;
 		hidePercentage(): void;

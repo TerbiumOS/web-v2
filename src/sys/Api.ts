@@ -43,6 +43,7 @@ export default async function Api() {
 	window.tb = {
 		registry: registry,
 		sh: window.tb.sh,
+		buffer: window.tb.buffer,
 		battery: {
 			async showPercentage() {
 				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
