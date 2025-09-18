@@ -34,19 +34,13 @@ jobs:
               run: npx replace-in-file "<head>" "<head>\n    <script src=\"libs/bare-mux/bare.cjs\"></script>" index.html
             - name: Replace BareMux in main.tsx
               run: |
-                npx replace-in-file "import { BareMuxConnection } from \"@mercuryworkshop/bare-mux\";" "" src/main.tsx
-                npx replace-in-file "const connection = new BareMuxConnection\\([\\s\\S]*?\\);[\\s\\S]*?\\];" "// @ts-expect-error\n      BareMux.SetSingletonTransport(new AnuraBareClient());" src/main.tsx
+                npx replace-in-file --regex "import\\s*\\{\\s*BareMuxConnection\\s*\\}\\s*from\\s*['\"]@mercuryworkshop/bare-mux['\"];" "" src/main.tsx
+                npx replace-in-file --regex "const\\s+connection\\s*=\\s*new\\s+BareMuxConnection\\([\"']/baremux/worker.js[\"']\\)" "// @ts-expect-error" src/main.tsx
+                npx replace-in-file --regex "await\\s+connection\\.setTransport\\([\"']/epoxy/index.mjs[\"'],\\s*\\[\\{[^}]+\\}\\]\\);" "BareMux.SetSingletonTransport(new AnuraBareClient());" src/main.tsx
             - name: Replace Transport Updater from v2 to v1
               run: |
-                npx replace-in-file "import { BareMuxConnection } from \"@mercuryworkshop/bare-mux\";" "" sys/api.ts
-                npx replace-in-file "const updateTransport = async () => {[^}]*};" "const updateTransport = async () => {
-                    const settingsstuff = await Filer.fs.promises.readFile(\`/home/\${await window.tb.user.username()}/settings.json\`)
-                    const settings = JSON.parse(settingsstuff)
-                    const wispserver = settings.wispServer || \`\${window.location.origin.replace(/^https?:\\/\\//, 'ws://')}/wisp/\`;
-                    //const connection = new BareMuxConnection(\"/baremux/worker.js\")
-                    // @ts-expect-error
-                    BareMux.SetSingletonTransport(new AnuraBareClient());
-                };" sys/api.ts
+                npx replace-in-file --regex "import\\s*\\{\\s*BareMuxConnection\\s*\\}\\s*from\\s*['\"]@mercuryworkshop/bare-mux['\"];" "" src/sys/Api.ts
+                npx replace-in-file --regex "if \\(settings\\.transport === \\\"Default \\(Epoxy\\)\\\"\\) \\{[\\s\\S]*?\\} else \\{" "BareMux.SetSingletonTransport(new AnuraBareClient());" src/sys/Api.ts
             - name: Build TB React
               run: pnpm run build-static
             - name: "Run UPK Builder"
