@@ -9,6 +9,8 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
+            - name: remove snap
+              uses: ading2210/gh-actions-remove-snap@v1
             - name: Set up Node
               uses: actions/setup-node@v4
               with:

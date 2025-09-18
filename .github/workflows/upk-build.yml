@@ -1,0 +1,53 @@
+name: Build Check
+on:
+    push:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+            - name: Set up Node
+              uses: actions/setup-node@v4
+              with:
+                node-version: 'lts/*'
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                version: 10
+            - name: remove snap
+              uses: ading2210/gh-actions-remove-snap@v1
+            - name: Setup Python
+              uses: actions/setup-python@v6
+              with:
+                python-version: '3.13'
+            - name: Install dependencies
+              run: pnpm i
+            - name: Install BareMux v1
+              run: pnpm i @mercuryworkshop/baremux@^1.1.4
+            - name: Download upk-tools.zip
+              run: curl -L -o upk-tools.zip https://cdn.terbiumon.top/upk-tools.zip
+            - name: Extract upk-tools
+              run: unzip -o upk-tools.zip
+            - name: replace BCC Client v2 with v1
+              run: mv bx1bcc.ts src/sys/liquor/bcc.ts
+            - name: Replace Transport Updater from v2 to v1
+              run: |
+                npx replace-in-file "const updateTransport = async () => {[^}]*};" "const updateTransport = async () => {
+                    const settingsstuff = await Filer.fs.promises.readFile(\`/home/\${await window.tb.user.username()}/settings.json\`)
+                    const settings = JSON.parse(settingsstuff)
+                    const wispserver = settings.wispServer || \`\${window.location.origin.replace(/^https?:\\/\\//, 'ws://')}/wisp/\`;
+                    //const connection = new BareMuxConnection(\"/baremux/worker.js\")
+                    // @ts-expect-error
+                    BareMux.SetSingletonTransport(new AnuraBareClient());
+                };" sys/api.ts
+            - name: Build TB React
+              run: pnpm run build-static
+            - name: "Run UPK Builder"
+              run: python3 upk.py
+            - name: Upload UPK
+              uses: actions/upload-artifact@v3
+              with:
+                name: UPK
+                path: terbium-upk.app.zip
