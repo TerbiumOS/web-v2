@@ -32,15 +32,8 @@ jobs:
               run: mv bx1bcc.ts src/sys/liquor/bcc.ts
             - name: Add BareMux Script
               run: npx replace-in-file "<head>" "<head>\n    <script src=\"libs/bare-mux/bare.cjs\"></script>" index.html
-            - name: Replace BareMux in main.tsx
-              run: |
-                npx replace-in-file --regex "import\\s*\\{\\s*BareMuxConnection\\s*\\}\\s*from\\s*['\"]@mercuryworkshop/bare-mux['\"];" "" src/main.tsx
-                npx replace-in-file --regex "const\\s+connection\\s*=\\s*new\\s+BareMuxConnection\\([\"']/baremux/worker.js[\"']\\)" "// @ts-expect-error" src/main.tsx
-                npx replace-in-file --regex "await\\s+connection\\.setTransport\\([\"']/epoxy/index.mjs[\"'],\\s*\\[\\{[^}]+\\}\\]\\);" "BareMux.SetSingletonTransport(new AnuraBareClient());" src/main.tsx
-            - name: Replace Transport Updater from v2 to v1
-              run: |
-                npx replace-in-file --regex "import\\s*\\{\\s*BareMuxConnection\\s*\\}\\s*from\\s*['\"]@mercuryworkshop/bare-mux['\"];" "" src/sys/Api.ts
-                npx replace-in-file --regex "if \\(settings\\.transport === \\\"Default \\(Epoxy\\)\\\"\\) \\{[\\s\\S]*?\\} else \\{" "BareMux.SetSingletonTransport(new AnuraBareClient());" src/sys/Api.ts
+            - name: Replace BareMux in codebase
+              run: bash replace.sh
             - name: Build TB React
               run: pnpm run build-static
             - name: "Run UPK Builder"
