@@ -25,7 +25,7 @@ jobs:
             - name: Install dependencies
               run: pnpm i
             - name: Install BareMux v1
-              run: pnpm i @mercuryworkshop/baremux@^1.1.4
+              run: pnpm i @mercuryworkshop/bare-mux@^1.1.4
             - name: Download upk-tools.zip
               run: curl -L -o upk-tools.zip https://cdn.terbiumon.top/upk-tools.zip
             - name: Extract upk-tools
