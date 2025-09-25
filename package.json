@@ -1,7 +1,7 @@
 {
 	"name": "tb-v2",
 	"private": true,
-	"version": "2.1.0",
+	"version": "2.2.0-dev",
 	"type": "module",
 	"scripts": {
 		"start": "npm run build && tsx bootstrap.ts",
@@ -27,6 +27,7 @@
 		"@mercuryworkshop/wisp-js": "^0.3.3",
 		"@paralleldrive/cuid2": "^2.2.2",
 		"@tailwindcss/postcss": "^4.1.13",
+		"@terbiumos/tfs": "1.0.5-beta",
 		"@titaniumnetwork-dev/ultraviolet": "^3.2.10",
 		"@webcontainer/api": "^1.6.1",
 		"compressorjs": "^1.2.1",
