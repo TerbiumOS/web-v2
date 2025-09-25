@@ -1,26 +1,26 @@
 // @ts-nocheck
 import { AFSProvider } from "./Filesystem";
 const AnuraFDSymbol = Symbol.for("AnuraFD");
-import { FSType } from "@terbiumos/tfs"
+import { FSType } from "@terbiumos/tfs";
 type AnuraFD = {
 	fd: number;
 	[AnuraFDSymbol]: string;
 };
 
 export class TFSProvider extends AFSProvider<any> {
-    domain = "/";
+	domain = "/";
 	name = "TFS Anura Provider";
 	version = window.tfs.version;
 
-    fs: FSType;
+	fs: FSType;
 
-    constructor() {
-        super();
-        // @ts-expect-error I have uncommited changes on my laptop I need to commit first but this wont be an error when I commit it
-        this.fs = window.tb.fs as FSType;
-    }
+	constructor() {
+		super();
+		// @ts-expect-error I have uncommited changes on my laptop I need to commit first but this wont be an error when I commit it
+		this.fs = window.tb.fs as FSType;
+	}
 
-    rename(oldPath: string, newPath: string, callback?: (err: Error | null) => void) {
+	rename(oldPath: string, newPath: string, callback?: (err: Error | null) => void) {
 		this.fs.rename(oldPath, newPath, callback);
 	}
 
@@ -86,7 +86,7 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	readdir(path: string, ...rest: any[]) {
-        // @ts-expect-error - Overloaded methods are scary
+		// @ts-expect-error - Overloaded methods are scary
 		this.fs.readdir(path, ...rest);
 	}
 
