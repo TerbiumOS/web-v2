@@ -16,7 +16,7 @@ import { Platform } from "./api/Platform";
 import { Dialog } from "./api/Dialog";
 import { Systray } from "./api/Systray";
 import { AnuraFilesystem } from "./api/Filesystem";
-import { FilerAFSProvider } from "./api/FilerFS";
+import { TFSProvider } from "./api/TFS";
 import { AnuraUI } from "./api/UI";
 
 declare global {
@@ -125,12 +125,8 @@ export class Anura {
 
 	static async new(config: any): Promise<Anura> {
 		// File System Initialization //
-		const Filer = window.Filer;
-		const filerProvider = new FilerAFSProvider(
-			new Filer.FileSystem({
-				name: "anura-mainContext",
-				provider: new Filer.FileSystem.providers.IndexedDB(),
-			}),
+		const filerProvider = new TFSProvider(
+			window.tb.fs,
 		);
 		// @ts-expect-error
 		const fs = new AnuraFilesystem([filerProvider]);

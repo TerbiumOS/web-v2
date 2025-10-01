@@ -872,7 +872,7 @@ async function unzip(path, target) {
 			if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
 				try {
 					console.log(`touch ${currentPath.slice(0, -1)}`);
-					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), Filer.Buffer.from(content));
+					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.parent.tb.buffer.from(content));
 				} catch {
 					console.log(`Cant make ${currentPath.slice(0, -1)}`);
 				}

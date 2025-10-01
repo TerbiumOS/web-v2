@@ -925,7 +925,7 @@ const DesktopItems = () => {
 						for (const item of addedItems) {
 							const itemExists = desktopConfig.some((config: any) => config.item === `/home/${user}/desktop/${item}`);
 							if (!itemExists) {
-								const type = (await window.tb.fs.promises.lstat(`/home/${user}/desktop/${item}`)).type.toLowerCase();
+								const type = (await window.tb.fs.promises.stat(`/home/${user}/desktop/${item}`)).type.toLowerCase();
 								if (type === "symlink") {
 									const isAppJson = (await window.tb.fs.promises.readFile(await window.tb.fs.promises.readlink(`/home/${user}/desktop/${item}`))).includes("config");
 									desktopConfig.push({
@@ -985,7 +985,7 @@ const DesktopItems = () => {
 			var allItems: any[] = [];
 			const items = JSON.parse(await window.tb.fs.promises.readFile(`/home/${user}/desktop/.desktop.json`, "utf8"));
 			for (const item of items) {
-				const type = (await window.tb.fs.promises.lstat(item.item)).type.toLowerCase();
+				const type = (await window.tb.fs.promises.stat(item.item)).type.toLowerCase();
 				const position = item.position;
 				if (type === "symlink") {
 					allItems.push({

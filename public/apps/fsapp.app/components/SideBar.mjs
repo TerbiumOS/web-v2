@@ -61,7 +61,7 @@ export function SideBar() {
                         return;
                     }
                     sh.mkdirp(path, async function (err) {
-                        if (err) console.error(error);
+                        if (err) console.error(err);
                         await window.parent.LocalFS.new(path);
                         reload();
                     });

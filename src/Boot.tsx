@@ -41,18 +41,19 @@ export default function Boot() {
 
 	useEffect(() => {
 		const getEntries = async () => {
+			let entries = [];
 			if (!(await fileExists("/bootentries.json"))) {
-				await window.tb.fs.promises.writeFile(
-					"/bootentries.json",
-					JSON.stringify([
-						{ name: "TB React", action: boot.toString() },
-						{ name: "TB React (Cloaked)", action: cloak.toString() },
-						{ name: "TB System Recovery", action: recovery.toString() },
-					]),
-				);
+				const ent = [
+					{ name: "TB React", action: boot.toString() },
+					{ name: "TB React (Cloaked)", action: cloak.toString() },
+					{ name: "TB System Recovery", action: recovery.toString() },
+				];
+				await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify(ent));
+				entries = ent;
+			} else {
+				entries = JSON.parse(await window.tb.fs.promises.readFile("/bootentries.json", "utf8"));
 			}
 
-			const entries = JSON.parse(await window.tb.fs.promises.readFile("/bootentries.json", "utf8"));
 			// @ts-expect-error
 			const recreatedEntries = entries.map(entry => ({
 				...entry,

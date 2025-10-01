@@ -14,10 +14,11 @@ export class TFSProvider extends AFSProvider<any> {
 
 	fs: FSType;
 
-	constructor() {
+	constructor(fs: FSType) {
 		super();
-		// @ts-expect-error I have uncommited changes on my laptop I need to commit first but this wont be an error when I commit it
-		this.fs = window.tb.fs as FSType;
+		this.fs = fs;
+		// For backwards compatibility
+		this.fs.shell = window.tfs.sh
 	}
 
 	rename(oldPath: string, newPath: string, callback?: (err: Error | null) => void) {
@@ -78,11 +79,11 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	access(path: string, ...rest: any[]) {
-		throw new Error("Method not implemented.");
+		this.fs.access(path, ...rest);
 	}
 
 	mkdtemp(...args: any[]) {
-		throw new Error("Method not implemented.");
+		window.tfs.shell.tempDir(...args);
 	}
 
 	readdir(path: string, ...rest: any[]) {
@@ -149,7 +150,7 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	appendFile(path: string, data: Uint8Array, callback?: (err: Error | null) => void) {
-		throw new Error("Method not implemented.");
+		this.fs.appendFile(path, data, callback);
 	}
 
 	setxattr(path: string, ...rest: any[]) {

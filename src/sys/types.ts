@@ -3,6 +3,7 @@
  * @description This file contains all the types and interfaces used in the Terbium system.
  */
 
+import { TFSType, FSType } from "@terbiumos/tfs";
 import { System } from "./apis/System";
 
 declare global {
@@ -21,6 +22,7 @@ declare global {
 		ExternalApp: any;
 		ExternalLib: any;
 		electron: any;
+		tfs: TFSType;
 	}
 }
 
@@ -28,36 +30,18 @@ export const isURL = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0
 
 export const dirExists = async (path: string): Promise<boolean> => {
 	return new Promise(resolve => {
-		window.tb.fs.stat(path, (err: any, stats: any) => {
-			if (err) {
-				if (err.code === "ENOENT") {
-					resolve(false);
-				} else {
-					console.error(err);
-					resolve(false);
-				}
-			} else {
-				const exists = stats.type === "DIRECTORY";
-				resolve(exists);
-			}
+		if (!window.tb.fs) return resolve(false);
+		window.tb.fs.exists(path, (exists: boolean) => {
+			resolve(exists);
 		});
 	});
 };
 
 export const fileExists = async (path: string): Promise<boolean> => {
 	return new Promise(resolve => {
-		window.tb.fs.stat(path, (err: any, stats: any) => {
-			if (err) {
-				if (err.code === "ENOENT") {
-					resolve(false);
-				} else {
-					console.error(err);
-					resolve(false);
-				}
-			} else {
-				const exists = stats.type === "FILE";
-				resolve(exists);
-			}
+		if (!window.tb.fs) return resolve(false);
+		window.tb.fs.exists(path, (exists: boolean) => {
+			resolve(exists);
 		});
 	});
 };
@@ -489,7 +473,7 @@ export interface COM {
 	};
 	libcurl: Libcurl;
 	fflate: any;
-	fs: FilerFS;
+	fs: FSType;
 	crypto(pass: string, file: string): Promise<string>;
 	platform: {
 		getPlatform(): Promise<"desktop" | "mobile">;

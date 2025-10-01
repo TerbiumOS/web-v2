@@ -8,10 +8,16 @@ Object.defineProperty(globalThis, "crossOriginIsolated", {
 	writable: false,
 });
 
+// Not recommended but a bypass for libs that expect window to exist
+self.window = self;
+
 // Due to anura's filesystem only being available once an anura instance is running,
 // we need a temporary filesystem to store files that are requested for caching.
 // As the anura filesystem is a wrapper around Filer, we can use default Filer here.
 importScripts("/assets/libs/filer.min.js");
+importScripts("/tfs/tfs.js");
+
+self.tfs.initSw();
 
 // Importing mime
 importScripts("/assets/libs/mime.iife.js");
@@ -27,8 +33,10 @@ const filerfs = new Filer.FileSystem({
 });
 const filersh = new filerfs.Shell();
 
-let opfs;
-let opfssh;
+setTimeout(() => {
+	self.opfs = window.tfs.fs;
+	self.opfssh = window.tfs.shell;
+}, 10);
 
 async function currentFs() {
 	// isConnected will return true if the anura instance is running, and otherwise infinitely wait.
@@ -39,8 +47,8 @@ async function currentFs() {
 		// An anura instance has not been started yet to populate the isConnected promise.
 		// We automatically know that the filesystem is not connected.
 		return {
-			fs: opfs || filerfs,
-			sh: opfssh || filersh,
+			fs: self.opfs || filerfs,
+			sh: self.opfssh || filersh,
 		};
 	}
 
@@ -49,8 +57,8 @@ async function currentFs() {
 		new Promise(resolve =>
 			setTimeout(() => {
 				resolve({
-					fs: opfs || filerfs,
-					sh: opfssh || filersh,
+					fs: self.opfs || filerfs,
+					sh: self.opfssh || filersh,
 					fallback: true,
 				});
 			}, CONN_TIMEOUT),
@@ -661,8 +669,8 @@ workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/
 	const path = decodeURI(url.pathname);
 
 	// Force Filer to be used in cache routes, as it does not require waiting for anura to be connected
-	const fs = opfs || filerfs;
-	const sh = opfssh || filersh;
+	const fs = self.opfs || filerfs;
+	const sh = self.opfssh || filersh;
 
 	// Terbium already has its own way for caching files to the file system so doing it again is just a waste of space
 	/*

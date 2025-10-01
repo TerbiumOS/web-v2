@@ -11,6 +11,19 @@
     <meta name="theme-color" content="#D16FFF" />
     <meta property="og:image" content="/tb.svg" />
     <meta name="google-adsense-account" content="ca-pub-2875368391887289" />
+    <script src="/tfs/tfs.js"></script>
+    <script>
+      window.tfs.initSw();
+      if (typeof window.tb === "undefined") window.tb = {};
+	    if (typeof window.tb.fs === "undefined" && typeof window.tb !== "undefined") {
+		    console.log("[FS] File System Ready");
+        setTimeout(() => {
+          window.tb.fs = window.tfs.fs;
+          window.tb.buffer = window.tfs.buffer;
+          window.tb.sh = window.tfs.shell;
+        }, 10);
+	    }
+    </script>
   </head>
   <body>
     <div id="root" class="flex flex-col h-full bg-[#0e0e0e] overflow-hidden"></div>
