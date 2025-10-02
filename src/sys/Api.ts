@@ -517,26 +517,22 @@ export default async function Api() {
 			},
 			exportfs: async () => {
 				const zip: { [key: string]: Uint8Array } = {};
-				// @ts-expect-error No Types as TFS is not production ready yet
-				if (window.tb.fs.mode === "OPFS") {
-					throw new Error("OPFS export is not implemented yet, Check back later");
-				} else {
-					async function addzip(inp: string, aPath = "") {
-						const files = await window.tb.fs.promises.readdir(inp);
-						for (const file of files) {
-							const fullPath = `${inp}/${file}`;
-							const stats = await window.tb.fs.promises.stat(fullPath);
-							const zipPath = `${aPath}${file}`;
-							if (stats.isDirectory()) {
-								await addzip(fullPath, `${zipPath}/`);
-							} else {
-								const fileData = await window.tb.fs.promises.readFile(fullPath);
-								zip[zipPath] = new Uint8Array(fileData);
-							}
+				// This is a very inefficient way of zipping the fs but it will be replaced soon
+				async function addzip(inp: string, aPath = "") {
+					const files = await window.tb.fs.promises.readdir(inp);
+					for (const file of files) {
+						const fullPath = `${inp}/${file}`;
+						const stats = await window.tb.fs.promises.stat(fullPath);
+						const zipPath = `${aPath}${file}`;
+						if (stats && stats.isDirectory()) {
+							await addzip(fullPath, `${zipPath}/`);
+						} else {
+							const fileData = await window.tb.fs.promises.readFile(fullPath);
+							zip[zipPath] = new Uint8Array(fileData);
 						}
 					}
-					await addzip("//");
 				}
+				await addzip("//");
 				const link = document.createElement("a");
 				const zipBlob = new Blob([window.tb.fflate.zipSync(zip)], { type: "application/zip" });
 				link.href = URL.createObjectURL(zipBlob);
@@ -661,13 +657,31 @@ export default async function Api() {
 						await window.tb.fs.promises.symlink(`/apps/system/${name}.tapp/index.json`, `/home/${username}/desktop/${name}.lnk`);
 					}
 					await window.tb.fs.promises.writeFile(`/home/${username}/desktop/.desktop.json`, JSON.stringify(items));
+					await window.tb.fs.promises.writeFile(
+						`/apps/user/${username}/app store/repos.json`,
+						JSON.stringify([
+							{
+								name: "TB App Repo",
+								url: "https://raw.githubusercontent.com/TerbiumOS/tb-repo/refs/heads/main/manifest.json",
+							},
+							{
+								name: "XSTARS XTRAS",
+								url: "https://raw.githubusercontent.com/Notplayingallday383/app-repo/refs/heads/main/manifest.json",
+							},
+							{
+								name: "Anura App Repo",
+								url: "https://raw.githubusercontent.com/MercuryWorkshop/anura-repo/refs/heads/master/manifest.json",
+								icon: "https://anura.pro/icon.png",
+							},
+						]),
+					);
 					return true;
 				},
 				async remove(id: string) {
 					const userDir = `/home/${id}`;
 					try {
 						const uDir = await window.tb.fs.promises.stat(userDir);
-						if (uDir.type === "DIRECTORY") {
+						if (uDir && uDir.type === "DIRECTORY") {
 							await window.tb.sh.promises.rm(userDir, { recursive: true });
 						}
 					} catch (err: any) {
@@ -675,7 +689,7 @@ export default async function Api() {
 					}
 					try {
 						const appDir = await window.tb.fs.promises.stat(`/apps/user/${id}`);
-						if (appDir.type === "DIRECTORY") {
+						if (appDir && appDir.type === "DIRECTORY") {
 							await window.tb.sh.promises.rm(`/apps/user/${id}`, { recursive: true });
 						}
 					} catch (err: any) {

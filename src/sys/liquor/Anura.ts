@@ -125,9 +125,7 @@ export class Anura {
 
 	static async new(config: any): Promise<Anura> {
 		// File System Initialization //
-		const filerProvider = new TFSProvider(
-			window.tb.fs,
-		);
+		const filerProvider = new TFSProvider(window.tb.fs);
 		// @ts-expect-error
 		const fs = new AnuraFilesystem([filerProvider]);
 		// @ts-expect-error

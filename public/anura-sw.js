@@ -510,7 +510,7 @@ async function serveFile(path, fsOverride, shOverride) {
 		}
 		const type = mime.default.getType(path) || "application/octet-stream";
 
-		return new Response(await fs.promises.readFile(path), {
+		return new Response(await fs.promises.readFile(path, "arraybuffer"), {
 			headers: {
 				"Content-Type": type,
 				"Content-Disposition": `inline; filename="${path.split("/").pop()}"`,
