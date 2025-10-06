@@ -21,6 +21,22 @@ export class vFS {
 
 	private constructor(servers: Map<string, ServerConnection>) {
 		this.servers = servers;
+		window.tb.fs.watch(`/apps/user/${sessionStorage.getItem("currAcc")}/files/davs.json`, { recursive: true }, async () => {
+			const data: ServerInfo[] = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${sessionStorage.getItem("currAcc")}/files/davs.json`, "utf8"));
+			this.servers.clear();
+			this.servers = new Map<string, ServerConnection>(
+				data.map(info => [
+					info.name,
+					{
+						name: info.name,
+						connected: false,
+						connection: null,
+						url: info.url,
+					},
+				]),
+			);
+			await this.mountAll();
+		});
 	}
 
 	static async create(): Promise<vFS> {
@@ -35,7 +51,9 @@ export class vFS {
 			});
 		}
 		const vfs = new vFS(servers);
-		await vfs.mountAll();
+		window.addEventListener("libcurl_load", async () => {
+			await vfs.mountAll();
+		});
 		return vfs;
 	}
 
@@ -45,13 +63,13 @@ export class vFS {
 		if (!url) throw new Error(`Server "${serverName}" not found`);
 		try {
 			const client = webdav.createClient(url, { username, password });
+			await client.getDirectoryContents("/");
 			this.servers.set(serverName, {
 				name: serverName,
 				connected: true,
 				connection: new vFSOperations(client),
 				url,
 			});
-			return new vFSOperations(client);
 		} catch (e) {
 			this.servers.set(serverName, {
 				name: serverName,
@@ -59,13 +77,55 @@ export class vFS {
 				connection: null,
 				url,
 			});
-			throw new Error(e as string);
+			console.warn(`Failed to connect to server "${serverName}":`, e);
 		}
 	}
 
 	async mountAll(): Promise<void> {
 		for (const serverName of this.servers.keys()) {
 			await this.mount(serverName);
+		}
+	}
+
+	async addServer(info: ServerInfo): Promise<void> {
+		const davjson = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${await window.tb.user.username()}/files/davs.json`, "utf8"));
+		davjson.push({
+			name: info.name,
+			url: info.url,
+			username: info.username,
+			password: info.password,
+		});
+		await window.tb.fs.promises.writeFile(`/apps/user/${await window.tb.user.username()}/files/davs.json`, JSON.stringify(davjson, null, 2));
+		const config = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${await window.tb.user.username()}/files/config.json`, "utf8"));
+		config.drives[info.name] = `/mnt/${info.name}/`;
+		await window.tb.fs.promises.writeFile(`/apps/user/${await window.tb.user.username()}/files/config.json`, JSON.stringify(config, null, 2));
+		window.tb.notification.Toast({
+			application: "System",
+			iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+			message: "New Dav Device has been added",
+		});
+	}
+
+	async removeServer(serverName: string): Promise<void> {
+		const davjson = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${await window.tb.user.username()}/files/davs.json`, "utf8"));
+		const index = davjson.findIndex((entry: any) => entry.name.toLowerCase() === serverName.toLowerCase());
+		if (index !== -1) {
+			davjson.splice(index, 1);
+			await window.tb.fs.promises.writeFile(`/apps/user/${await window.tb.user.username()}/files/davs.json`, JSON.stringify(davjson, null, 2));
+			const config = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${await window.tb.user.username()}/files/config.json`, "utf8"));
+			delete config.drives[serverName.toLowerCase()];
+			await window.tb.fs.promises.writeFile(`/apps/user/${await window.tb.user.username()}/files/config.json`, JSON.stringify(config, null, 2));
+			window.tb.notification.Toast({
+				application: "System",
+				iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+				message: "Dav Drive has been removed",
+			});
+		} else {
+			window.tb.notification.Toast({
+				application: "System",
+				iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+				message: "Dav Drive not found",
+			});
 		}
 	}
 

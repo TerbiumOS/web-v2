@@ -851,7 +851,6 @@ export default async function Api() {
 				// @ts-expect-error
 				const stream = await navigator.mediaDevices.getDisplayMedia({ preferCurrentTab: true });
 				const capture = new ImageCapture(stream.getVideoTracks()[0]);
-				// @ts-expect-error
 				const frame = await capture.grabFrame();
 				stream.getVideoTracks()[0].stop();
 				const canvas: HTMLCanvasElement = document.createElement("canvas");

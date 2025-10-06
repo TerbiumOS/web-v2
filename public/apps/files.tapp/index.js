@@ -353,6 +353,7 @@ const createStorageDeviceCard = (type, davInfo) => {
 			title.textContent = davInfo.name || "Dav Drive";
 			const displayText = davInfo.url || "http://localhost:3001/dav/";
 			size.textContent = displayText.length > 18 ? displayText.slice(0, 18) + "..." : displayText;
+			item.id = `f-${davInfo.name.toLocaleLowerCase()}`;
 			percent.style.width = "100%";
 			const test = async () => {
 				const servers = window.parent.tb.vfs.servers;
