@@ -25,6 +25,7 @@ import { initializeWebContainer } from "./Node/runtimes/Webcontainers/nodeProc";
 import parse from "./Parser";
 import { useWindowStore } from "./Store";
 import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
+import { vFS } from "./vFS";
 
 const system = new System();
 const pw = new pwd();
@@ -765,6 +766,7 @@ export default async function Api() {
 		libcurl: libcurl,
 		fflate: fflate,
 		fs: window.tb.fs,
+		vfs: await vFS.create(),
 		node: {
 			webContainer: {},
 			servers: new Map<number, string>(),

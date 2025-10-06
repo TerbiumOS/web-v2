@@ -13,16 +13,18 @@
     <meta name="google-adsense-account" content="ca-pub-2875368391887289" />
     <script src="/tfs/tfs.js"></script>
     <script>
-      window.tfs.initSw();
-      if (typeof window.tb === "undefined") window.tb = {};
-	    if (typeof window.tb.fs === "undefined" && typeof window.tb !== "undefined") {
-		    console.log("[FS] File System Ready");
-        setTimeout(() => {
-          window.tb.fs = window.tfs.fs;
-          window.tb.buffer = window.tfs.buffer;
-          window.tb.sh = window.tfs.shell;
-        }, 10);
-	    }
+      (async () => {
+        const handle = await navigator.storage.getDirectory();
+        window.tfs = new window.tfs(handle)
+        if (typeof window.tb === "undefined") window.tb = {};
+	      if (typeof window.tb.fs === "undefined" && typeof window.tb !== "undefined") {
+		      console.log("[FS] File System Ready");
+		      window.tb.fs = window.tfs.fs;
+		      window.tb.buffer = window.tfs.buffer;
+		      window.tb.sh = window.tfs.shell;
+		      window.dispatchEvent(new Event("tfsready"));
+	      }
+      })();
     </script>
   </head>
   <body>

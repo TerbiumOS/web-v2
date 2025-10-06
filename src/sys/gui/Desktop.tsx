@@ -51,7 +51,7 @@ const Desktop: FC<IDesktopProps> = ({ desktop, onContextMenu }) => {
 			}
 		};
 		getPins();
-		getWallpaper();
+		window.addEventListener("tfsready", getWallpaper);
 		window.addEventListener("open-net", menu);
 		window.addEventListener("open-notif", nMenu);
 		window.addEventListener("load", getWallpaper);
@@ -67,6 +67,7 @@ const Desktop: FC<IDesktopProps> = ({ desktop, onContextMenu }) => {
 			window.removeEventListener("updPins", getPins);
 			// @ts-expect-error
 			window.removeEventListener("windows-prev", showWinPrev);
+			window.removeEventListener("tfsready", getWallpaper);
 		};
 	}, [showNotif, winPrev, pinned]);
 

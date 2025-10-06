@@ -17,8 +17,6 @@ self.window = self;
 importScripts("/assets/libs/filer.min.js");
 importScripts("/tfs/tfs.js");
 
-self.tfs.initSw();
-
 // Importing mime
 importScripts("/assets/libs/mime.iife.js");
 
@@ -33,10 +31,12 @@ const filerfs = new Filer.FileSystem({
 });
 const filersh = new filerfs.Shell();
 
-setTimeout(() => {
+(async () => {
+	const handle = await navigator.storage.getDirectory();
+	window.tfs = new window.tfs(handle);
 	self.opfs = window.tfs.fs;
-	self.opfssh = window.tfs.shell;
-}, 10);
+	self.opfssh = window.tfs.sh;
+})();
 
 async function currentFs() {
 	// isConnected will return true if the anura instance is running, and otherwise infinitely wait.
@@ -107,7 +107,7 @@ const supportedWebDAVMethods = [
 async function handleDavRequest({ request, url }) {
 	const fsCallback = (await currentFs()).fs;
 	const fs = fsCallback.promises;
-	const shell = await new fsCallback.Shell();
+	const shell = new (await currentFs()).sh();
 	const method = request.method;
 	const path = decodeURIComponent(url.pathname.replace(/^\/dav/, "") || "/");
 

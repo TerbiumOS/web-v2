@@ -5,6 +5,7 @@
 
 import { TFSType, FSType } from "@terbiumos/tfs";
 import { System } from "./apis/System";
+import { vFS } from "./vFS";
 
 declare global {
 	namespace React.JSX {
@@ -474,6 +475,7 @@ export interface COM {
 	libcurl: Libcurl;
 	fflate: any;
 	fs: FSType;
+	vfs: vFS;
 	crypto(pass: string, file: string): Promise<string>;
 	platform: {
 		getPlatform(): Promise<"desktop" | "mobile">;

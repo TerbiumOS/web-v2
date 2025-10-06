@@ -355,13 +355,8 @@ const createStorageDeviceCard = (type, davInfo) => {
 			size.textContent = displayText.length > 18 ? displayText.slice(0, 18) + "..." : displayText;
 			percent.style.width = "100%";
 			const test = async () => {
-				try {
-					const client = webdav.createClient(davInfo.url, {
-						username: davInfo.user,
-						password: davInfo.pass,
-						authType: webdav.AuthType.Password,
-					});
-					await client.getDirectoryContents("/");
+				const servers = window.parent.tb.vfs.servers;
+				if (servers.has(davInfo.name) && servers.get(davInfo.name).connected === true) {
 					const icn = `
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                             <path d="M4.07982 5.227C4.25015 4.58826 4.6267 4.02366 5.15094 3.62094C5.67518 3.21822 6.31775 2.99993 6.97882 3H17.0198C17.6811 2.99971 18.3239 3.2179 18.8483 3.62063C19.3728 4.02337 19.7494 4.58809 19.9198 5.227L22.0328 13.153C21.1022 12.4051 19.9437 11.9982 18.7498 12H5.24982C4.05559 11.998 2.89667 12.4049 1.96582 13.153L4.07982 5.227Z"/>
@@ -375,8 +370,7 @@ const createStorageDeviceCard = (type, davInfo) => {
                     `;
 					icon.innerHTML = icn;
 					percent.style.backgroundColor = "#5DD881";
-				} catch (error) {
-					console.error(error);
+				} else {
 					const icn = `
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                             <path d="M4.07982 5.227C4.25015 4.58826 4.6267 4.02366 5.15094 3.62094C5.67518 3.21822 6.31775 2.99993 6.97882 3H17.0198C17.6811 2.99971 18.3239 3.2179 18.8483 3.62063C19.3728 4.02337 19.7494 4.58809 19.9198 5.227L22.0328 13.153C21.1022 12.4051 19.9437 11.9982 18.7498 12H5.24982C4.05559 11.998 2.89667 12.4049 1.96582 13.153L4.07982 5.227Z"/>
@@ -463,15 +457,7 @@ const showLS = async () => {
 };
 
 const useDavClient = async path => {
-	const davInstances = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${sessionStorage.getItem("currAcc")}/files/davs.json`, "utf8"));
-	const davUrl = path.split("/dav/")[0] + "/dav/";
-	const dav = davInstances.find(d => d.url.toLowerCase().includes(davUrl));
-	if (!dav) throw new Error("No matching dav instance found");
-	const client = webdav.createClient(dav.url, {
-		username: dav.username,
-		password: dav.password,
-		authType: webdav.AuthType.Password,
-	});
+	const client = window.parent.tb.vfs.currentServer.connection.client;
 	let filePath;
 	if (path.startsWith("http")) {
 		const match = path.match(/^https?:\/\/[^\/]+\/dav\/([^\/]+\/)?(.+)$/);
@@ -1851,17 +1837,9 @@ const openPath = async path => {
 		return;
 	}
 	if (path.includes("mnt")) {
-		let davInstances = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${sessionStorage.getItem("currAcc")}/files/davs.json`, "utf8"));
-		const toFind = path.split("/")[2] || "";
-		let davConfig = davInstances.find(dav => dav.name === toFind);
+		window.parent.tb.vfs.setServer(path.split("/")[2]);
+		let davConfig = window.parent.tb.vfs.currentServer;
 		console.log("Loading webdav: " + davConfig.url + path.split("/")[2]);
-		if (!davConfig) {
-			window.parent.tb.dialog.Alert({
-				title: "WebDAV Error",
-				message: "No matching WebDAV configuration found for this path.",
-			});
-			return;
-		}
 		let relPath = path.replace(`/mnt/${davConfig.name}/`, "/");
 		console.log(relPath);
 		const exp = document.querySelector(".exp");
@@ -1872,11 +1850,7 @@ const openPath = async path => {
 		exp.innerHTML = `<div style="padding:1em;">Loading WebDAV...</div>`;
 		const modal = document.querySelector(".drive-modal");
 		try {
-			const client = webdav.createClient(davConfig.url, {
-				username: davConfig.username,
-				password: davConfig.password,
-				authType: webdav.AuthType.Password,
-			});
+			const client = window.parent.tb.vfs.currentServer.connection.client;
 			const contents = await client.getDirectoryContents(relPath);
 			exp.innerHTML = "";
 			document.getElementById(`f-${davConfig.name.toLocaleLowerCase()}`).innerHTML = `
