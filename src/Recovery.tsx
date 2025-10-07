@@ -28,7 +28,7 @@ export default function Recovery() {
 		const totalFiles = files.length;
 		for (const [index, file] of files.entries()) {
 			const stats = await window.tb.fs.promises.stat(`${inp}/${file}`);
-			if (stats.isDirectory()) {
+			if (stats && stats.isDirectory()) {
 				await window.tb.fs.promises.mkdir(`${dest}/${file}`);
 				await copyDir(`${inp}/${file}`, `${dest}/${file}`, true);
 			} else {
@@ -254,12 +254,49 @@ export default function Recovery() {
 		console.log(`File saved successfully at: ${location}`);
 	}
 
+	const migrateFs = async () => {
+		setShowCursor(false);
+		main.current!.classList.remove("flex");
+		main.current!.classList.add("hidden");
+		progresscheck.current!.classList.remove("hidden");
+		progresscheck.current!.classList.add("flex");
+		async function copyRecursive(src: string, dest: string) {
+			const entries = await Filer.fs.promises.readdir(src);
+			for (const entry of entries) {
+				const srcPath = src.endsWith("/") ? src + entry : src + "/" + entry;
+				const destPath = dest.endsWith("/") ? dest + entry : dest + "/" + entry;
+				const stat = await Filer.fs.promises.stat(srcPath);
+				if (stat.isDirectory()) {
+					if (!(await dirExists(destPath))) {
+						await window.tb.fs.promises.mkdir(destPath);
+					}
+					await copyRecursive(srcPath, destPath);
+				} else {
+					const fileBuffer = await Filer.fs.promises.readFile(srcPath);
+					await window.tb.fs.promises.writeFile(destPath, fileBuffer);
+				}
+				statusref.current!.innerText = `Migrating: ${srcPath}`;
+			}
+		}
+		await copyRecursive("/", "/");
+		setProgress(100);
+		statusref.current!.innerText = "Migration complete!";
+		// TODO: Format Filer
+		sessionStorage.clear();
+		sessionStorage.setItem("boot", "true");
+		localStorage.setItem("setup", "true");
+		window.location.reload();
+	};
+
+	// @ts-expect-error types
+	window.migrateFs = migrateFs;
+
 	useEffect(() => {
 		const handleKeyDown = async (e: KeyboardEvent) => {
 			if (e.key === "ArrowUp") {
-				setSelected(prevSelected => (prevSelected === 0 ? (updCache ? 4 : 3) : prevSelected - 1));
+				setSelected(prevSelected => (prevSelected === 0 ? (updCache ? 5 : 4) : prevSelected - 1));
 			} else if (e.key === "ArrowDown") {
-				setSelected(prevSelected => (prevSelected === (updCache ? 4 : 3) ? 0 : prevSelected + 1));
+				setSelected(prevSelected => (prevSelected === (updCache ? 5 : 4) ? 0 : prevSelected + 1));
 			} else if (e.key === "Enter") {
 				if (selected === 0) {
 					localStorage.clear();
@@ -280,8 +317,10 @@ export default function Recovery() {
 					setMsg("BE AWARE if your static hosting this download will NOT work. Proceed?");
 					setAction("prodins()");
 				} else if (selected === 2) {
+					migrateFs();
+				} else if (selected === 3) {
 					zipins();
-				} else if (selected === 3 && updCache) {
+				} else if (selected === 4 && updCache) {
 					setShowCursor(false);
 					msgbox.current!.classList.remove("flex");
 					msgbox.current!.classList.add("hidden");
@@ -291,7 +330,7 @@ export default function Recovery() {
 					await window.tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", hash);
 					await window.tb.sh.promises.rm("/system/tmp/terb-upd/", { recursive: true });
 					window.location.reload();
-				} else if (selected === (updCache ? 4 : 3)) {
+				} else if (selected === (updCache ? 5 : 4)) {
 					sessionStorage.clear();
 					window.location.reload();
 				}
@@ -430,6 +469,21 @@ export default function Recovery() {
 						`
 						}
 						onClick={() => {
+							migrateFs();
+						}}
+					>
+						Migrate from Filer to OPFS
+					</span>
+					<span
+						className={
+							"p-2 px-2.5 text-sm font-extrabold lg:text-lg md:text-base border-[1px] rounded-md" +
+							" " +
+							`
+							${selected === 3 && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"}
+							${showCursor ? "hover:bg-[#ffffff18] hover:border-[#ffffff20]" : null}
+						`
+						}
+						onClick={() => {
 							zipins();
 						}}
 					>
@@ -441,7 +495,7 @@ export default function Recovery() {
 								"p-2 px-2.5 text-sm font-extrabold lg:text-lg md:text-base border-[1px] rounded-md" +
 								" " +
 								`
-								${selected === 3 && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"}
+								${selected === 4 && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"}
 								${showCursor ? "hover:bg-[#ffffff18] hover:border-[#ffffff20]" : null}
 							`
 							}
@@ -465,7 +519,7 @@ export default function Recovery() {
 							"p-2 px-2.5 text-sm font-extrabold lg:text-lg md:text-base border-[1px] rounded-md" +
 							" " +
 							`
-							${selected === (updCache ? 4 : 3) && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"}
+							${selected === (updCache ? 5 : 4) && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"}
 							${showCursor ? "hover:bg-[#ffffff18] hover:border-[#ffffff20]" : null}
 						`
 						}

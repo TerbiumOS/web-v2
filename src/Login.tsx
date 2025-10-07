@@ -31,7 +31,7 @@ export default function Login() {
 			const dirEntries = await Promise.all(
 				entries.map(async entry => {
 					const stat = await window.tb.fs.promises.stat(`/home/${entry}`);
-					if (stat.isDirectory()) {
+					if (stat && stat.isDirectory()) {
 						try {
 							await window.tb.fs.promises.access(`/home/${entry}/user.json`);
 							return entry;

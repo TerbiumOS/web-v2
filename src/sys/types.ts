@@ -3,7 +3,7 @@
  * @description This file contains all the types and interfaces used in the Terbium system.
  */
 
-import { TFSType, FSType } from "@terbiumos/tfs";
+import { TFSType, FSType, ShellType } from "@terbiumos/tfs";
 import { System } from "./apis/System";
 import { vFS } from "./vFS";
 
@@ -366,7 +366,7 @@ export interface SysSettings {
 
 export interface COM {
 	registry: any;
-	sh: any;
+	sh: ShellType;
 	buffer: any;
 	battery: {
 		showPercentage(): void;

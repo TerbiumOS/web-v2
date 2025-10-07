@@ -17,7 +17,7 @@ export default function Updater() {
 		const totalFiles = files.length;
 		for (const [index, file] of files.entries()) {
 			const stats = await window.tb.fs.promises.stat(`${inp}/${file}`);
-			if (stats.isDirectory()) {
+			if (stats && stats.isDirectory()) {
 				await window.tb.fs.promises.mkdir(`${dest}/${file}`);
 				await copyDir(`${inp}/${file}`, `${dest}/${file}`, true);
 			} else {
