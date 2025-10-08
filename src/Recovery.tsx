@@ -139,7 +139,7 @@ export default function Recovery() {
 					await window.tb.sh.promises.rm("/home/", { recursive: true });
 				}
 				setProgress(25);
-				await window.tb.fs.promises.writeFile("//uploaded.zip", Filer.Buffer.from(content));
+				await window.tb.fs.promises.writeFile("//uploaded.zip", window.tb.buffer.from(content), "arraybuffer");
 				setProgress(35);
 				setShowCursor(false);
 				main.current!.classList.remove("flex");
@@ -230,7 +230,7 @@ export default function Recovery() {
 			for (let i = 0; i < pathParts.length; i++) {
 				currentPath += pathParts[i] + "/";
 				if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
-					await window.tb.fs.promises.writeFile(currentPath.slice(0, -1), Filer.Buffer.from(content));
+					await window.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.tb.buffer.from(content), "arraybuffer");
 				} else if (!(await dirExists(currentPath))) {
 					await window.tb.fs.promises.mkdir(currentPath);
 				}
@@ -250,7 +250,7 @@ export default function Recovery() {
 			throw new Error(`Failed to download the file. Status: ${response.status}`);
 		}
 		const content = await response.arrayBuffer();
-		await window.tb.fs.promises.writeFile(location, Filer.Buffer.from(content));
+		await window.tb.fs.promises.writeFile(location, window.tb.buffer.from(content), "arraybuffer");
 		console.log(`File saved successfully at: ${location}`);
 	}
 

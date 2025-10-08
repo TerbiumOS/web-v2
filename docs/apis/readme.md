@@ -15,6 +15,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - [Platform](#platform)
   - [Process](#process)
   - [Screen](#screen)
+  - [VFS](#vfs)
   - [System](#system)
   - [Mediaisland](#mediaisland)
   - [File](#file)
@@ -582,6 +583,9 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
     ```javascript
     tb.screen.capture()
     ```
+
+### VFS
+  - 
 
 ### System
   - **version**

@@ -97,12 +97,12 @@ tb_island.addControl({
 												defaultValue: file.name,
 												onOk: async newFileName => {
 													if (newFileName !== null && newFileName !== "") {
-														await window.parent.tb.fs.promises.writeFile(`${path}/${newFileName}`, Filer.Buffer.from(content));
+														await window.parent.tb.fs.promises.writeFile(`${path}/${newFileName}`, Filer.Buffer.from(content), "arraybuffer");
 													}
 												},
 											});
 										} catch (error) {
-											await window.parent.tb.fs.promises.writeFile(filePath, Filer.Buffer.from(content));
+											await window.parent.tb.fs.promises.writeFile(filePath, Filer.Buffer.from(content), "arraybuffer");
 										}
 									}
 									openPath(document.querySelector(".nav-input.dir").value);

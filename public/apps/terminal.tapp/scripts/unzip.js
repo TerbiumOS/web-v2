@@ -15,7 +15,7 @@ async function uzip(path, target) {
 				try {
 					console.log(`touch ${currentPath.slice(0, -1)}`);
 					displayOutput(`touch ${currentPath.slice(0, -1)}`);
-					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), Filer.Buffer.from(content));
+					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.parent.tb.buffer.from(content), "arraybuffer");
 				} catch {
 					displayOutput(`Cant make ${currentPath.slice(0, -1)}`);
 					console.log(`Cant make ${currentPath.slice(0, -1)}`);

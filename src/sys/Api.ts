@@ -510,7 +510,7 @@ export default async function Api() {
 						throw new Error(`Failed to download the file. Status: ${response.status}`);
 					}
 					const content = await response.arrayBuffer();
-					await window.tb.fs.promises.writeFile(location, Filer.Buffer.from(content));
+					await window.tb.fs.promises.writeFile(location, window.tb.buffer.from(content), "arraybuffer");
 					console.log(`File saved successfully at: ${location}`);
 				} catch (error) {
 					console.error(error);

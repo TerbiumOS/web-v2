@@ -1,4 +1,3 @@
-import * as webdav from "./webdav.js";
 const Filer = window.Filer;
 
 const user = sessionStorage.getItem("currAcc");
@@ -1359,12 +1358,12 @@ const cm = async e => {
 												defaultValue: file.name,
 												onOk: async newFileName => {
 													if (newFileName !== null && newFileName !== "") {
-														client.putFileContents(`${filePath}/${newFileName}`, Filer.Buffer.from(content));
+														client.putFileContents(`${filePath}/${newFileName}`, window.parent.tb.buffer.from(content));
 													}
 												},
 											});
 										} else {
-											client.putFileContents(`${filePath}/${file.name}`, Filer.Buffer.from(content));
+											client.putFileContents(`${filePath}/${file.name}`, window.parent.tb.buffer.from(content));
 										}
 									}
 								} else {
@@ -1378,12 +1377,12 @@ const cm = async e => {
 												defaultValue: file.name,
 												onOk: async newFileName => {
 													if (newFileName !== null && newFileName !== "") {
-														await window.parent.tb.fs.promises.writeFile(`${path}/${newFileName}`, Filer.Buffer.from(content));
+														await window.parent.tb.fs.promises.writeFile(`${path}/${newFileName}`, window.parent.tb.buffer.from(content), "arraybuffer");
 													}
 												},
 											});
 										} catch (error) {
-											await window.parent.tb.fs.promises.writeFile(filePath, Filer.Buffer.from(content));
+											await window.parent.tb.fs.promises.writeFile(filePath, window.parent.tb.buffer.from(content), "arraybuffer");
 										}
 									}
 								}
@@ -2077,7 +2076,7 @@ async function unzip(path, target, app) {
 			if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
 				try {
 					console.log(`touch ${currentPath.slice(0, -1)}`);
-					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), Filer.Buffer.from(content));
+					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.parent.tb.buffer.from(content), "arraybuffer");
 				} catch {
 					console.log(`Cant make ${currentPath.slice(0, -1)}`);
 				}

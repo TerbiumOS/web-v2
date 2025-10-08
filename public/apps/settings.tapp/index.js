@@ -147,7 +147,7 @@ const customWallpaper = () => {
 							wimg.addEventListener("click", async e => {
 								tb_wallpaper.set(path);
 							});
-							await window.parent.tb.fs.promises.writeFile(path, Filer.Buffer.from(buffer));
+							await window.parent.tb.fs.promises.writeFile(path, window.parent.tb.buffer.from(buffer), "arraybuffer");
 							tb_wallpaper.set(path);
 							img_container.append(wimg);
 							img_container.append(delete_button);

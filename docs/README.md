@@ -3,7 +3,6 @@
 Welcome to Terbium v2's Documentation. Here is a simple table of contents to help you get where you need to get
 
 - [How to Contribute to Terbium v2](./contributions.md)
-- [Quick Guide to Filer](./quick-guide-to-filer.md)
 - [Creating Terminal Commands](./creating-terminal-commands.md)
 - [Creating Apps](./creating-apps.md)
 - [Backend Configuration Options](./backend-configuration.md)

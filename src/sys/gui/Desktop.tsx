@@ -20,8 +20,6 @@ const Desktop: FC<IDesktopProps> = ({ desktop, onContextMenu }) => {
 	const desktopRef = useRef<HTMLDivElement>(null);
 	const [showMenu, setShowMenu] = useState(false);
 	const [showNotif, setShowNotif] = useState(false);
-	const [wallpaper, setWallpaper] = useState<string | null>(null);
-	const [wallpaperMode, setwallpaperMode] = useState("cover");
 	const [pinned, setPinned] = useState<Array<TDockItem>>([]);
 	const [winPrev, setWinPrev] = useState<{ open: boolean; windows: any; location: string } | null>(null);
 
@@ -34,13 +32,20 @@ const Desktop: FC<IDesktopProps> = ({ desktop, onContextMenu }) => {
 		};
 		const getWallpaper = async () => {
 			const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`));
+			console.log(settings.wallpaper);
 			if (settings.wallpaper.startsWith("/system")) {
-				let stream = await window.tb.fs.promises.readFile(settings["wallpaper"]);
-				setWallpaper(`data:image/png;base64,${stream.toString("base64")}`);
+				if (!desktopRef.current) return;
+				desktopRef.current.style.backgroundImage = `url("/fs/${settings.wallpaper}")`;
+				desktopRef.current.style.backgroundSize = settings.wallpaperMode === "stretch" ? "100% 100%" : settings.wallpaperMode;
+				desktopRef.current.style.backgroundPosition = "center";
+				desktopRef.current.style.backgroundRepeat = "no-repeat";
 			} else {
-				setWallpaper(settings["wallpaper"]);
+				if (!desktopRef.current) return;
+				desktopRef.current.style.backgroundImage = `url("${settings.wallpaper}")`;
+				desktopRef.current.style.backgroundSize = settings.wallpaperMode === "stretch" ? "100% 100%" : settings.wallpaperMode;
+				desktopRef.current.style.backgroundPosition = "center";
+				desktopRef.current.style.backgroundRepeat = "no-repeat";
 			}
-			setwallpaperMode(settings["wallpaperMode"]);
 		};
 		const showWinPrev = (e: CustomEvent) => {
 			setWinPrev(JSON.parse(e.detail));
@@ -74,12 +79,6 @@ const Desktop: FC<IDesktopProps> = ({ desktop, onContextMenu }) => {
 	return (
 		<div
 			className={`desktop flex flex-col h-[inherit] overflow-hidden `}
-			style={{
-				backgroundImage: `url(${wallpaper})`,
-				backgroundSize: wallpaperMode === "stretch" ? "100% 100%" : wallpaperMode,
-				backgroundPosition: "center",
-				backgroundRepeat: "no-repeat",
-			}}
 			data-desktop={desktop}
 			ref={desktopRef}
 			onContextMenuCapture={(e: React.MouseEvent<HTMLDivElement>) => {
