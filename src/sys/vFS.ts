@@ -1,5 +1,6 @@
 // @ts-expect-error: No types
 import * as webdav from "../../public/apps/files.tapp/webdav.js";
+import { FSType } from "@terbiumos/tfs";
 
 export interface ServerInfo {
 	name: string;
@@ -137,6 +138,16 @@ export class vFS {
 		}
 		return false;
 	}
+
+	whatFS(path: string): vFSOperations | FSType {
+		if (path.startsWith("/mnt/")) {
+			const parts = path.split("/");
+			if (parts.length > 2) {
+				return this.servers.get(parts[2])?.connection
+			}
+		}
+		return window.tb.fs;
+	}
 }
 
 export class vFSOperations {
@@ -146,47 +157,130 @@ export class vFSOperations {
 		this.client = client;
 	}
 
-	async readDir(path: string): Promise<any[]> {
-		return this.client.getDirectoryContents(path);
+	readdir(path: string, callback: (err: any, files?: any[]) => void): void {
+		this.client.getDirectoryContents(path)
+			.then((files: any[]) => callback(null, files))
+			.catch((err: any) => callback(err));
 	}
 
-	async readFile(path: string): Promise<string> {
-		return this.client.getFileContents(path, { format: "text" });
+	readFile(path: string, callback: (err: any, data?: string) => void): void {
+		this.client.getFileContents(path, { format: "text" })
+			.then((data: string) => callback(null, data))
+			.catch((err: any) => callback(err));
 	}
 
-	async writeFile(path: string, data: string | ArrayBuffer): Promise<void> {
-		return this.client.putFileContents(path, data);
+	writeFile(path: string, data: string | ArrayBuffer, callback: (err: any) => void): void {
+		this.client.putFileContents(path, data)
+			.then(() => callback(null))
+			.catch((err: any) => callback(err));
 	}
 
-	async delete(path: string): Promise<void> {
-		return this.client.deleteFile(path);
+	delete(path: string, callback: (err: any) => void): void {
+		this.client.deleteFile(path)
+			.then(() => callback(null))
+			.catch((err: any) => callback(err));
 	}
 
-	async rename(oldPath: string, newPath: string): Promise<void> {
-		return this.client.moveFile(oldPath, newPath);
+	rename(oldPath: string, newPath: string, callback: (err: any) => void): void {
+		this.client.moveFile(oldPath, newPath)
+			.then(() => callback(null))
+			.catch((err: any) => callback(err));
 	}
 
-	async createDirectory(path: string): Promise<void> {
-		return this.client.createDirectory(path);
+	createDirectory(path: string, callback: (err: any) => void): void {
+		this.client.createDirectory(path)
+			.then(() => callback(null))
+			.catch((err: any) => callback(err));
 	}
 
-	async exists(path: string): Promise<boolean> {
-		return this.client.exists(path);
+	exists(path: string, callback: (err: any, exists?: boolean) => void): void {
+		this.client.exists(path)
+			.then((exists: boolean) => callback(null, exists))
+			.catch((err: any) => callback(err));
 	}
 
-	async stat(path: string): Promise<any> {
-		return this.client.stat(path);
+	stat(path: string, callback: (err: any, stat?: any) => void): void {
+		this.client.stat(path)
+			.then((stat: any) => callback(null, stat))
+			.catch((err: any) => callback(err));
 	}
 
-	async copy(source: string, destination: string): Promise<void> {
-		return this.client.copyFile(source, destination);
+	copy(source: string, destination: string, callback: (err: any) => void): void {
+		this.client.copyFile(source, destination)
+			.then(() => callback(null))
+			.catch((err: any) => callback(err));
 	}
 
-	async unlink(path: string): Promise<void> {
-		return this.client.deleteFile(path);
+	unlink(path: string, callback: (err: any) => void): void {
+		this.client.deleteFile(path)
+			.then(() => callback(null))
+			.catch((err: any) => callback(err));
 	}
 
-	async move(source: string, destination: string): Promise<void> {
-		return this.client.moveFile(source, destination);
+	move(source: string, destination: string, callback: (err: any) => void): void {
+		this.client.moveFile(source, destination)
+			.then(() => callback(null))
+			.catch((err: any) => callback(err));
+	}
+
+	appendFile(path: string, data: string | ArrayBuffer, callback: (err: any) => void): void {
+		this.client.getFileContents(path, { format: "text" })
+			.then((existingData: string) => {
+				const newData = existingData + data;
+				return this.client.putFileContents(path, newData);
+			})
+			.then(() => callback(null))
+			.catch((err: any) => callback(err));
+	}
+
+	promises = {
+		readdir: (path: string): Promise<any[]> =>
+			new Promise((resolve, reject) => {
+				this.readdir(path, (err, files) => err ? reject(err) : resolve(files!));
+			}),
+		readFile: (path: string): Promise<string> =>
+			new Promise((resolve, reject) => {
+				this.readFile(path, (err, data) => err ? reject(err) : resolve(data!));
+			}),
+		writeFile: (path: string, data: string | ArrayBuffer): Promise<void> =>
+			new Promise((resolve, reject) => {
+				this.writeFile(path, data, err => err ? reject(err) : resolve());
+			}),
+		delete: (path: string): Promise<void> =>
+			new Promise((resolve, reject) => {
+				this.delete(path, err => err ? reject(err) : resolve());
+			}),
+		rename: (oldPath: string, newPath: string): Promise<void> =>
+			new Promise((resolve, reject) => {
+				this.rename(oldPath, newPath, err => err ? reject(err) : resolve());
+			}),
+		createDirectory: (path: string): Promise<void> =>
+			new Promise((resolve, reject) => {
+				this.createDirectory(path, err => err ? reject(err) : resolve());
+			}),
+		exists: (path: string): Promise<boolean> =>
+			new Promise((resolve, reject) => {
+				this.exists(path, (err, exists) => err ? reject(err) : resolve(exists!));
+			}),
+		stat: (path: string): Promise<any> =>
+			new Promise((resolve, reject) => {
+				this.stat(path, (err, stat) => err ? reject(err) : resolve(stat!));
+			}),
+		copy: (source: string, destination: string): Promise<void> =>
+			new Promise((resolve, reject) => {
+				this.copy(source, destination, err => err ? reject(err) : resolve());
+			}),
+		unlink: (path: string): Promise<void> =>
+			new Promise((resolve, reject) => {
+				this.unlink(path, err => err ? reject(err) : resolve());
+			}),
+		move: (source: string, destination: string): Promise<void> =>
+			new Promise((resolve, reject) => {
+				this.move(source, destination, err => err ? reject(err) : resolve());
+			}),
+		appendFile: (path: string, data: string | ArrayBuffer): Promise<void> =>
+			new Promise((resolve, reject) => {
+				this.appendFile(path, data, err => err ? reject(err) : resolve());
+			}),
 	}
 }
