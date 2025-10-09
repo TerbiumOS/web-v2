@@ -148,6 +148,8 @@ export default function Login() {
 				style={{
 					backgroundImage: `url("${wallpaper?.includes("/system/etc/") ? `/fs/${wallpaper}` : wallpaper || ""}")`,
 					backgroundSize: "cover",
+					backgroundRepeat: "no-repeat",
+					backgroundPosition: "center",
 				}}
 			></div>
 			<div
