@@ -192,7 +192,7 @@ export class vFSOperations {
 			.catch((err: any) => callback(err));
 	}
 
-	createDirectory(path: string, callback: (err: any) => void): void {
+	mkdir(path: string, callback: (err: any) => void): void {
 		this.client
 			.createDirectory(path)
 			.then(() => callback(null))
@@ -213,7 +213,7 @@ export class vFSOperations {
 			.catch((err: any) => callback(err));
 	}
 
-	copy(source: string, destination: string, callback: (err: any) => void): void {
+	copyFile(source: string, destination: string, callback: (err: any) => void): void {
 		this.client
 			.copyFile(source, destination)
 			.then(() => callback(null))
@@ -266,9 +266,9 @@ export class vFSOperations {
 			new Promise((resolve, reject) => {
 				this.rename(oldPath, newPath, err => (err ? reject(err) : resolve()));
 			}),
-		createDirectory: (path: string): Promise<void> =>
+		mkdir: (path: string): Promise<void> =>
 			new Promise((resolve, reject) => {
-				this.createDirectory(path, err => (err ? reject(err) : resolve()));
+				this.mkdir(path, err => (err ? reject(err) : resolve()));
 			}),
 		exists: (path: string): Promise<boolean> =>
 			new Promise((resolve, reject) => {
@@ -278,9 +278,9 @@ export class vFSOperations {
 			new Promise((resolve, reject) => {
 				this.stat(path, (err, stat) => (err ? reject(err) : resolve(stat!)));
 			}),
-		copy: (source: string, destination: string): Promise<void> =>
+		copyFile: (source: string, destination: string): Promise<void> =>
 			new Promise((resolve, reject) => {
-				this.copy(source, destination, err => (err ? reject(err) : resolve()));
+				this.copyFile(source, destination, err => (err ? reject(err) : resolve()));
 			}),
 		unlink: (path: string): Promise<void> =>
 			new Promise((resolve, reject) => {
