@@ -275,13 +275,34 @@ export default function Recovery() {
 					const fileBuffer = await Filer.fs.promises.readFile(srcPath);
 					await window.tb.fs.promises.writeFile(destPath, fileBuffer);
 				}
-				statusref.current!.innerText = `Migrating: ${srcPath}`;
+				statusref.current!.innerText = `Copying: ${srcPath}`;
 			}
 		}
 		await copyRecursive("/", "/");
+		setProgress(85);
+		statusref.current!.innerText = "Recreating Desktop Shortcuts...";
+		for (const user of await window.tb.fs.promises.readdir("/home/")) {
+			const items = JSON.parse(await window.tb.fs.promises.readFile(`/home/${user}/desktop/.desktop.json`, "utf8"));
+			for (const item of items) {
+				const target = await Filer.fs.promises.readlink(item.item);
+				await window.tb.fs.promises.symlink(target, item.item);
+				statusref.current!.innerText = `Creating shortcut: ${item.name}.lnk...`;
+			}
+		}
+		setProgress(93);
+		statusref.current!.innerText = "Formatting Filer...";
+		const entries = await Filer.fs.promises.readdir("/");
+		for (const entry of entries as string[]) {
+			const stats = await Filer.fs.promises.stat(entry);
+			if (stats && stats.type === "DIRECTORY") {
+				// @ts-expect-error types
+				await new Filer.fs.Shell().promises.rm(entry, { recursive: true });
+			} else {
+				await Filer.fs.promises.unlink(entry);
+			}
+		}
 		setProgress(100);
 		statusref.current!.innerText = "Migration complete!";
-		// TODO: Format Filer
 		sessionStorage.clear();
 		sessionStorage.setItem("boot", "true");
 		localStorage.setItem("setup", "true");
