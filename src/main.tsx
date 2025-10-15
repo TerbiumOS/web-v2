@@ -20,9 +20,13 @@ const Root = () => {
 		const tempTransport = async () => {
 			const connection = new BareMuxConnection("/baremux/worker.js");
 			await connection.setTransport("/epoxy/index.mjs", [{ wisp: "wss://wisp.terbiumon.top/wisp/" }]);
-			setTimeout(() => {
+			const tbOn = async () => {
+				while (!window.tb.system?.version) {
+					await new Promise(res => setTimeout(res, 50));
+				}
 				window.dispatchEvent(new Event("tfsready"));
-			}, 1000);
+			};
+			tbOn();
 			const { ScramjetController } = $scramjetLoadController();
 			window.scramjetTb = {
 				prefix: "/service/",
