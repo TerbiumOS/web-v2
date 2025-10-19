@@ -1,4 +1,5 @@
 /* global workbox */
+/** @type {import('@terbiumos/tfs').TFS} */
 
 // was a workaround for a firefox quirk where crossOriginIsolated
 // is not reported properly in a service worker, now its just assumed for

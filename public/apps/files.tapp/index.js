@@ -465,16 +465,22 @@ const useDavClient = async path => {
 	} else {
 		filePath = path.replace(davUrl, "/");
 	}
-	return { client, filePath };
+	let mntPath;
+	if (path.startsWith("/mnt/")) {
+		mntPath = path;
+	} else {
+		mntPath = window.parent.tb.fs.normalizePath(`/mnt/${window.parent.tb.vfs.currentServer.name}/${filePath}`);
+	}
+	return { client, filePath, mntPath };
 };
 
 const getItemDetails = async path => {
 	if (path.includes("http")) {
-		const { client, filePath } = await useDavClient(path);
+		const { client, filePath, mntPath } = await useDavClient(path);
 		const stats = await client.stat(filePath, { depth: 1 });
 		let message = JSON.stringify({
 			type: "item-details",
-			path: path,
+			path: mntPath,
 			details: {
 				name: stats.basename,
 				type: stats.mime,
@@ -493,8 +499,8 @@ const getItemDetails = async path => {
 			icon: "/fs/apps/system/files.tapp/icon.svg",
 			src: "/fs/apps/system/files.tapp/properties/index.html",
 			size: {
-				width: 280,
-				height: 252,
+				width: 350,
+				height: 275,
 			},
 			controls: ["minimize", "close"],
 			message: message,
@@ -533,8 +539,8 @@ const getItemDetails = async path => {
 				icon: "/fs/apps/system/files.tapp/icon.svg",
 				src: "/fs/apps/system/files.tapp/properties/index.html",
 				size: {
-					width: 280,
-					height: 252,
+					width: 350,
+					height: 275,
 				},
 				controls: ["minimize", "close"],
 				message: message,
