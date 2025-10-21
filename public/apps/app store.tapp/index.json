@@ -3,7 +3,7 @@
 	"config": {
 		"title": {
 			"text": "App Store",
-			"html": "<div style=\"display: flex; flex-direction: row; justify-content: center; align-items: center; height: 32px; z-index: 999999;\"><div style=\"width:350px; display:flex; justify-content:center;\"><input class=\"app-search bg-white/15 border-0 outline-none text-white py-1 px-2 rounded-lg transition-all duration-150 ease-in-out font-semibold\" type=\"search\" placeholder=\"Search for apps\" style=\"width:100%;\" /></div></div>"
+			"html": "<div style=\"display: flex; flex-direction: row; align-items: center; height: 32px; z-index: 999999;\"><div style=\"width:350px; display:flex; justify-content:center;\"><input class=\"app-search bg-white/15 border-0 outline-none text-white py-1 px-2 rounded-lg transition-all duration-150 ease-in-out font-semibold\" type=\"search\" placeholder=\"Search for apps\" style=\"width:100%;\" /></div></div>"
 		},
 		"icon": "/fs/apps/system/app store.tapp/icon.svg",
 		"src": "/fs/apps/system/app store.tapp/index.html",

@@ -607,12 +607,12 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					setMaximized(!maximized);
 				}}
 			>
-				<div className="flex gap-2 items-center">
+				<div className="flex gap-2 items-center flex-row w-full">
 					<img src={config.icon} alt="icon" className="w-5 h-5 pointer-events-none select-none" draggable={false} />
 					<span ref={titleRef} className="font-[680] pointer-events-none select-none">
 						{title}
 					</span>
-					{titlebarhtml && <div ref={thtmlref} />}
+					{titlebarhtml && <div className="w-[80%]" ref={thtmlref} />}
 				</div>
 				{controls ? (
 					<div className="controls flex gap-1">
