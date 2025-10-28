@@ -16,13 +16,23 @@ export default function Setup() {
 	const currentViewRef = useRef<HTMLDivElement | null>(null);
 	var nextButtonClick = () => void 0;
 
-	const Next = () => {
+	const Next = (type?: string) => {
 		setBeforeSetup(currentStep);
-		setCurrentStep(prevStep => Math.min(prevStep + 1, 5));
+		if (type && type === "Local") {
+			setCurrentStep(2.1);
+		} else if (type && type === "Tauth") {
+			setCurrentStep(2.2);
+		} else {
+			setCurrentStep(prevStep => Math.min(prevStep + 1, 5));
+		}
 	};
 	const Back = () => {
 		setBeforeSetup(currentStep);
-		setCurrentStep(prevStep => Math.max(prevStep - 1, 1));
+		if (currentStep === 2.1 || currentStep === 2.2) {
+			setCurrentStep(2);
+		} else {
+			setCurrentStep(prevStep => Math.max(prevStep - 1, 1));
+		}
 	};
 	const saveData = async () => {
 		await init();
@@ -116,6 +126,45 @@ export default function Setup() {
 		);
 	};
 	const Step2 = () => {
+		setTimeout(() => {
+			currentViewRef.current?.classList.remove("-translate-x-6");
+			currentViewRef.current?.classList.remove("opacity-0");
+		}, 150);
+		return (
+			<div
+				ref={el => {
+					currentViewRef.current = el;
+				}}
+				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center"
+			>
+				<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Choose what kind of account you want to use</span>
+				<div className="relative flex flex-col justify-center items-end">
+					<div className="flex flex-row gap-2">
+						<button
+						className={`cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150 ${currentStep === 5 ? "translate-y-8 opacity-0 pointer-events-none" : ""}`}
+						onMouseDown={() => Next("Local")}
+					>
+						Local Account
+					</button>
+					<button
+						className={`cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150 ${currentStep === 5 ? "translate-y-8 opacity-0 pointer-events-none" : ""}`}
+						onMouseDown={() => Next("Tauth")}
+					>
+						Terbium Cloud&trade; Account
+					</button>
+					</div>
+				</div>
+			</div>
+		)
+	}
+	const Step2CA = () => {
+		return (
+			<div>
+				<h1>Terbium Cloud&trade; Account Setup is coming soon!</h1>
+			</div>
+		)
+	}
+	const Step2L = () => {
 		setTimeout(() => {
 			currentViewRef.current?.classList.remove("-translate-x-6");
 			currentViewRef.current?.classList.remove("opacity-0");
@@ -552,22 +601,27 @@ export default function Setup() {
 						{currentStep < 5 && (
 							<button
 								className={`cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150 ${currentStep === 5 ? "translate-y-8 opacity-0 pointer-events-none" : ""}`}
-								onMouseDown={Back}
+								onMouseDown={() => Back()}
 							>
 								Previous
 							</button>
 						)}
-						<button
-							ref={el => {
-								currentStep === 4 && (currentMotionEl.current = el);
-							}}
-							className={`${currentStep === 5 && "translate-y-8 opacity-0"} cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150`}
-							onMouseDown={() => {
-								currentStep < 5 ? nextButtonClick() : null;
-							}}
-						>
-							{currentStep < 4 ? "Next" : "Finish"}
-						</button>
+						{(currentStep > 2 && currentStep < 5) && (
+							<button
+								ref={el => {
+									currentStep === 4 && (currentMotionEl.current = el);
+								}}
+								className={`${currentStep === 5 && "translate-y-8 opacity-0"} cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150`}
+								onMouseDown={() => {
+									if (currentStep === 2.1 || currentStep === 2.2) {
+										setCurrentStep(2);
+									}
+									currentStep < 5 ? nextButtonClick() : null;
+								}}
+							>
+								{currentStep < 4 ? "Next" : "Finish"}
+							</button>
+						)}
 					</div>
 				) : null}
 			</div>
@@ -581,7 +635,7 @@ export default function Setup() {
 					<img src="/assets/img/logo.png" alt="TB" className="w-[240px] lg:w-[480px] h-auto" />
 				</div>
 				<div className="sm:h-full sm:w-1/2 h-1/2 w-full flex flex-col justify-start items-center text-center sm:justify-center sm:items-center overflow-y-hidden">
-					{currentStep === 1 ? <Step1 /> : currentStep === 2 ? <Step2 /> : currentStep === 3 ? <Step3 /> : currentStep === 4 ? <Step4 /> : currentStep === 5 ? <Step5 /> : null}
+					{currentStep === 1 ? <Step1 /> : currentStep === 2 ? <Step2 /> : currentStep === 2.1 ? <Step2L /> : currentStep === 2.2 ? <Step2CA /> : currentStep === 3 ? <Step3 /> : currentStep === 4 ? <Step4 /> : currentStep === 5 ? <Step5 /> : null}
 				</div>
 			</div>
 			<Buttons />
