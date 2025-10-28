@@ -253,6 +253,7 @@ export interface dialogProps {
 	onOk: void | any;
 	onCancel?: void | any;
 	sudo?: boolean;
+	local?: boolean;
 }
 
 export interface cmprops {

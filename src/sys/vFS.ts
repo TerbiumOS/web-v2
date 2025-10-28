@@ -157,89 +157,110 @@ export class vFSOperations {
 		this.client = client;
 	}
 
+	pathtourl(path: string): string {
+		if (!path.startsWith("/mnt/")) return path;
+		const parts = path.split("/").filter(Boolean);
+		if (parts.length < 2) return path;
+		const serverName = parts[1];
+		const servers: Map<string, any> | undefined = window.tb.vfs.servers;
+		const server = servers?.get(serverName);
+		if (!server || !server.url) return path;
+		const rest = parts.slice(2).join("/");
+		const base = server.url.replace(/\/+$/, "");
+		return rest ? `${base}/${rest}` : `${base}/`;
+	}
+
+	pathtoFSPath(path: string): string {
+		if (!path.startsWith("/mnt/")) return path;
+		const parts = path.split("/").filter(Boolean);
+		if (parts.length < 2) return "/";
+		const rest = parts.slice(2).join("/");
+		return rest ? `/${rest}` : "/";
+	}
+
 	readdir(path: string, callback: (err: any, files?: any[]) => void): void {
 		this.client
-			.getDirectoryContents(path)
+			.getDirectoryContents(this.pathtoFSPath(path))
 			.then((files: any[]) => callback(null, files))
 			.catch((err: any) => callback(err));
 	}
 
 	readFile(path: string, callback: (err: any, data?: string) => void): void {
 		this.client
-			.getFileContents(path, { format: "text" })
+			.getFileContents(this.pathtoFSPath(path), { format: "text" })
 			.then((data: string) => callback(null, data))
 			.catch((err: any) => callback(err));
 	}
 
 	writeFile(path: string, data: string | ArrayBuffer, callback: (err: any) => void): void {
 		this.client
-			.putFileContents(path, data)
+			.putFileContents(this.pathtoFSPath(path), data)
 			.then(() => callback(null))
 			.catch((err: any) => callback(err));
 	}
 
 	delete(path: string, callback: (err: any) => void): void {
 		this.client
-			.deleteFile(path)
+			.deleteFile(this.pathtoFSPath(path))
 			.then(() => callback(null))
 			.catch((err: any) => callback(err));
 	}
 
 	rename(oldPath: string, newPath: string, callback: (err: any) => void): void {
 		this.client
-			.moveFile(oldPath, newPath)
+			.moveFile(this.pathtoFSPath(oldPath), this.pathtoFSPath(newPath))
 			.then(() => callback(null))
 			.catch((err: any) => callback(err));
 	}
 
 	mkdir(path: string, callback: (err: any) => void): void {
 		this.client
-			.createDirectory(path)
+			.createDirectory(this.pathtoFSPath(path))
 			.then(() => callback(null))
 			.catch((err: any) => callback(err));
 	}
 
 	exists(path: string, callback: (err: any, exists?: boolean) => void): void {
 		this.client
-			.exists(path)
+			.exists(this.pathtoFSPath(path))
 			.then((exists: boolean) => callback(null, exists))
 			.catch((err: any) => callback(err));
 	}
 
 	stat(path: string, callback: (err: any, stat?: any) => void): void {
 		this.client
-			.stat(path)
+			.stat(this.pathtoFSPath(path))
 			.then((stat: any) => callback(null, stat))
 			.catch((err: any) => callback(err));
 	}
 
 	copyFile(source: string, destination: string, callback: (err: any) => void): void {
 		this.client
-			.copyFile(source, destination)
+			.copyFile(this.pathtoFSPath(source), this.pathtoFSPath(destination))
 			.then(() => callback(null))
 			.catch((err: any) => callback(err));
 	}
 
 	unlink(path: string, callback: (err: any) => void): void {
 		this.client
-			.deleteFile(path)
+			.deleteFile(this.pathtoFSPath(path))
 			.then(() => callback(null))
 			.catch((err: any) => callback(err));
 	}
 
 	move(source: string, destination: string, callback: (err: any) => void): void {
 		this.client
-			.moveFile(source, destination)
+			.moveFile(this.pathtoFSPath(source), this.pathtoFSPath(destination))
 			.then(() => callback(null))
 			.catch((err: any) => callback(err));
 	}
 
 	appendFile(path: string, data: string | ArrayBuffer, callback: (err: any) => void): void {
 		this.client
-			.getFileContents(path, { format: "text" })
+			.getFileContents(this.pathtoFSPath(path), { format: "text" })
 			.then((existingData: string) => {
 				const newData = existingData + data;
-				return this.client.putFileContents(path, newData);
+				return this.client.putFileContents(this.pathtoFSPath(path), newData);
 			})
 			.then(() => callback(null))
 			.catch((err: any) => callback(err));

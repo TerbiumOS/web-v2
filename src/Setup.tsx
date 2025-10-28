@@ -311,12 +311,15 @@ export default function Setup() {
 		}, 150);
 		nextButtonClick = () => {
 			// TODO implement actual DB authentication
-			sessionStorage.setItem("new-user", JSON.stringify({
-				username: usernameRef.current?.value,
-				password: passwordRef.current?.value,
-				perm: "admin",
-				pfp: "/assets/img/default - pink.png"
-			}));
+			sessionStorage.setItem(
+				"new-user",
+				JSON.stringify({
+					username: usernameRef.current?.value,
+					password: passwordRef.current?.value,
+					perm: "admin",
+					pfp: "/assets/img/default - pink.png",
+				}),
+			);
 			Next(2.5);
 		};
 		return (
@@ -483,11 +486,11 @@ export default function Setup() {
 								ref={sendBTNRef}
 								className="cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150"
 								onMouseDown={() => {
-									sendBTNRef.current!.disabled = true
-									sendBTNRef.current!.innerText = "Email Sent"
+									sendBTNRef.current!.disabled = true;
+									sendBTNRef.current!.innerText = "Email Sent";
 									setTimeout(() => {
-										sendBTNRef.current!.disabled = false
-										sendBTNRef.current!.innerText = "Send Email"
+										sendBTNRef.current!.disabled = false;
+										sendBTNRef.current!.innerText = "Send Email";
 									}, 60000);
 								}}
 							>

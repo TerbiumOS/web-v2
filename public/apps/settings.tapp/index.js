@@ -160,6 +160,7 @@ const customWallpaper = () => {
 				case "fs":
 					tb.dialog.FileBrowser({
 						title: "Select a wallpaper from the file system",
+						local: true,
 						onOk: async filePath => {
 							const imgdata = await window.parent.tb.fs.promises.readFile(filePath, "base64");
 							tb.desktop.wallpaper.set("/system/etc/terbium/wallpapers/" + filePath.split("/").pop());
