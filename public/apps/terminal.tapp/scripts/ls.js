@@ -27,10 +27,7 @@ async function ls(args) {
 		try {
 			const match = args._raw.match(/\/mnt\/([^\/]+)\//) || path.match(/\/mnt\/([^\/]+)\//);
 			const davName = match ? match[1].toLowerCase() : "";
-			window.parent.tb.vfs.setServer(davName);
-			const client = window.parent.tb.vfs.currentServer.connection.client;
-			const np = args._raw.replace(`/mnt/${davName.toLowerCase()}/`, "") || path.replace(`/mnt/${davName.toLowerCase()}/`, "");
-			const contents = await client.getDirectoryContents(np);
+			const contents = await tb.vfs.servers.get(davName).connection.promises.readdir(`${path}/${args._raw}`);
 			for (const entry of contents) {
 				if (entry.type === "directory") {
 					displayOutput(`${entry.basename}/`);

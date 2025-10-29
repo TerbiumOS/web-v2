@@ -1,6 +1,6 @@
 import Cropper from "cropperjs";
 import Compressor from "compressorjs";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./sys/gui/styles/login.css";
 import "./sys/gui/styles/cropper.css";
 import "./sys/gui/styles/oobe.css";
@@ -8,6 +8,7 @@ import "./sys/gui/styles/dropdown.css";
 import pwd from "./sys/apis/Crypto";
 import { init } from "./init";
 import { fileExists, User } from "./sys/types";
+import { CheckIcon, XMarkIcon } from "@heroicons/react/24/solid";
 const pw = new pwd();
 
 export default function Setup() {
@@ -16,12 +17,10 @@ export default function Setup() {
 	const currentViewRef = useRef<HTMLDivElement | null>(null);
 	var nextButtonClick = () => void 0;
 
-	const Next = (type?: string) => {
+	const Next = (step?: number) => {
 		setBeforeSetup(currentStep);
-		if (type && type === "Local") {
-			setCurrentStep(2.1);
-		} else if (type && type === "Tauth") {
-			setCurrentStep(2.2);
+		if (step) {
+			setCurrentStep(step);
 		} else {
 			setCurrentStep(prevStep => Math.min(prevStep + 1, 5));
 		}
@@ -30,9 +29,137 @@ export default function Setup() {
 		setBeforeSetup(currentStep);
 		if (currentStep === 2.1 || currentStep === 2.2) {
 			setCurrentStep(2);
+		} else if (currentStep === 2.3 || currentStep === 2.4 || currentStep === 2.5) {
+			setCurrentStep(2.2);
+		} else if (currentStep === 3) {
+			if (sessionStorage.getItem("tacc")) {
+				setCurrentStep(2.5);
+			} else {
+				setCurrentStep(2.1);
+			}
 		} else {
 			setCurrentStep(prevStep => Math.max(prevStep - 1, 1));
 		}
+	};
+	const makePFP = () => {
+		const uploader = document.createElement("input");
+		uploader.type = "file";
+		uploader.accept = "img/*";
+		uploader.onchange = () => {
+			const files = uploader!.files;
+			const file = files![0];
+			const reader = new FileReader();
+			reader.onload = () => {
+				const img = document.createElement("img");
+				img.classList.add("opacity-0", "pointer-events-none");
+				img.src = reader.result as string;
+				img.onload = () => {
+					const cropper_container = document.createElement("div");
+					const cropper_container_styles = ["w-screen", "h-screen", "fixed", "top-0", "left-0", "right-0", "bottom-0", "z-999999", "bg-[#000000a6]", "flex", "flex-col", "justify-center", "items-center", "gap-[10px]"];
+					cropper_container_styles.forEach(style => cropper_container.classList.add(style));
+					const cropper_img_container = document.createElement("div");
+					cropper_img_container.className = "cropper-img-container";
+					let cropper_img_container_sizes = ["bg-[#ffffff0a]", "lg:w-[500px]", "lg:h-[500px]", "md:w-[400px]", "md:h-[400px]", "sm:w-[300px]", "sm:h-[300px]", "flex", "justify-center", "items-center", "rounded-[8px]", "overflow-hidden"];
+					cropper_img_container_sizes.forEach(size => cropper_img_container.classList.add(size));
+					const cropper_img = document.createElement("img");
+					cropper_img.src = img.src;
+					cropper_img.classList.add("cropper-img");
+					cropper_img_container.classList.add("w-[500px]");
+					cropper_img_container.classList.add("h-[500px]");
+					cropper_img.style.objectFit = "cover";
+					cropper_img.style.objectPosition = "center";
+					cropper_img_container.appendChild(cropper_img);
+					cropper_container.appendChild(cropper_img_container);
+					document.body.appendChild(cropper_container);
+					const cropper = new Cropper(cropper_img, { aspectRatio: 1, viewMode: 1, cropBoxResizable: false, movable: true, rotatable: true, scalable: true, responsive: true });
+					const buttons = document.createElement("div");
+					buttons.className = "flex w-[500px] justify-between items-center";
+					cropper_container.appendChild(buttons);
+					const save = document.createElement("button");
+					save.className = "save broken_button cursor-pointer";
+					save.innerText = "Save";
+					const save_styles = [
+						"bg-[#1d1d1d]",
+						"text-[#ffffff38]",
+						"border-[#ffffff22]",
+						"hover:bg-[#414141]",
+						"hover:text-[#ffffff8d]",
+						"focus:bg-[#ffffff1f]",
+						"focus:text-[#ffffff8d]",
+						"focus:border-[#73a9ffd6]",
+						"focus:ring-[#73a9ff74]",
+						"focus:outline-hidden",
+						"focus:ring-2",
+						"ring-[transparent]",
+						"ring-0",
+						"border-[1px]",
+						"font-[600]",
+						"px-[20px]",
+						"py-[8px]",
+						"h-[18px]",
+						"rounded-[6px]",
+						"transition",
+						"duration-150",
+					];
+					save_styles.forEach(style => save.classList.add(style));
+					save.onclick = () => {
+						const canvas = cropper.getCroppedCanvas();
+						const pfp = document.querySelector(".pfp");
+						canvas.toBlob(blob => {
+							new Compressor(blob as Blob, {
+								quality: 0.5,
+								success(result) {
+									const reader = new FileReader();
+									reader.readAsDataURL(result);
+									reader.onload = () => {
+										(pfp! as HTMLImageElement).style.background = `url(${reader.result})`;
+										(pfp! as HTMLImageElement).style.backgroundSize = "cover";
+										(pfp! as HTMLImageElement).style.backgroundPosition = "center";
+										(pfp! as HTMLImageElement).style.backgroundRepeat = "no-repeat";
+										(pfp! as HTMLImageElement).setAttribute("data-src", reader.result as string);
+										document.body.removeChild(cropper_container);
+									};
+								},
+							});
+						});
+					};
+					const cancel = document.createElement("button");
+					cancel.className = "cancel broken_button cursor-pointer";
+					cancel.innerText = "Cancel";
+					const cancel_styles = [
+						"bg-[#1d1d1d]",
+						"text-[#ffffff38]",
+						"border-[#ffffff22]",
+						"hover:bg-[#414141]",
+						"hover:text-[#ffffff8d]",
+						"focus:bg-[#ffffff1f]",
+						"focus:text-[#ffffff8d]",
+						"focus:border-[#73a9ffd6]",
+						"focus:ring-[#73a9ff74]",
+						"focus:outline-hidden",
+						"focus:ring-2",
+						"ring-[transparent]",
+						"ring-0",
+						"border-[1px]",
+						"font-[600]",
+						"px-[20px]",
+						"py-[8px]",
+						"h-[18px]",
+						"rounded-[6px]",
+						"transition",
+						"duration-150",
+					];
+					cancel_styles.forEach(style => cancel.classList.add(style));
+					cancel.onclick = () => {
+						document.body.removeChild(cropper_container);
+					};
+					buttons.appendChild(cancel);
+					buttons.appendChild(save);
+				};
+			};
+			reader.readAsDataURL(file);
+		};
+		uploader.click();
 	};
 	const saveData = async () => {
 		await init();
@@ -141,29 +268,284 @@ export default function Setup() {
 				<div className="relative flex flex-col justify-center items-end">
 					<div className="flex flex-row gap-2">
 						<button
-						className={`cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150 ${currentStep === 5 ? "translate-y-8 opacity-0 pointer-events-none" : ""}`}
-						onMouseDown={() => Next("Local")}
-					>
-						Local Account
-					</button>
-					<button
-						className={`cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150 ${currentStep === 5 ? "translate-y-8 opacity-0 pointer-events-none" : ""}`}
-						onMouseDown={() => Next("Tauth")}
-					>
-						Terbium Cloud&trade; Account
-					</button>
+							className={`cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150 ${currentStep === 5 ? "translate-y-8 opacity-0 pointer-events-none" : ""}`}
+							onMouseDown={() => Next(2.1)}
+						>
+							Local Account
+						</button>
+						<button
+							className={`cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150 ${currentStep === 5 ? "translate-y-8 opacity-0 pointer-events-none" : ""}`}
+							onMouseDown={() => Next(2.2)}
+						>
+							Terbium Cloud&trade; Account
+						</button>
 					</div>
 				</div>
 			</div>
-		)
-	}
+		);
+	};
 	const Step2CA = () => {
+		const usernameRef = useRef<HTMLInputElement>(null);
+		const passwordRef = useRef<HTMLInputElement>(null);
+		const [connected, setConnected] = useState(false);
+		useEffect(() => {
+			const test = async () => {
+				try {
+					// Keeping disabled until we finish
+					const response = await fetch("https://auth.terbiumon.top");
+					if (!response.ok) {
+						setConnected(false);
+						Back();
+					}
+					setConnected(true);
+				} catch {
+					setConnected(false);
+					Back();
+				}
+			};
+			test();
+		}, [connected]);
+		setTimeout(() => {
+			currentViewRef.current?.classList.remove("-translate-x-6");
+			currentViewRef.current?.classList.remove("opacity-0");
+		}, 150);
+		nextButtonClick = () => {
+			// TODO implement actual DB authentication
+			sessionStorage.setItem(
+				"new-user",
+				JSON.stringify({
+					username: usernameRef.current?.value,
+					password: passwordRef.current?.value,
+					perm: "admin",
+					pfp: "/assets/img/default - pink.png",
+				}),
+			);
+			Next(2.5);
+		};
 		return (
-			<div>
-				<h1>Terbium Cloud&trade; Account Setup is coming soon!</h1>
+			<div
+				ref={el => {
+					currentViewRef.current = el;
+				}}
+				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center"
+			>
+				{connected ? (
+					<div className="flex flex-col justify-center items-center">
+						<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Sign in with Terbium Cloud&trade;</span>
+						<div className="relative flex flex-col justify-center items-end">
+							<div className="flex flex-col gap-2">
+								<input
+									ref={usernameRef}
+									type="text"
+									className="username cursor-[var(--cursor-text)] rounded-[6px] px-[10px] py-[8px] text-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:placeholder-[#ffffff48] focus:text-[#ffffff] focus:outline-hidden focus:ring-2"
+									placeholder="username"
+									onKeyDown={(e: any) => {
+										if (e.key === "Enter" && passwordRef.current) {
+											passwordRef.current.focus();
+										}
+									}}
+								/>
+								<input
+									ref={passwordRef}
+									type="password"
+									className="password cursor-[var(--cursor-text)] rounded-[6px] px-[10px] py-[8px] text-[#ffffff] caret-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:text-[#ffffff] focus:placeholder-[#ffffff48] focus:outline-hidden focus:ring-2"
+									placeholder="password"
+									onKeyDown={(e: any) => {
+										if (e.key === "Enter" && passwordRef.current) {
+											passwordRef.current.focus();
+										}
+									}}
+								/>
+								<div className="flex flex-row gap-2">
+									<button
+										className="cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150"
+										onMouseDown={() => Next(2.3)}
+									>
+										Create Account
+									</button>
+									<button
+										className="cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150"
+										onMouseDown={() => Next(2.4)}
+									>
+										Forgot Password
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				) : (
+					<div>
+						<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Terbium Cloud&trade;</span>
+						<p>Connecting to Authentication servers please wait...</p>
+					</div>
+				)}
 			</div>
-		)
-	}
+		);
+	};
+	const Step2CR = () => {
+		const usernameRef = useRef<HTMLInputElement>(null);
+		const passwordRef = useRef<HTMLInputElement>(null);
+		const pfpRef = useRef<HTMLDivElement>(null);
+		setTimeout(() => {
+			currentViewRef.current?.classList.remove("-translate-x-6");
+			currentViewRef.current?.classList.remove("opacity-0");
+		}, 150);
+		nextButtonClick = () => {
+			Next(2.5);
+		};
+		return (
+			<div
+				ref={el => {
+					currentViewRef.current = el;
+				}}
+				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center"
+			>
+				<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Create a Terbium Cloud&trade; account</span>
+				<div className="relative flex flex-col justify-center items-end">
+					<div className="flex flex-col gap-2 items-center">
+						<div
+							ref={pfpRef}
+							className="pfp relative group w-[100px] h-[100px] rounded-[50%] bg-[#ffffff0a] border-[#3b3b3b] border-[2px] transition duration-150 ring-[transparent] ring-0 cursor-pointer"
+							onMouseDown={() => {
+								makePFP();
+							}}
+						>
+							<div className="uploader opacity-0 size-full rounded-[50%] bg-[#00000060] transition duration-150 group-hover:opacity-100 cursor-pointer"></div>
+							<p className="absolute top-1/2 cursor-pointer left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 text-[#cccccc] text-[16px] font-[600] group-hover:opacity-100 transition duration-150 pointer-events-none">Upload</p>
+						</div>
+						<input
+							ref={usernameRef}
+							type="text"
+							className="username cursor-[var(--cursor-text)] rounded-[6px] px-[10px] py-[8px] text-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:placeholder-[#ffffff48] focus:text-[#ffffff] focus:outline-hidden focus:ring-2"
+							placeholder="username"
+							onKeyDown={(e: any) => {
+								if (e.key === "Enter" && passwordRef.current) {
+									passwordRef.current.focus();
+								}
+							}}
+						/>
+						<input
+							ref={passwordRef}
+							type="password"
+							className="password cursor-[var(--cursor-text)] rounded-[6px] px-[10px] py-[8px] text-[#ffffff] caret-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:text-[#ffffff] focus:placeholder-[#ffffff48] focus:outline-hidden focus:ring-2"
+							placeholder="password"
+							onKeyDown={(e: any) => {
+								if (e.key === "Enter" && passwordRef.current) {
+									passwordRef.current.focus();
+								}
+							}}
+						/>
+						<button
+							className="cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150"
+							onMouseDown={() => Next(2.2)}
+						>
+							Already have an account? Sign in
+						</button>
+					</div>
+				</div>
+			</div>
+		);
+	};
+	const Step2FG = () => {
+		const usernameRef = useRef<HTMLInputElement>(null);
+		const sendBTNRef = useRef<HTMLButtonElement>(null);
+		setTimeout(() => {
+			currentViewRef.current?.classList.remove("-translate-x-6");
+			currentViewRef.current?.classList.remove("opacity-0");
+		}, 150);
+		nextButtonClick = () => {
+			Next(2.2);
+		};
+		return (
+			<div
+				ref={el => {
+					currentViewRef.current = el;
+				}}
+				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center"
+			>
+				<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Reset Terbium Cloud&trade; password</span>
+				<div className="relative flex flex-col justify-center items-end">
+					<div className="flex flex-col gap-2 items-center">
+						<input
+							ref={usernameRef}
+							type="text"
+							className="username cursor-[var(--cursor-text)] rounded-[6px] px-[10px] py-[8px] text-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:placeholder-[#ffffff48] focus:text-[#ffffff] focus:outline-hidden focus:ring-2"
+							placeholder="username"
+							onKeyDown={(e: any) => {
+								// TODO
+							}}
+						/>
+						<div className="flex flex-row gap-2">
+							<button
+								className="cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150"
+								onMouseDown={() => Next(2.2)}
+							>
+								Back to Sign in
+							</button>
+							<button
+								ref={sendBTNRef}
+								className="cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150"
+								onMouseDown={() => {
+									sendBTNRef.current!.disabled = true;
+									sendBTNRef.current!.innerText = "Email Sent";
+									setTimeout(() => {
+										sendBTNRef.current!.disabled = false;
+										sendBTNRef.current!.innerText = "Send Email";
+									}, 60000);
+								}}
+							>
+								Send Email
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	};
+	const Step2CF = () => {
+		const [hasSettings, setHasSettings] = useState(false);
+		const userdata = JSON.parse(sessionStorage.getItem("new-user") as string) || {};
+		setTimeout(() => {
+			currentViewRef.current?.classList.remove("-translate-x-6");
+			currentViewRef.current?.classList.remove("opacity-0");
+		}, 150);
+		nextButtonClick = () => {
+			if (!hasSettings) {
+				Next(3);
+				sessionStorage.setItem("tacc", "true");
+			} else {
+				Next(5);
+			}
+		};
+		return (
+			<div
+				ref={el => {
+					currentViewRef.current = el;
+				}}
+				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center"
+			>
+				<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Confirm Identity</span>
+				<img src={userdata.pfp} className="w-[100px] h-[100px] rounded-[50%] mb-[10px]" />
+				<p className="text-[#ffffffb3] text-center lg:w-[400px] md:w-[300px] sm:w-[250px]">Welcome, {userdata.username}!</p>
+				{hasSettings ? (
+					<div className="flex flex-col justify-center items-center">
+						<div className="flex flex-row items-center justify-center gap-4">
+							<CheckIcon className="w-[50px] h-[50px] text-green-500" />
+							<p className="text-[#ffffffb3] text-center text-lg">We found Terbium Settings attached to your account</p>
+						</div>
+					</div>
+				) : (
+					<div className="flex flex-col">
+						<div className="flex flex-row items-center justify-center gap-4">
+							<XMarkIcon className="w-[50px] h-[50px] text-red-500 my-[20px]" />
+							<p className="text-[#ffffffb3] text-center text-lg">No Terbium Settings were detected</p>
+						</div>
+					</div>
+				)}
+				<p>Click next to use this account</p>
+			</div>
+		);
+	};
 	const Step2L = () => {
 		setTimeout(() => {
 			currentViewRef.current?.classList.remove("-translate-x-6");
@@ -207,133 +589,16 @@ export default function Setup() {
 				ref={el => {
 					currentViewRef.current = el;
 				}}
-				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center"
+				className="duration-150 -translate-x-6 opacity-0 flex-col justify-center items-center"
 			>
-				<div className="relative flex flex-col justify-center items-end">
+				<div className="relative flex flex-col justify-center">
 					<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text mb-[20px]">Setup your account.</span>
-					<div className="flex flex-col gap-[10px] justify-center items-center mr-[40px]">
+					<div className="flex flex-col gap-[10px] justify-center items-center">
 						<div
 							ref={pfpRef}
 							className="pfp relative group w-[100px] h-[100px] rounded-[50%] bg-[#ffffff0a] border-[#3b3b3b] border-[2px] transition duration-150 ring-[transparent] ring-0 cursor-pointer"
 							onMouseDown={() => {
-								const uploader = document.createElement("input");
-								uploader.type = "file";
-								uploader.accept = "img/*";
-								uploader.onchange = () => {
-									const files = uploader!.files;
-									const file = files![0];
-									const reader = new FileReader();
-									reader.onload = () => {
-										const img = document.createElement("img");
-										img.classList.add("opacity-0", "pointer-events-none");
-										img.src = reader.result as string;
-										img.onload = () => {
-											const cropper_container = document.createElement("div");
-											const cropper_container_styles = ["w-screen", "h-screen", "fixed", "top-0", "left-0", "right-0", "bottom-0", "z-999999", "bg-[#000000a6]", "flex", "flex-col", "justify-center", "items-center", "gap-[10px]"];
-											cropper_container_styles.forEach(style => cropper_container.classList.add(style));
-											const cropper_img_container = document.createElement("div");
-											cropper_img_container.className = "cropper-img-container";
-											let cropper_img_container_sizes = ["bg-[#ffffff0a]", "lg:w-[500px]", "lg:h-[500px]", "md:w-[400px]", "md:h-[400px]", "sm:w-[300px]", "sm:h-[300px]", "flex", "justify-center", "items-center", "rounded-[8px]", "overflow-hidden"];
-											cropper_img_container_sizes.forEach(size => cropper_img_container.classList.add(size));
-											const cropper_img = document.createElement("img");
-											cropper_img.src = img.src;
-											cropper_img.classList.add("cropper-img");
-											cropper_img_container.classList.add("w-[500px]");
-											cropper_img_container.classList.add("h-[500px]");
-											cropper_img.style.objectFit = "cover";
-											cropper_img.style.objectPosition = "center";
-											cropper_img_container.appendChild(cropper_img);
-											cropper_container.appendChild(cropper_img_container);
-											document.body.appendChild(cropper_container);
-											const cropper = new Cropper(cropper_img, { aspectRatio: 1, viewMode: 1, cropBoxResizable: false, movable: true, rotatable: true, scalable: true, responsive: true });
-											const buttons = document.createElement("div");
-											buttons.className = "flex w-[500px] justify-between items-center";
-											cropper_container.appendChild(buttons);
-											const save = document.createElement("button");
-											save.className = "save broken_button cursor-pointer";
-											save.innerText = "Save";
-											const save_styles = [
-												"bg-[#1d1d1d]",
-												"text-[#ffffff38]",
-												"border-[#ffffff22]",
-												"hover:bg-[#414141]",
-												"hover:text-[#ffffff8d]",
-												"focus:bg-[#ffffff1f]",
-												"focus:text-[#ffffff8d]",
-												"focus:border-[#73a9ffd6]",
-												"focus:ring-[#73a9ff74]",
-												"focus:outline-hidden",
-												"focus:ring-2",
-												"ring-[transparent]",
-												"ring-0",
-												"border-[1px]",
-												"font-[600]",
-												"px-[20px]",
-												"py-[8px]",
-												"h-[18px]",
-												"rounded-[6px]",
-												"transition",
-												"duration-150",
-											];
-											save_styles.forEach(style => save.classList.add(style));
-											save.onclick = () => {
-												const canvas = cropper.getCroppedCanvas();
-												const pfp = document.querySelector(".pfp");
-												canvas.toBlob(blob => {
-													new Compressor(blob as Blob, {
-														quality: 0.5,
-														success(result) {
-															const reader = new FileReader();
-															reader.readAsDataURL(result);
-															reader.onload = () => {
-																(pfp! as HTMLImageElement).style.background = `url(${reader.result})`;
-																(pfp! as HTMLImageElement).style.backgroundSize = "cover";
-																(pfp! as HTMLImageElement).style.backgroundPosition = "center";
-																(pfp! as HTMLImageElement).style.backgroundRepeat = "no-repeat";
-																(pfp! as HTMLImageElement).setAttribute("data-src", reader.result as string);
-																document.body.removeChild(cropper_container);
-															};
-														},
-													});
-												});
-											};
-											const cancel = document.createElement("button");
-											cancel.className = "cancel broken_button cursor-pointer";
-											cancel.innerText = "Cancel";
-											const cancel_styles = [
-												"bg-[#1d1d1d]",
-												"text-[#ffffff38]",
-												"border-[#ffffff22]",
-												"hover:bg-[#414141]",
-												"hover:text-[#ffffff8d]",
-												"focus:bg-[#ffffff1f]",
-												"focus:text-[#ffffff8d]",
-												"focus:border-[#73a9ffd6]",
-												"focus:ring-[#73a9ff74]",
-												"focus:outline-hidden",
-												"focus:ring-2",
-												"ring-[transparent]",
-												"ring-0",
-												"border-[1px]",
-												"font-[600]",
-												"px-[20px]",
-												"py-[8px]",
-												"h-[18px]",
-												"rounded-[6px]",
-												"transition",
-												"duration-150",
-											];
-											cancel_styles.forEach(style => cancel.classList.add(style));
-											cancel.onclick = () => {
-												document.body.removeChild(cropper_container);
-											};
-											buttons.appendChild(cancel);
-											buttons.appendChild(save);
-										};
-									};
-									reader.readAsDataURL(file);
-								};
-								uploader.click();
+								makePFP();
 							}}
 						>
 							<div className="uploader opacity-0 size-full rounded-[50%] bg-[#00000060] transition duration-150 group-hover:opacity-100 cursor-pointer"></div>
@@ -366,24 +631,24 @@ export default function Setup() {
 									}}
 								/>
 							</div>
-							{showSec ? (
-								<div className="security-section mt-4 p-3 rounded bg-[#ffffff0a] border border-[#ffffff22] w-[250]">
-									<div className="font-semibold text-[#ffffffa0] mb-2">Security Question (optional)</div>
-									<input
-										ref={secQ}
-										type="text"
-										className="security-question mb-2 w-full rounded-[6px] px-[10px] py-[8px] text-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:text-[#ffffff] focus:placeholder-[#ffffff48] focus:outline-hidden focus:ring-2"
-										placeholder="Enter a security question"
-									/>
-									<input
-										ref={secA}
-										type="text"
-										className="security-answer w-full rounded-[6px] px-[10px] py-[8px] text-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:text-[#ffffff] focus:placeholder-[#ffffff48] focus:outline-hidden focus:ring-2"
-										placeholder="Enter your answer"
-									/>
-								</div>
-							) : null}
 						</div>
+						{showSec ? (
+							<div className="security-section mt-4 p-3 rounded bg-[#ffffff0a] border border-[#ffffff22] w-[250]">
+								<div className="font-semibold text-[#ffffffa0] mb-2">Security Question (optional)</div>
+								<input
+									ref={secQ}
+									type="text"
+									className="security-question mb-2 w-full rounded-[6px] px-[10px] py-[8px] text-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:text-[#ffffff] focus:placeholder-[#ffffff48] focus:outline-hidden focus:ring-2"
+									placeholder="Enter a security question"
+								/>
+								<input
+									ref={secA}
+									type="text"
+									className="security-answer w-full rounded-[6px] px-[10px] py-[8px] text-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:text-[#ffffff] focus:placeholder-[#ffffff48] focus:outline-hidden focus:ring-2"
+									placeholder="Enter your answer"
+								/>
+							</div>
+						) : null}
 					</div>
 				</div>
 			</div>
@@ -606,7 +871,7 @@ export default function Setup() {
 								Previous
 							</button>
 						)}
-						{(currentStep > 2 && currentStep < 5) && (
+						{currentStep > 2 && currentStep < 5 && (
 							<button
 								ref={el => {
 									currentStep === 4 && (currentMotionEl.current = el);
@@ -635,7 +900,27 @@ export default function Setup() {
 					<img src="/assets/img/logo.png" alt="TB" className="w-[240px] lg:w-[480px] h-auto" />
 				</div>
 				<div className="sm:h-full sm:w-1/2 h-1/2 w-full flex flex-col justify-start items-center text-center sm:justify-center sm:items-center overflow-y-hidden">
-					{currentStep === 1 ? <Step1 /> : currentStep === 2 ? <Step2 /> : currentStep === 2.1 ? <Step2L /> : currentStep === 2.2 ? <Step2CA /> : currentStep === 3 ? <Step3 /> : currentStep === 4 ? <Step4 /> : currentStep === 5 ? <Step5 /> : null}
+					{currentStep === 1 ? (
+						<Step1 />
+					) : currentStep === 2 ? (
+						<Step2 />
+					) : currentStep === 2.1 ? (
+						<Step2L />
+					) : currentStep === 2.2 ? (
+						<Step2CA />
+					) : currentStep === 2.3 ? (
+						<Step2CR />
+					) : currentStep === 2.4 ? (
+						<Step2FG />
+					) : currentStep === 2.5 ? (
+						<Step2CF />
+					) : currentStep === 3 ? (
+						<Step3 />
+					) : currentStep === 4 ? (
+						<Step4 />
+					) : currentStep === 5 ? (
+						<Step5 />
+					) : null}
 				</div>
 			</div>
 			<Buttons />

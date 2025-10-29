@@ -348,7 +348,7 @@ export function Permissions({ title, message, onOk, onCancel }: dialogProps) {
 	);
 }
 
-export function FileBrowser({ title, filter, onOk, onCancel }: dialogProps) {
+export function FileBrowser({ title, filter, local, onOk, onCancel }: dialogProps) {
 	if (!title) throw new Error("title is required");
 	const [selectedEntry, setSelectedEntry] = useState<string | null>(null);
 	const [currentDirectory, setCurrentDirectory] = useState<string>("storage devices");
@@ -412,17 +412,24 @@ export function FileBrowser({ title, filter, onOk, onCancel }: dialogProps) {
 				setStorageInfo({ usage: usage as number, quota: quota as number });
 			});
 			setLoading(false);
-			const entries = [
-				{
-					entry: "File System",
-					type: "internal",
-				},
-				...Array.from(window.tb.vfs.servers.values()).map(server => ({
-					entry: server.name,
-					type: "external",
-					connected: server.connected,
-				})),
-			];
+			const entries = local
+				? [
+						{
+							entry: "File System",
+							type: "internal",
+						},
+					]
+				: [
+						{
+							entry: "File System",
+							type: "internal",
+						},
+						...Array.from(window.tb.vfs.servers.values()).map(server => ({
+							entry: server.name,
+							type: "external",
+							connected: server.connected,
+						})),
+					];
 			setFileEntries(entries);
 			setShowBackButton(false);
 		} else {
@@ -597,7 +604,7 @@ export function FileBrowser({ title, filter, onOk, onCancel }: dialogProps) {
 	);
 }
 
-export function DirectoryBrowser({ title, defualtDir, onOk, onCancel }: dialogProps) {
+export function DirectoryBrowser({ title, defualtDir, local, onOk, onCancel }: dialogProps) {
 	const [selectedEntry, setSelectedEntry] = useState<string | null>(null);
 	const [fileEntries, setFileEntries] = useState<any[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
@@ -654,17 +661,24 @@ export function DirectoryBrowser({ title, defualtDir, onOk, onCancel }: dialogPr
 			navigator.storage.estimate().then(({ usage, quota }) => {
 				setStorageInfo({ usage: usage as number, quota: quota as number });
 			});
-			const entries = [
-				{
-					entry: "File System",
-					type: "internal",
-				},
-				...Array.from(window.tb.vfs.servers.values()).map(server => ({
-					entry: server.name,
-					type: "external",
-					connected: server.connected,
-				})),
-			];
+			const entries = local
+				? [
+						{
+							entry: "File System",
+							type: "internal",
+						},
+					]
+				: [
+						{
+							entry: "File System",
+							type: "internal",
+						},
+						...Array.from(window.tb.vfs.servers.values()).map(server => ({
+							entry: server.name,
+							type: "external",
+							connected: server.connected,
+						})),
+					];
 			setFileEntries(entries);
 			setShowBackButton(false);
 			setLoading(false);
@@ -858,7 +872,7 @@ export function DirectoryBrowser({ title, defualtDir, onOk, onCancel }: dialogPr
 	);
 }
 
-export function SaveFile({ title, defualtDir, filename, onOk, onCancel }: dialogProps) {
+export function SaveFile({ title, defualtDir, filename, local, onOk, onCancel }: dialogProps) {
 	if (!title) throw new Error("title is required");
 	const [selectedEntry, setSelectedEntry] = useState<string | null>(null);
 	const [fileEntries, setFileEntries] = useState<any[]>([]);
@@ -913,17 +927,24 @@ export function SaveFile({ title, defualtDir, filename, onOk, onCancel }: dialog
 			navigator.storage.estimate().then(({ usage, quota }) => {
 				setStorageInfo({ usage: usage as number, quota: quota as number });
 			});
-			const entries = [
-				{
-					entry: "File System",
-					type: "internal",
-				},
-				...Array.from(window.tb.vfs.servers.values()).map(server => ({
-					entry: server.name,
-					type: "external",
-					connected: server.connected,
-				})),
-			];
+			const entries = local
+				? [
+						{
+							entry: "File System",
+							type: "internal",
+						},
+					]
+				: [
+						{
+							entry: "File System",
+							type: "internal",
+						},
+						...Array.from(window.tb.vfs.servers.values()).map(server => ({
+							entry: server.name,
+							type: "external",
+							connected: server.connected,
+						})),
+					];
 			setFileEntries(entries);
 			setShowBackButton(false);
 			setLoading(false);

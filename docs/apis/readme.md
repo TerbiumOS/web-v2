@@ -457,7 +457,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **FileBrowser**
     - Description: Simple FileBrowser Dialog
     - Parameters:
-      - `props: { title: string, filter: string, onOk: Function }` - FileBrowser dialog properties.
+      - `props: { title: string, filter: string, onOk: Function, onCancel: Function, local: boolean }` - FileBrowser dialog properties.
     - Example:
       ```javascript
       await tb.dialog.FileBrowser({
@@ -470,7 +470,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **DirectoryBrowser**
     - Description: Simple FileBrowser Dialog
     - Parameters:
-      - `props: { title: string, filter: string, onOk: Function }` - FileBrowser dialog properties.
+      - `props: { title: string, filter: string, onOk: Function, onCancel: Function, local: boolean }` - FileBrowser dialog properties.
     - Example:
       ```javascript
       await tb.dialog.DirectoryBrowser({
@@ -483,7 +483,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **SaveFile**
     - Description: Simple File Saving Dialog
     - Parameters:
-      - `props: { title: string, defualtDir: string, filename: string, onOk: Function }` - SaveFile dialog properties.
+      - `props: { title: string, defualtDir: string, filename: string, onOk: Function, onCancel: Function, local: boolean }` - SaveFile dialog properties.
     - Example:
     ```javascript
     await tb.dialog.SaveFile({
