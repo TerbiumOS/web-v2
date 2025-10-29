@@ -19,7 +19,7 @@ const Root = () => {
 	useEffect(() => {
 		const tempTransport = async () => {
 			const connection = new BareMuxConnection("/baremux/worker.js");
-			await connection.setTransport("/epoxy/index.mjs", [{ wisp: "wss://wisp.terbiumon.top/wisp/" }]);
+			await connection.setTransport("/epoxy/index.mjs", [{ wisp: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/` }]);
 			const tbOn = async () => {
 				while (!window.tb.system?.version) {
 					await new Promise(res => setTimeout(res, 50));

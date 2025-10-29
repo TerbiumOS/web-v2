@@ -9,6 +9,7 @@ import pwd from "./sys/apis/Crypto";
 import { init } from "./init";
 import { fileExists, User } from "./sys/types";
 import { CheckIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { XOR } from "./sys/apis/Xor";
 const pw = new pwd();
 
 export default function Setup() {
@@ -16,7 +17,6 @@ export default function Setup() {
 	const [currentStep, setCurrentStep] = useState(1);
 	const currentViewRef = useRef<HTMLDivElement | null>(null);
 	var nextButtonClick = () => void 0;
-
 	const Next = (step?: number) => {
 		setBeforeSetup(currentStep);
 		if (step) {
@@ -292,7 +292,7 @@ export default function Setup() {
 			const test = async () => {
 				try {
 					// Keeping disabled until we finish
-					const response = await fetch("https://auth.terbiumon.top");
+					const response = await fetch(`/service/${XOR.encode(`https://auth.terbiumon.top/ping`)}`, { method: "GET" });
 					if (!response.ok) {
 						setConnected(false);
 						Back();
@@ -310,6 +310,7 @@ export default function Setup() {
 			currentViewRef.current?.classList.remove("opacity-0");
 		}, 150);
 		nextButtonClick = () => {
+			if (!connected) return;
 			// TODO implement actual DB authentication
 			sessionStorage.setItem(
 				"new-user",
@@ -386,11 +387,22 @@ export default function Setup() {
 		const usernameRef = useRef<HTMLInputElement>(null);
 		const passwordRef = useRef<HTMLInputElement>(null);
 		const pfpRef = useRef<HTMLDivElement>(null);
+		const emailRef = useRef<HTMLInputElement>(null);
 		setTimeout(() => {
 			currentViewRef.current?.classList.remove("-translate-x-6");
 			currentViewRef.current?.classList.remove("opacity-0");
 		}, 150);
 		nextButtonClick = () => {
+			// TODO implement actual DB registration
+			sessionStorage.setItem(
+				"new-user",
+				JSON.stringify({
+					username: usernameRef.current?.value,
+					password: passwordRef.current?.value,
+					perm: "admin",
+					pfp: pfpRef.current?.getAttribute("data-src"),
+				}),
+			);
 			Next(2.5);
 		};
 		return (
@@ -430,8 +442,19 @@ export default function Setup() {
 							className="password cursor-[var(--cursor-text)] rounded-[6px] px-[10px] py-[8px] text-[#ffffff] caret-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:text-[#ffffff] focus:placeholder-[#ffffff48] focus:outline-hidden focus:ring-2"
 							placeholder="password"
 							onKeyDown={(e: any) => {
-								if (e.key === "Enter" && passwordRef.current) {
-									passwordRef.current.focus();
+								if (e.key === "Enter" && emailRef.current) {
+									emailRef.current.focus();
+								}
+							}}
+						/>
+						<input
+							ref={emailRef}
+							type="text"
+							className="email cursor-[var(--cursor-text)] rounded-[6px] px-[10px] py-[8px] text-[#ffffff] caret-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:text-[#ffffff] focus:placeholder-[#ffffff48] focus:outline-hidden focus:ring-2"
+							placeholder="email address"
+							onKeyDown={(e: any) => {
+								if (e.key === "Enter") {
+									// TODO
 								}
 							}}
 						/>
@@ -449,11 +472,15 @@ export default function Setup() {
 	const Step2FG = () => {
 		const usernameRef = useRef<HTMLInputElement>(null);
 		const sendBTNRef = useRef<HTMLButtonElement>(null);
+		const [emailSent, setEmailSent] = useState(false);
 		setTimeout(() => {
 			currentViewRef.current?.classList.remove("-translate-x-6");
 			currentViewRef.current?.classList.remove("opacity-0");
 		}, 150);
 		nextButtonClick = () => {
+			if (!emailSent) {
+				// TODO fix email sending
+			}
 			Next(2.2);
 		};
 		return (
@@ -485,11 +512,12 @@ export default function Setup() {
 							<button
 								ref={sendBTNRef}
 								className="cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150"
+								disabled={emailSent}
 								onMouseDown={() => {
-									sendBTNRef.current!.disabled = true;
+									setEmailSent(true);
 									sendBTNRef.current!.innerText = "Email Sent";
 									setTimeout(() => {
-										sendBTNRef.current!.disabled = false;
+										setEmailSent(false);
 										sendBTNRef.current!.innerText = "Send Email";
 									}, 60000);
 								}}
@@ -509,6 +537,11 @@ export default function Setup() {
 			currentViewRef.current?.classList.remove("-translate-x-6");
 			currentViewRef.current?.classList.remove("opacity-0");
 		}, 150);
+		useEffect(() => {
+			if (sessionStorage.getItem("tacc-settings")) {
+				setHasSettings(true);
+			}
+		}, [hasSettings]);
 		nextButtonClick = () => {
 			if (!hasSettings) {
 				Next(3);
