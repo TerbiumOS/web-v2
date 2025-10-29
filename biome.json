@@ -12,8 +12,7 @@
 		"enabled": true,
 		"indentStyle": "tab",
 		"indentWidth": 4,
-		"lineWidth": 320,
-		"formatWithErrors": true
+		"lineWidth": 320
 	},
 	"css": {
 		"parser": {
