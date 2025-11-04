@@ -136,18 +136,17 @@ tb_island.addControl({
 				text: "Go To",
 				click: async () => {
 					const response = await tb.dialog.Message({
-						title: "Enter a name for the new folder",
+						title: "Enter the directory to navigate to",
 						defaultValue: "",
 						onOk: async response => {
-							await window.parent.tb.fs.exists(response, async exists => {
-								if (exists) openPath(response);
-								else {
-									tb.dialog.Alert({
-										title: "Error",
-										message: `Cannot find ${response}. Check your spelling and try again.`,
-									});
-								}
-							});
+							try {
+								openPath(response);
+							} catch {
+								tb.dialog.Alert({
+									title: "Error",
+									message: `Cannot find ${response}. Check your spelling and try again.`,
+								});
+							}
 						},
 					});
 				},
