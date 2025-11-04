@@ -45,20 +45,20 @@ async function ls(args) {
 		try {
 			const entries = await tb.sh.promises.ls(path + args._raw);
 			entries.forEach(entry => {
-				displayOutput(entry);
+				displayOutput(entry.name);
 			});
 			createNewCommandInput();
 		} catch {
 			const entries = await tb.sh.promises.ls(args._raw);
 			entries.forEach(entry => {
-				displayOutput(entry);
+				displayOutput(entry.name);
 			});
 			createNewCommandInput();
 		}
 	} else {
 		const entries = await tb.sh.promises.ls(path);
 		entries.forEach(entry => {
-			displayOutput(entry);
+			displayOutput(entry.name);
 		});
 		createNewCommandInput();
 	}
