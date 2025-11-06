@@ -220,58 +220,92 @@ renderAccounts();
 
 const createAccount = async () => {
 	const askNewAccountDetails = async () => {
-		await tb.dialog.Message({
-			title: "Create Username",
-			onOk: async username => {
-				const data = {};
-				data["id"] = username;
-				data["username"] = username;
-				await tb.dialog.Message({
-					title: "Create Password",
-					onOk: async password => {
-						if (password !== "") {
-							data["password"] = await tb.crypto(password);
-						} else {
-							data["password"] = false;
+		const makeAccount = async () => {
+			await tb.dialog.Message({
+				title: "Create Username",
+				onOk: async username => {
+					const data = {};
+					data["id"] = username;
+					data["username"] = username;
+					await tb.dialog.Message({
+						title: "Create Password",
+						onOk: async password => {
+							if (password !== "") {
+								data["password"] = await tb.crypto(password);
+							} else {
+								data["password"] = false;
+							}
+							await tb.dialog.Select({
+								title: "Do you want to set up a security question?",
+								options: [
+									{
+										text: "Yes",
+										value: "yes",
+									},
+									{
+										text: "No",
+										value: "no",
+									},
+								],
+								onOk: async securityChoice => {
+									if (securityChoice === "yes") {
+										await tb.dialog.Message({
+											title: "Set Security Question",
+											onOk: async question => {
+												await tb.dialog.Message({
+													title: "Set Security Answer",
+													onOk: async answer => {
+														data["securityQuestion"] = {
+															question: question,
+															answer: await tb.crypto(answer),
+														};
+														askProfilePicture(data);
+													},
+												});
+											},
+										});
+									} else {
+										askProfilePicture(data);
+									}
+								},
+							});
+						},
+					});
+				},
+			});
+		};
+		const ping = await fetch(`/service/${await window.parent.tb.proxy.encode(`https://auth.terbiumon.top/ping`, "XOR")}`, { method: "GET" })
+		if (ping.ok) {
+			await tb.dialog.Select({
+			title: "Select Account Type",
+			options: [
+				{
+					text: "Local Account",
+					value: "user",
+				},
+				{
+					text: "Terbium Cloud Account",
+					value: "tacc",
+				},
+			],
+			onOk: async accountType => {
+				if (accountType === "user") {
+					makeAccount();
+				} else {
+					await tb.dialog.WebAuth({
+						title: "Terbium Cloud Authentication",
+						onOk: async (username, password) => {
+							try {
+								// TODO Add actual auth n stuff
+							} catch {}
 						}
-						await tb.dialog.Select({
-							title: "Do you want to set up a security question?",
-							options: [
-								{
-									text: "Yes",
-									value: "yes",
-								},
-								{
-									text: "No",
-									value: "no",
-								},
-							],
-							onOk: async securityChoice => {
-								if (securityChoice === "yes") {
-									await tb.dialog.Message({
-										title: "Set Security Question",
-										onOk: async question => {
-											await tb.dialog.Message({
-												title: "Set Security Answer",
-												onOk: async answer => {
-													data["securityQuestion"] = {
-														question: question,
-														answer: await tb.crypto(answer),
-													};
-													askProfilePicture(data);
-												},
-											});
-										},
-									});
-								} else {
-									askProfilePicture(data);
-								}
-							},
-						});
-					},
-				});
+					});
+				}
 			},
 		});
+		} else {
+			makeAccount();
+		}
 	};
 
 	const askProfilePicture = async data => {
