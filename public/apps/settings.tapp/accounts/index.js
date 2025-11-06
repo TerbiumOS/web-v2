@@ -274,35 +274,35 @@ const createAccount = async () => {
 				},
 			});
 		};
-		const ping = await fetch(`/service/${await window.parent.tb.proxy.encode(`https://auth.terbiumon.top/ping`, "XOR")}`, { method: "GET" })
+		const ping = await fetch(`/service/${await window.parent.tb.proxy.encode(`https://auth.terbiumon.top/ping`, "XOR")}`, { method: "GET" });
 		if (ping.ok) {
 			await tb.dialog.Select({
-			title: "Select Account Type",
-			options: [
-				{
-					text: "Local Account",
-					value: "user",
+				title: "Select Account Type",
+				options: [
+					{
+						text: "Local Account",
+						value: "user",
+					},
+					{
+						text: "Terbium Cloud Account",
+						value: "tacc",
+					},
+				],
+				onOk: async accountType => {
+					if (accountType === "user") {
+						makeAccount();
+					} else {
+						await tb.dialog.WebAuth({
+							title: "Terbium Cloud Authentication",
+							onOk: async (username, password) => {
+								try {
+									// TODO Add actual auth n stuff
+								} catch {}
+							},
+						});
+					}
 				},
-				{
-					text: "Terbium Cloud Account",
-					value: "tacc",
-				},
-			],
-			onOk: async accountType => {
-				if (accountType === "user") {
-					makeAccount();
-				} else {
-					await tb.dialog.WebAuth({
-						title: "Terbium Cloud Authentication",
-						onOk: async (username, password) => {
-							try {
-								// TODO Add actual auth n stuff
-							} catch {}
-						}
-					});
-				}
-			},
-		});
+			});
 		} else {
 			makeAccount();
 		}
