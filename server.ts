@@ -7,7 +7,7 @@ import config from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { version } from "./package.json"
+import { version } from "./package.json";
 // @ts-expect-error no types
 import { server as wisp } from "@mercuryworkshop/wisp-js/server";
 
