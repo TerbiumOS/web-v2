@@ -1018,10 +1018,10 @@ const cm = async e => {
 									const path = document.querySelector(".exp").getAttribute("path");
 									const createUniqueFolder = async (path, folderName, number = null) => {
 										const folderPath = `${path}/${folderName}${number !== null ? ` (${number})` : ""}`;
-										try {
-											await window.parent.tb.fs.promises.access(folderPath);
-											return createUniqueFolder(path, folderName, number + 1);
-										} catch (error) {
+										const exists = await window.parent.tb.fs.promises.exists(folderPath);
+										if (exists) {
+											return createUniqueFolder(path, folderName, number !== null ? number + 1 : 2);
+										} else {
 											await window.parent.tb.fs.promises.mkdir(folderPath);
 										}
 									};
@@ -1313,10 +1313,10 @@ const cm = async e => {
 									} else {
 										const createUniqueFolder = async (path, folderName, number = null) => {
 											const folderPath = `${path}/${folderName}${number !== null ? ` (${number})` : ""}`;
-											try {
-												await window.parent.tb.fs.promises.access(folderPath);
-												return createUniqueFolder(path, folderName, number + 1);
-											} catch (error) {
+											const exists = await window.parent.tb.fs.promises.exists(folderPath);
+											if (exists) {
+												return createUniqueFolder(path, folderName, number !== null ? number + 1 : 2);
+											} else {
 												await window.parent.tb.fs.promises.mkdir(folderPath);
 											}
 										};
@@ -1376,8 +1376,8 @@ const cm = async e => {
 									for (const file of e.target.files) {
 										const content = await file.arrayBuffer();
 										const filePath = `${path}/${file.name}`;
-										try {
-											await window.parent.tb.fs.promises.access(filePath);
+										const exists = await window.parent.tb.fs.promises.exists(filePath);
+										if (exists) {
 											await tb.dialog.Message({
 												title: `File "${file.name}" already exists`,
 												defaultValue: file.name,
@@ -1387,7 +1387,7 @@ const cm = async e => {
 													}
 												},
 											});
-										} catch (error) {
+										} else {
 											await window.parent.tb.fs.promises.writeFile(filePath, window.parent.tb.buffer.from(content), "arraybuffer");
 										}
 									}

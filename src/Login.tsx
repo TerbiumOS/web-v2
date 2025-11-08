@@ -32,10 +32,10 @@ export default function Login() {
 				entries.map(async entry => {
 					const stat = await window.tb.fs.promises.stat(`/home/${entry}`);
 					if (stat && stat.isDirectory()) {
-						try {
-							await window.tb.fs.promises.access(`/home/${entry}/user.json`);
+						const exists = await window.tb.fs.promises.exists(`/home/${entry}/user.json`);
+						if (exists) {
 							return entry;
-						} catch (error) {
+						} else {
 							return null;
 						}
 					}

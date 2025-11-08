@@ -7,6 +7,7 @@ import config from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { version } from "./package.json"
 // @ts-expect-error no types
 import { server as wisp } from "@mercuryworkshop/wisp-js/server";
 
@@ -124,8 +125,6 @@ export function TServer() {
 		}
 	});
 
-	const manifest = fs.readFileSync(path.join(__dirname, "package.json"), "utf-8");
-	const { version } = JSON.parse(manifest);
 	server.listen(port, () => {
 		console.log(`
   \x1b[38;2;50;174;98m@@@@@@@@@@@@@@~ B@@@@@@@@#G?.
