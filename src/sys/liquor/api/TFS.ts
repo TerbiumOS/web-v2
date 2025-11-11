@@ -22,7 +22,8 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	rename(oldPath: string, newPath: string, callback?: (err: Error | null) => void) {
-		this.fs.rename(oldPath, newPath, callback);
+		const fs = window.tb.vfs.whatFS(oldPath);
+		fs.rename(oldPath, newPath, callback);
 	}
 
 	ftruncate(fd: AnuraFD, len: number, callback?: (err: Error | null, fd: AnuraFD) => void) {
@@ -34,7 +35,8 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	stat(path: string, callback?: (err: Error | null, stats: any) => void) {
-		this.fs.stat(path, callback);
+		const fs = window.tb.vfs.whatFS(path);
+		fs.stat(path, callback);
 	}
 
 	fstat(fd: AnuraFD, callback?: ((err: Error | null, stats: any) => void) | undefined): void {
@@ -42,28 +44,38 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	lstat(path: string, callback?: (err: Error | null, stats: any) => void) {
-		this.fs.lstat(path, callback);
+		const fs = window.tb.vfs.whatFS(path);
+		fs.lstat(path, callback);
 	}
 
 	exists(path: string, callback?: (exists: boolean) => void) {
+		const fs = window.tb.vfs.whatFS(path);
 		this.fs.exists(path, callback);
 	}
 
 	link(srcPath: string, dstPath: string, callback?: (err: Error | null) => void) {
-		throw new Error("Method not implemented.");
+		const fs = window.tb.vfs.whatFS(srcPath);
+		if (!fs.link) throw new Error("Linking not supported on this filesystem.");
+		fs.link(srcPath, dstPath, callback);
 	}
 
 	symlink(path: string, ...rest: any[]) {
+		const fs = window.tb.vfs.whatFS(path);
+		if (!fs.symlink) throw new Error("Symlinking not supported on this filesystem.");
 		// @ts-expect-error - Overloaded methods are scary
-		this.fs.symlink(path, ...rest);
+		fs.symlink(path, ...rest);
 	}
 
 	readlink(path: string, callback?: (err: Error | null, linkContents: string) => void) {
-		this.fs.readlink(path, callback);
+		const fs = window.tb.vfs.whatFS(path);
+		if (!fs.readlink) throw new Error("Reading links not supported on this filesystem.");
+		fs.readlink(path, callback);
 	}
 
 	unlink(path: string, callback?: (err: Error | null) => void) {
-		this.fs.unlink(path, callback);
+		const fs = window.tb.vfs.whatFS(path);
+		if (!fs.unlink) throw new Error("Unlinking not supported on this filesystem.");
+		fs.unlink(path, callback);
 	}
 
 	mknod(path: string, mode: number, callback?: (err: Error | null) => void) {
@@ -71,15 +83,18 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	rmdir(path: string, callback?: (err: Error | null) => void) {
-		this.fs.rmdir(path, callback);
+		const fs = window.tb.vfs.whatFS(path);
+		fs.rmdir(path, callback);
 	}
 
 	mkdir(path: string, ...rest: any[]) {
-		this.fs.mkdir(path, ...rest);
+		const fs = window.tb.vfs.whatFS(path);
+		fs.mkdir(path, ...rest);
 	}
 
 	access(path: string, ...rest: any[]) {
-		this.fs.access(path, ...rest);
+		const fs = window.tb.vfs.whatFS(path);
+		fs.access(path, ...rest);
 	}
 
 	mkdtemp(...args: any[]) {
@@ -87,8 +102,8 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	readdir(path: string, ...rest: any[]) {
-		// @ts-expect-error - Overloaded methods are scary
-		this.fs.readdir(path, ...rest);
+		const fs = window.tb.vfs.whatFS(path);
+		fs.readdir(path, ...rest);
 	}
 
 	close(fd: AnuraFD, callback?: ((err: Error | null) => void) | undefined): void {
@@ -110,7 +125,9 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	chown(path: string, uid: number, gid: number, callback?: (err: Error | null) => void) {
-		throw new Error("Method not implemented.");
+		const fs = window.tb.vfs.whatFS(path);
+		if (!fs.chown) throw new Error("Chowning not supported on this filesystem.");
+		fs.chown(path, uid, gid, callback);
 	}
 
 	fchown(fd: AnuraFD, ...rest: any[]) {
@@ -118,7 +135,9 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	chmod(path: string, mode: number, callback?: (err: Error | null) => void) {
-		throw new Error("Method not implemented.");
+		const fs = window.tb.vfs.whatFS(path);
+		if (!fs.chmod) throw new Error("Chmod not supported on this filesystem.");
+		fs.chmod(path, mode, callback);
 	}
 
 	fchmod(fd: AnuraFD, ...rest: any[]) {
@@ -141,20 +160,25 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	readFile(path: string, callback?: (err: Error | null, data: Uint8Array) => void) {
-		this.fs.readFile(path, callback);
+		const fs = window.tb.vfs.whatFS(path);
+		fs.readFile(path, callback);
 	}
 
 	writeFile(path: string, ...rest: any[]) {
+		const fs = window.tb.vfs.whatFS(path);
 		// @ts-expect-error - Overloaded methods are scary
-		this.fs.writeFile(path, ...rest);
+		fs.writeFile(path, ...rest);
 	}
 
 	appendFile(path: string, data: Uint8Array, callback?: (err: Error | null) => void) {
-		this.fs.appendFile(path, data, callback);
+		const fs = window.tb.vfs.whatFS(path);
+		fs.appendFile(path, data, callback);
 	}
 
 	setxattr(path: string, ...rest: any[]) {
-		throw new Error("Method not implemented.");
+		const fs = window.tb.vfs.whatFS(path);
+		if (!fs.setxattr) throw new Error("Extended attributes not supported on this filesystem.");
+		fs.setxattr(path, ...rest);
 	}
 
 	fsetxattr(fd: AnuraFD, ...rest: any[]) {
@@ -162,7 +186,9 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	getxattr(path: string, name: string, callback?: (err: Error | null, value: string | object) => void) {
-		throw new Error("Method not implemented.");
+		const fs = window.tb.vfs.whatFS(path);
+		if (!fs.getxattr) throw new Error("Extended attributes not supported on this filesystem.");
+		fs.getxattr(path, name, callback);
 	}
 
 	fgetxattr(fd: AnuraFD, name: string, callback?: (err: Error | null, value: string | object) => void) {

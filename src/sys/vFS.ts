@@ -179,6 +179,7 @@ export class vFSOperations {
 	}
 
 	readdir(path: string, callback: (err: any, files?: any[]) => void): void {
+		console.log("VFS READ")
 		this.client
 			.getDirectoryContents(this.pathtoFSPath(path))
 			.then((files: any[]) => callback(null, files))
@@ -266,6 +267,15 @@ export class vFSOperations {
 			.catch((err: any) => callback(err));
 	}
 
+	access(path: string, ...rest: any[]): void {
+		this.exists(path, (err, exists) => {
+			const callback = rest.pop();
+			if (err) return callback(err);
+			if (!exists) return callback(new Error("File does not exist"));
+			callback(null);
+		});
+	}
+
 	promises = {
 		readdir: (path: string): Promise<any[]> =>
 			new Promise((resolve, reject) => {
@@ -314,6 +324,10 @@ export class vFSOperations {
 		appendFile: (path: string, data: string | ArrayBuffer): Promise<void> =>
 			new Promise((resolve, reject) => {
 				this.appendFile(path, data, err => (err ? reject(err) : resolve()));
+			}),
+		access: (path: string, ...rest: any[]): Promise<void> =>
+			new Promise((resolve, reject) => {
+				this.access(path, ...rest, (err: any) => (err ? reject(err) : resolve()));
 			}),
 	};
 }

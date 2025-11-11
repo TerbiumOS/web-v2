@@ -219,7 +219,7 @@ async function handleDavRequest({ request, url }) {
 			case "GET":
 			case "HEAD": {
 				try {
-					const data = await fs.readFile(path);
+					const data = await fs.readFile(path, "arraybuffer");
 					return new Response(method === "HEAD" ? null : new Blob([data]), {
 						headers: {
 							"Content-Type": mime.default.getType(path) || "application/octet-stream",
