@@ -10,6 +10,7 @@ import { init } from "./init";
 import { fileExists, User } from "./sys/types";
 import { CheckIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { XOR } from "./sys/apis/Xor";
+import { createAuthClient } from "better-auth/react";
 const pw = new pwd();
 
 export default function Setup() {
@@ -41,6 +42,15 @@ export default function Setup() {
 			setCurrentStep(prevStep => Math.max(prevStep - 1, 1));
 		}
 	};
+	const authClient = createAuthClient({
+		baseURL: "https://auth.terbiumon.top",
+		fetchOptions: {
+			customFetchImpl: async (input: string | URL | Request, init?: RequestInit | undefined) => {
+				const response = await fetch(`/service/${XOR.encode(input.toString())}`, init);
+				return response;
+			},
+		},
+	});
 	const makePFP = () => {
 		const uploader = document.createElement("input");
 		uploader.type = "file";
@@ -311,17 +321,30 @@ export default function Setup() {
 		}, 150);
 		nextButtonClick = () => {
 			if (!connected) return;
-			// TODO implement actual DB authentication
-			sessionStorage.setItem(
-				"new-user",
-				JSON.stringify({
-					username: usernameRef.current?.value,
-					password: passwordRef.current?.value,
-					perm: "admin",
-					pfp: "/assets/img/default - pink.png",
-				}),
-			);
-			Next(2.5);
+			authClient.signIn.email({
+				email: usernameRef.current?.value || "",
+				password: passwordRef.current?.value || "",
+				rememberMe: true,
+				fetchOptions: {
+					onSuccess: async data => {
+						console.log("Successfully authenticated:", data);
+						sessionStorage.setItem(
+							"new-user",
+							JSON.stringify({
+								username: usernameRef.current?.value,
+								password: passwordRef.current?.value,
+								perm: "admin",
+								pfp: "/assets/img/default - pink.png",
+							}),
+						);
+						Next(2.5);
+					},
+					onError: error => {
+						console.error("Authentication error:", error);
+						Next(2.2);
+					},
+				},
+			});
 		};
 		return (
 			<div
@@ -339,7 +362,7 @@ export default function Setup() {
 									ref={usernameRef}
 									type="text"
 									className="username cursor-[var(--cursor-text)] rounded-[6px] px-[10px] py-[8px] text-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:placeholder-[#ffffff48] focus:text-[#ffffff] focus:outline-hidden focus:ring-2"
-									placeholder="username"
+									placeholder="email"
 									onKeyDown={(e: any) => {
 										if (e.key === "Enter" && passwordRef.current) {
 											passwordRef.current.focus();
@@ -393,6 +416,22 @@ export default function Setup() {
 			currentViewRef.current?.classList.remove("opacity-0");
 		}, 150);
 		nextButtonClick = () => {
+			authClient.signUp.email({
+				email: emailRef.current?.value || "",
+				password: passwordRef.current?.value || "",
+				name: usernameRef.current?.value || "",
+				fetchOptions: {
+					onSuccess: async data => {
+						console.log("Successfully registered:", data);
+						Next(2.5);
+					},
+					onError: error => {
+						console.error("Registration error:", error);
+						Next(2.2);
+					},
+				},
+				image: pfpRef.current?.getAttribute("data-src") || undefined,
+			});
 			// TODO implement actual DB registration
 			sessionStorage.setItem(
 				"new-user",
