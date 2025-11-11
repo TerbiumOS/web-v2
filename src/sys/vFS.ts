@@ -179,7 +179,7 @@ export class vFSOperations {
 	}
 
 	readdir(path: string, callback: (err: any, files?: any[]) => void): void {
-		console.log("VFS READ")
+		console.log("VFS READ");
 		this.client
 			.getDirectoryContents(this.pathtoFSPath(path))
 			.then((files: any[]) => callback(null, files))

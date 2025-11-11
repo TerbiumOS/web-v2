@@ -47,7 +47,7 @@ async function openFile(url, ext, dav) {
 				const davUrl = url.split("/dav/")[0] + "/dav/";
 				const dav = davInstances.find(d => d.url.toLowerCase().includes(davUrl));
 				if (!dav) throw new Error("No matching dav instance found");
-				const client = window.parent.tb.vfs.servers.get(dav.name)
+				const client = window.parent.tb.vfs.servers.get(dav.name);
 				let filePath;
 				if (url.startsWith("http")) {
 					const match = url.match(/^https?:\/\/[^\/]+\/dav\/([^\/]+\/)?(.+)$/);
@@ -254,7 +254,7 @@ async function openFile(url, ext, dav) {
 				const davUrl = url.split("/dav/")[0] + "/dav/";
 				const dav = davInstances.find(d => d.url.toLowerCase().includes(davUrl));
 				if (!dav) throw new Error("No matching dav instance found");
-				const client = window.parent.tb.vfs.servers.get(dav.name)
+				const client = window.parent.tb.vfs.servers.get(dav.name);
 				let filePath;
 				if (url.startsWith("http")) {
 					const match = url.match(/^https?:\/\/[^\/]+\/dav\/([^\/]+\/)?(.+)$/);
