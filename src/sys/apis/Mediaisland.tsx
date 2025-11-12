@@ -45,31 +45,30 @@ export default function MediaIsland() {
 function Music({ track_name, artist, endtime, onRemove, onPausePlay, onNext, onBack }: MediaProps & { onRemove: () => void }) {
 	const [isPaused, setIsPaused] = useState(false);
 	const [elapsedTime, setElapsedTime] = useState(0);
-	const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 	const [track, setTrack] = useState(track_name);
 	useEffect(() => {
-		if (isPaused) {
-			if (intervalId) {
-				clearInterval(intervalId);
-				setIntervalId(null);
-			}
-			return;
-		}
-		const id = setInterval(() => {
-			setElapsedTime(prev => {
-				if (prev + 1 >= endtime) {
-					clearInterval(id);
-					onRemove();
-					return prev;
-				}
-				return prev + 1;
-			});
-		}, 1000);
-		setIntervalId(id);
-		return () => {
-			if (id) clearInterval(id);
+		let cancelled = false;
+		let localId: ReturnType<typeof setTimeout> | null = null;
+		const runTick = () => {
+			if (isPaused || cancelled) return;
+			localId = setTimeout(() => {
+				setElapsedTime(prev => {
+					const next = prev + 1;
+					if (next >= endtime) {
+						onRemove();
+						return prev;
+					}
+					return next;
+				});
+				if (!isPaused && !cancelled) runTick();
+			}, 1000);
 		};
-	}, [isPaused, endtime, onRemove]);
+		if (!isPaused) runTick();
+		return () => {
+			cancelled = true;
+			if (localId) clearTimeout(localId);
+		};
+	}, [isPaused]);
 	useEffect(() => {
 		window.addEventListener("tb-pause-isl", () => PausePlay);
 		return () => window.removeEventListener("tb-pause-isl", () => PausePlay);
@@ -111,8 +110,8 @@ function Music({ track_name, artist, endtime, onRemove, onPausePlay, onNext, onB
 	return (
 		<div className="music-player w-[250px] h-[50px]">
 			<div className="info">
-				<h1 className="track cursor-[var(--cursor-text)]">{track}</h1>
-				<h2 className="artist cursor-[var(--cursor-text)]">{artist}</h2>
+				<h1 className="track cursor-(--cursor-text)">{track}</h1>
+				<h2 className="artist cursor-(--cursor-text)">{artist}</h2>
 			</div>
 			<div className="playerctrl gap-2">
 				<svg
@@ -170,31 +169,30 @@ function Music({ track_name, artist, endtime, onRemove, onPausePlay, onNext, onB
 function Video({ video_name, creator, endtime, onRemove, onPausePlay, onBack, onNext }: MediaProps & { onRemove: () => void }) {
 	const [isPaused, setIsPaused] = useState(false);
 	const [elapsedTime, setElapsedTime] = useState(0);
-	const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 	const [video, setVideo] = useState(video_name);
 	useEffect(() => {
-		if (isPaused) {
-			if (intervalId) {
-				clearInterval(intervalId);
-				setIntervalId(null);
-			}
-			return;
-		}
-		const id = setInterval(() => {
-			setElapsedTime(prev => {
-				if (prev + 1 >= endtime) {
-					clearInterval(id);
-					onRemove();
-					return prev;
-				}
-				return prev + 1;
-			});
-		}, 1000);
-		setIntervalId(id);
-		return () => {
-			if (id) clearInterval(id);
+		let cancelled = false;
+		let localId: ReturnType<typeof setTimeout> | null = null;
+		const runTick = () => {
+			if (isPaused || cancelled) return;
+			localId = setTimeout(() => {
+				setElapsedTime(prev => {
+					const next = prev + 1;
+					if (next >= endtime) {
+						onRemove();
+						return prev;
+					}
+					return next;
+				});
+				if (!isPaused && !cancelled) runTick();
+			}, 1000);
 		};
-	}, [isPaused, endtime, onRemove]);
+		if (!isPaused) runTick();
+		return () => {
+			cancelled = true;
+			if (localId) clearTimeout(localId);
+		};
+	}, [isPaused]);
 	useEffect(() => {
 		window.addEventListener("tb-pause-isl", () => PausePlay);
 		return () => window.removeEventListener("tb-pause-isl", () => PausePlay);
@@ -233,8 +231,8 @@ function Video({ video_name, creator, endtime, onRemove, onPausePlay, onBack, on
 	return (
 		<div className="music-player w-[250px] h-[50px]">
 			<div className="info">
-				<h1 className="track cursor-[var(--cursor-text)]">{video}</h1>
-				<h2 className="artist cursor-[var(--cursor-text)]">{creator}</h2>
+				<h1 className="track cursor-(--cursor-text)">{video}</h1>
+				<h2 className="artist cursor-(--cursor-text)">{creator}</h2>
 			</div>
 			<div className="playerctrl gap-2">
 				<svg
