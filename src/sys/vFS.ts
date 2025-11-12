@@ -179,18 +179,72 @@ export class vFSOperations {
 	}
 
 	readdir(path: string, callback: (err: any, files?: any[]) => void): void {
-		console.log("VFS READ");
 		this.client
 			.getDirectoryContents(this.pathtoFSPath(path))
-			.then((files: any[]) => callback(null, files))
+			.then((files: any[]) => {
+				const basenames = files.map((f: any) => {
+					if (typeof f === "string") return f.split("/").filter(Boolean).pop() || "";
+					if (f && typeof f.basename === "string") return f.basename;
+					if (f && typeof f.filename === "string") return f.filename.split("/").filter(Boolean).pop() || "";
+					return "";
+				});
+				callback(null, basenames);
+			})
 			.catch((err: any) => callback(err));
 	}
 
 	readFile(path: string, callback: (err: any, data?: string) => void): void {
-		this.client
-			.getFileContents(this.pathtoFSPath(path), { format: "text" })
-			.then((data: string) => callback(null, data))
-			.catch((err: any) => callback(err));
+		try {
+			this.client
+				.getFileContents(this.pathtoFSPath(path), { format: "binary" })
+				.then((data: any) => {
+					let uint8: Uint8Array | null = null;
+					if (data instanceof ArrayBuffer) {
+						uint8 = new Uint8Array(data);
+					} else if (ArrayBuffer.isView(data)) {
+						uint8 = new Uint8Array((data as any).buffer, (data as any).byteOffset || 0, (data as any).byteLength || undefined);
+					} else if (typeof data === "string") {
+						return callback(null, data);
+					} else if (data && data.buffer instanceof ArrayBuffer) {
+						uint8 = new Uint8Array(data.buffer);
+					} else {
+						try {
+							const asBuffer = Buffer.isBuffer(data) ? data : null;
+							if (asBuffer) uint8 = new Uint8Array(asBuffer);
+						} catch (e) {
+							return callback(null, data);
+						}
+					}
+					if (!uint8) return callback(null, data);
+					const len = Math.min(uint8.length, 512);
+					let nonText = 0;
+					for (let i = 0; i < len; i++) {
+						const ch = uint8[i];
+						if (ch === 0) {
+							nonText = Infinity;
+							break;
+						}
+						if ((ch >= 7 && ch <= 13) || (ch >= 32 && ch <= 126)) {} else {
+							nonText++;
+						}
+					}
+					if (nonText === Infinity || nonText / len > 0.3) {
+						// @ts-expect-error
+						return callback(null, uint8.buffer);
+					} else {
+						try {
+							const text = new TextDecoder("utf-8", { fatal: false }).decode(uint8);
+							return callback(null, text);
+						} catch (e) {
+							// @ts-expect-error
+							return callback(null, uint8.buffer);
+						}
+					}
+				})
+				.catch((err: any) => callback(err));
+		} catch (err) {
+			callback(err);
+		}
 	}
 
 	writeFile(path: string, data: string | ArrayBuffer, callback: (err: any) => void): void {
