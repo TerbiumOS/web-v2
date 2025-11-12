@@ -204,66 +204,86 @@ export class TFSProvider extends AFSProvider<any> {
 	}
 
 	promises = {
-		appendFile: (path: string, data: Uint8Array, options: { encoding: string; mode: number; flag: string }) => { return new Promise<void>((resolve, reject) => {
-			this.appendFile(path, data, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		appendFile: (path: string, data: Uint8Array, options: { encoding: string; mode: number; flag: string }) => {
+			return new Promise<void>((resolve, reject) => {
+				this.appendFile(path, data, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		access: (path: string, mode?: number) => { return new Promise<void>((resolve, reject) => {
-			this.access(path, mode, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		access: (path: string, mode?: number) => {
+			return new Promise<void>((resolve, reject) => {
+				this.access(path, mode, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		chown: (path: string, uid: number, gid: number) => { return new Promise<void>((resolve, reject) => {
-			this.chown(path, uid, gid, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		chown: (path: string, uid: number, gid: number) => {
+			return new Promise<void>((resolve, reject) => {
+				this.chown(path, uid, gid, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		chmod: (path: string, mode: number) => { return new Promise<void>((resolve, reject) => {
-			this.chmod(path, mode, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		chmod: (path: string, mode: number) => {
+			return new Promise<void>((resolve, reject) => {
+				this.chmod(path, mode, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		getxattr: (path: string, name: string) => { return new Promise<string | object>((resolve, reject) => {
-			this.getxattr(path, name, (err: Error | null, value: string | object) => {
-				if (err) reject(err);
-				else resolve(value);
+		},
+		getxattr: (path: string, name: string) => {
+			return new Promise<string | object>((resolve, reject) => {
+				this.getxattr(path, name, (err: Error | null, value: string | object) => {
+					if (err) reject(err);
+					else resolve(value);
+				});
 			});
-		})},
-		link: (srcPath: string, dstPath: string) => { return new Promise<void>((resolve, reject) => {
-			this.link(srcPath, dstPath, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		link: (srcPath: string, dstPath: string) => {
+			return new Promise<void>((resolve, reject) => {
+				this.link(srcPath, dstPath, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		lstat: (path: string) => { return new Promise<any>((resolve, reject) => {
-			this.lstat(path, (err: Error | null, stats: any) => {
-				if (err) reject(err);
-				else resolve(stats);
+		},
+		lstat: (path: string) => {
+			return new Promise<any>((resolve, reject) => {
+				this.lstat(path, (err: Error | null, stats: any) => {
+					if (err) reject(err);
+					else resolve(stats);
+				});
 			});
-		})},
-		mkdir: (path: string, mode?: number) => { return new Promise<void>((resolve, reject) => {
-			this.mkdir(path, mode, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		mkdir: (path: string, mode?: number) => {
+			return new Promise<void>((resolve, reject) => {
+				this.mkdir(path, mode, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		mkdtemp: (prefix: string, options?: { encoding: string }) => { return new Promise<string>((resolve, reject) => {
-			this.mkdtemp(prefix, options, (err: Error | null, folder: string) => {
-				if (err) reject(err);
-				else resolve(folder);
+		},
+		mkdtemp: (prefix: string, options?: { encoding: string }) => {
+			return new Promise<string>((resolve, reject) => {
+				this.mkdtemp(prefix, options, (err: Error | null, folder: string) => {
+					if (err) reject(err);
+					else resolve(folder);
+				});
 			});
-		})},
-		mknod: (path: string, mode: number) => { return new Promise<void>((resolve, reject) => {
-			this.mknod(path, mode, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		mknod: (path: string, mode: number) => {
+			return new Promise<void>((resolve, reject) => {
+				this.mknod(path, mode, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
+		},
 		open: async (path: string, flags: "r" | "r+" | "w" | "w+" | "a" | "a+", mode?: number) => ({
 			fd: await new Promise<number>((resolve, reject) => {
 				this.open(path, flags, mode as any, (err: Error | null, fd: AnuraFD) => {
@@ -273,84 +293,110 @@ export class TFSProvider extends AFSProvider<any> {
 			}),
 			[AnuraFDSymbol]: this.domain,
 		}),
-		readdir: (path: string, options?: { encoding: string; withFileTypes: boolean }) => { return new Promise<string[] | any[]>((resolve, reject) => {
-			this.readdir(path, (err: Error | null, files: string[] | any[]) => {
-				if (err) reject(err);
-				else resolve(files);
+		readdir: (path: string, options?: { encoding: string; withFileTypes: boolean }) => {
+			return new Promise<string[] | any[]>((resolve, reject) => {
+				this.readdir(path, (err: Error | null, files: string[] | any[]) => {
+					if (err) reject(err);
+					else resolve(files);
+				});
 			});
-		})},
-		readFile: (path: string) => { return new Promise<Uint8Array>((resolve, reject) => {
-			this.readFile(path, (err: Error | null, data: Uint8Array) => {
-				if (err) reject(err);
-				else resolve(data);
+		},
+		readFile: (path: string) => {
+			return new Promise<Uint8Array>((resolve, reject) => {
+				this.readFile(path, (err: Error | null, data: Uint8Array) => {
+					if (err) reject(err);
+					else resolve(data);
+				});
 			});
-		})},
-		readlink: (path: string) => { return new Promise<string>((resolve, reject) => {
-			this.readlink(path, (err: Error | null, linkString: string) => {
-				if (err) reject(err);
-				else resolve(linkString);
+		},
+		readlink: (path: string) => {
+			return new Promise<string>((resolve, reject) => {
+				this.readlink(path, (err: Error | null, linkString: string) => {
+					if (err) reject(err);
+					else resolve(linkString);
+				});
 			});
-		})},
-		removexattr: (path: string, name: string) => { return new Promise<void>((resolve, reject) => {
-			this.removexattr(path, name, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		removexattr: (path: string, name: string) => {
+			return new Promise<void>((resolve, reject) => {
+				this.removexattr(path, name, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		rename: (oldPath: string, newPath: string) => { return new Promise<void>((resolve, reject) => {
-			this.rename(oldPath, newPath, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		rename: (oldPath: string, newPath: string) => {
+			return new Promise<void>((resolve, reject) => {
+				this.rename(oldPath, newPath, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		rmdir: (path: string) => { return new Promise<void>((resolve, reject) => {
-			this.rmdir(path, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		rmdir: (path: string) => {
+			return new Promise<void>((resolve, reject) => {
+				this.rmdir(path, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		setxattr: (path: string, name: string, value: string | object, flag?: "CREATE" | "REPLACE") => { return new Promise<void>((resolve, reject) => {
-			this.setxattr(path, name, value, flag, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		setxattr: (path: string, name: string, value: string | object, flag?: "CREATE" | "REPLACE") => {
+			return new Promise<void>((resolve, reject) => {
+				this.setxattr(path, name, value, flag, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		stat: (path: string) => { return new Promise<any>((resolve, reject) => {
-			this.stat(path, (err: Error | null, stats: any) => {
-				if (err) reject(err);
-				else resolve(stats);
+		},
+		stat: (path: string) => {
+			return new Promise<any>((resolve, reject) => {
+				this.stat(path, (err: Error | null, stats: any) => {
+					if (err) reject(err);
+					else resolve(stats);
+				});
 			});
-		})},
-		symlink: (srcPath: string, dstPath: string, type?: string) => { return new Promise<void>((resolve, reject) => {
-			this.symlink(srcPath, dstPath, type, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		symlink: (srcPath: string, dstPath: string, type?: string) => {
+			return new Promise<void>((resolve, reject) => {
+				this.symlink(srcPath, dstPath, type, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		truncate: (path: string, len: number) => { return new Promise<void>((resolve, reject) => {
-			this.truncate(path, len, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		truncate: (path: string, len: number) => {
+			return new Promise<void>((resolve, reject) => {
+				this.truncate(path, len, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
+		},
 
-		unlink: (path: string) => { return new Promise<void>((resolve, reject) => {
-			this.unlink(path, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		unlink: (path: string) => {
+			return new Promise<void>((resolve, reject) => {
+				this.unlink(path, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		utimes: (path: string, atime: number | Date, mtime: number | Date) => { return new Promise<void>((resolve, reject) => {
-			this.utimes(path, atime, mtime, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		utimes: (path: string, atime: number | Date, mtime: number | Date) => {
+			return new Promise<void>((resolve, reject) => {
+				this.utimes(path, atime, mtime, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
-		writeFile: (path: string, data: Uint8Array | string, options: { encoding: string; mode: number; flag: string }) => { return new Promise<void>((resolve, reject) => {
-			this.writeFile(path, data, options, (err: Error | null) => {
-				if (err) reject(err);
-				else resolve();
+		},
+		writeFile: (path: string, data: Uint8Array | string, options: { encoding: string; mode: number; flag: string }) => {
+			return new Promise<void>((resolve, reject) => {
+				this.writeFile(path, data, options, (err: Error | null) => {
+					if (err) reject(err);
+					else resolve();
+				});
 			});
-		})},
+		},
 	};
 }

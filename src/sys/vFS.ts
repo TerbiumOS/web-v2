@@ -224,7 +224,8 @@ export class vFSOperations {
 							nonText = Infinity;
 							break;
 						}
-						if ((ch >= 7 && ch <= 13) || (ch >= 32 && ch <= 126)) {} else {
+						if ((ch >= 7 && ch <= 13) || (ch >= 32 && ch <= 126)) {
+						} else {
 							nonText++;
 						}
 					}
