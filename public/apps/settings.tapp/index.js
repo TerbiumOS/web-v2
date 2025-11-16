@@ -162,9 +162,9 @@ const customWallpaper = () => {
 						title: "Select a wallpaper from the file system",
 						local: true,
 						onOk: async filePath => {
-							const imgdata = await window.parent.tb.fs.promises.readFile(filePath, "base64");
+							const imgdata = await window.parent.tb.fs.promises.readFile(filePath, "arraybuffer");
+							await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/wallpapers/" + filePath.split("/").pop(), imgdata, "arraybuffer");
 							tb.desktop.wallpaper.set("/system/etc/terbium/wallpapers/" + filePath.split("/").pop());
-							await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/wallpapers/" + filePath.split("/").pop(), imgdata);
 							document.querySelector(".wallpapers").innerHTML = `
 								<img src="/assets/wallpapers/1.png" class="wallpaper-option"></img>
 								<img src="/assets/wallpapers/2.png" class="wallpaper-option"></img>
