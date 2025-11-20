@@ -43,7 +43,7 @@ export default function Setup() {
 		}
 	};
 	// @ts-expect-error no types
-	libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`)
+	libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
 	const authClient = createAuthClient({
 		baseURL: "https://auth.terbiumon.top",
 		fetchOptions: {
