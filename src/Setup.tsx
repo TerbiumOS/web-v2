@@ -43,7 +43,7 @@ export default function Setup() {
 		}
 	};
 	// @ts-expect-error no types
-	libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`)
+	libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
 	const authClient = createAuthClient({
 		baseURL: "https://auth.terbiumon.top",
 		fetchOptions: {
@@ -322,24 +322,20 @@ export default function Setup() {
 		}, 150);
 		nextButtonClick = () => {
 			if (!connected) return;
+			const password = passwordRef.current?.value || "";
 			authClient.signIn.email({
 				email: usernameRef.current?.value || "",
-				password: passwordRef.current?.value || "",
+				password: password,
 				rememberMe: true,
 				fetchOptions: {
 					onSuccess: async data => {
-						/*
-						const info = await libcurl.fetch(`https://auth.terbiumon.top/user/info/`, {
-							method: "GET",
-							headers: data.response.headers
-						})*/
 						sessionStorage.setItem(
 							"new-user",
 							JSON.stringify({
-								username: usernameRef.current?.value,
-								password: passwordRef.current?.value,
+								username: data.data.user.name,
+								password: password,
 								perm: "admin",
-								pfp: "/assets/img/default - pink.png",
+								pfp: data.data.user.image,
 							}),
 						);
 						Next(2.5);
@@ -435,7 +431,7 @@ export default function Setup() {
 						Next(2.2);
 					},
 				},
-				image: pfpRef.current?.getAttribute("data-src") || undefined,
+				image: pfpRef.current?.getAttribute("data-src") || "/assets/img/default - pink.png",
 			});
 			// TODO implement actual DB registration
 			sessionStorage.setItem(
