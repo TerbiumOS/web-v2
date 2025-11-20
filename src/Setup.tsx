@@ -9,8 +9,8 @@ import pwd from "./sys/apis/Crypto";
 import { init } from "./init";
 import { fileExists, User } from "./sys/types";
 import { CheckIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import { XOR } from "./sys/apis/Xor";
 import { createAuthClient } from "better-auth/react";
+import { libcurl } from "libcurl.js/bundled";
 const pw = new pwd();
 
 export default function Setup() {
@@ -42,11 +42,13 @@ export default function Setup() {
 			setCurrentStep(prevStep => Math.max(prevStep - 1, 1));
 		}
 	};
+	// @ts-expect-error no types
+	libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`)
 	const authClient = createAuthClient({
 		baseURL: "https://auth.terbiumon.top",
 		fetchOptions: {
 			customFetchImpl: async (input: string | URL | Request, init?: RequestInit | undefined) => {
-				const response = await fetch(`/service/${XOR.encode(input.toString())}`, init);
+				const response = await libcurl.fetch(input.toString(), init);
 				return response;
 			},
 		},
@@ -301,8 +303,7 @@ export default function Setup() {
 		useEffect(() => {
 			const test = async () => {
 				try {
-					// Keeping disabled until we finish
-					const response = await fetch(`/service/${XOR.encode(`https://auth.terbiumon.top/ping`)}`, { method: "GET" });
+					const response = await libcurl.fetch(`https://auth.terbiumon.top/ping`, { method: "GET" });
 					if (!response.ok) {
 						setConnected(false);
 						Back();
@@ -327,7 +328,11 @@ export default function Setup() {
 				rememberMe: true,
 				fetchOptions: {
 					onSuccess: async data => {
-						console.log("Successfully authenticated:", data);
+						/*
+						const info = await libcurl.fetch(`https://auth.terbiumon.top/user/info/`, {
+							method: "GET",
+							headers: data.response.headers
+						})*/
 						sessionStorage.setItem(
 							"new-user",
 							JSON.stringify({
