@@ -1411,7 +1411,7 @@ const DesktopItems = () => {
 						id="desktop-item"
 						className="group relative size-max min-w-16 min-h-16 flex flex-col items-center justify-center p-2 text-sm font-medium text-wrap select-none"
 						onDoubleClick={() => {
-							createWindow(item.config);
+							createWindow({ ...item.config, wid: undefined });
 						}}
 						style={{
 							position: "absolute",
