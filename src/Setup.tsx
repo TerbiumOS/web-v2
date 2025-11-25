@@ -8,7 +8,7 @@ import "./sys/gui/styles/dropdown.css";
 import pwd from "./sys/apis/Crypto";
 import { init } from "./init";
 import { fileExists, User } from "./sys/types";
-import { CheckIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { createAuthClient } from "better-auth/react";
 import { libcurl } from "libcurl.js/bundled";
 const pw = new pwd();
@@ -29,9 +29,12 @@ export default function Setup() {
 	const Back = () => {
 		setBeforeSetup(currentStep);
 		if (currentStep === 2.1 || currentStep === 2.2) {
+			sessionStorage.removeItem("tacc");
 			setCurrentStep(2);
 		} else if (currentStep === 2.3 || currentStep === 2.4 || currentStep === 2.5) {
 			setCurrentStep(2.2);
+		} else if (currentStep === 3.1) {
+			setCurrentStep(2.5);
 		} else if (currentStep === 3) {
 			if (sessionStorage.getItem("tacc")) {
 				setCurrentStep(2.5);
@@ -53,6 +56,7 @@ export default function Setup() {
 			},
 		},
 	});
+	const randomColors = ["orange", "red", "green", "blue", "purple", "pink", "yellow"];
 	const makePFP = () => {
 		const uploader = document.createElement("input");
 		uploader.type = "file";
@@ -300,6 +304,7 @@ export default function Setup() {
 		const usernameRef = useRef<HTMLInputElement>(null);
 		const passwordRef = useRef<HTMLInputElement>(null);
 		const [connected, setConnected] = useState(false);
+		const [error, setError] = useState("");
 		useEffect(() => {
 			const test = async () => {
 				try {
@@ -341,8 +346,7 @@ export default function Setup() {
 						Next(2.5);
 					},
 					onError: error => {
-						console.error("Authentication error:", error);
-						Next(2.2);
+						setError(error.error.message || "An unknown error occurred during authentication.");
 					},
 				},
 			});
@@ -358,6 +362,11 @@ export default function Setup() {
 					<div className="flex flex-col justify-center items-center">
 						<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Sign in with Terbium Cloud&trade;</span>
 						<div className="relative flex flex-col justify-center items-end">
+							{error && (
+								<div className="w-full p-2 mb-2 bg-red-500/20 border border-red-500/50 rounded-md text-sm text-red-300">
+									<InformationCircleIcon className="inline-block w-5 h-5 mr-1" /> {error}
+								</div>
+							)}
 							<div className="flex flex-col gap-2">
 								<input
 									ref={usernameRef}
@@ -377,7 +386,7 @@ export default function Setup() {
 									placeholder="password"
 									onKeyDown={(e: any) => {
 										if (e.key === "Enter" && passwordRef.current) {
-											passwordRef.current.focus();
+											nextButtonClick();
 										}
 									}}
 								/>
@@ -412,6 +421,7 @@ export default function Setup() {
 		const passwordRef = useRef<HTMLInputElement>(null);
 		const pfpRef = useRef<HTMLDivElement>(null);
 		const emailRef = useRef<HTMLInputElement>(null);
+		const [error, setError] = useState("");
 		setTimeout(() => {
 			currentViewRef.current?.classList.remove("-translate-x-6");
 			currentViewRef.current?.classList.remove("opacity-0");
@@ -427,20 +437,18 @@ export default function Setup() {
 						Next(2.5);
 					},
 					onError: error => {
-						console.error("Registration error:", error);
-						Next(2.2);
+						setError(error.error.message || "An unknown error occurred during registration.");
 					},
 				},
-				image: pfpRef.current?.getAttribute("data-src") || "/assets/img/default - pink.png",
+				image: pfpRef.current?.getAttribute("data-src") || `/assets/img/default - ${randomColors[Math.floor(Math.random() * randomColors.length)]}.png`,
 			});
-			// TODO implement actual DB registration
 			sessionStorage.setItem(
 				"new-user",
 				JSON.stringify({
 					username: usernameRef.current?.value,
 					password: passwordRef.current?.value,
 					perm: "admin",
-					pfp: pfpRef.current?.getAttribute("data-src"),
+					pfp: pfpRef.current?.getAttribute("data-src") || `/assets/img/default - ${randomColors[Math.floor(Math.random() * randomColors.length)]}.png`,
 				}),
 			);
 			Next(2.5);
@@ -454,6 +462,11 @@ export default function Setup() {
 			>
 				<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Create a Terbium Cloud&trade; account</span>
 				<div className="relative flex flex-col justify-center items-end">
+					{error && (
+						<div className="w-full p-2 mb-2 bg-red-500/20 border border-red-500/50 rounded-md text-sm text-red-300">
+							<InformationCircleIcon className="inline-block w-5 h-5 mr-1" /> {error}
+						</div>
+					)}
 					<div className="flex flex-col gap-2 items-center">
 						<div
 							ref={pfpRef}
@@ -494,7 +507,7 @@ export default function Setup() {
 							placeholder="email address"
 							onKeyDown={(e: any) => {
 								if (e.key === "Enter") {
-									// TODO
+									nextButtonClick();
 								}
 							}}
 						/>
@@ -513,13 +526,25 @@ export default function Setup() {
 		const usernameRef = useRef<HTMLInputElement>(null);
 		const sendBTNRef = useRef<HTMLButtonElement>(null);
 		const [emailSent, setEmailSent] = useState(false);
+		const [error, setError] = useState("");
 		setTimeout(() => {
 			currentViewRef.current?.classList.remove("-translate-x-6");
 			currentViewRef.current?.classList.remove("opacity-0");
 		}, 150);
 		nextButtonClick = () => {
 			if (!emailSent) {
-				// TODO fix email sending
+				sendBTNRef.current!.innerText = "Email Sent";
+				authClient.requestPasswordReset({
+					email: usernameRef.current?.value || "",
+					fetchOptions: {
+						onSuccess: () => {
+							setEmailSent(true);
+						},
+						onError: error => {
+							setError(error.error.message || "An unknown error occurred while attempting to send the password reset email.");
+						},
+					},
+				});
 			}
 			Next(2.2);
 		};
@@ -533,13 +558,20 @@ export default function Setup() {
 				<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Reset Terbium Cloud&trade; password</span>
 				<div className="relative flex flex-col justify-center items-end">
 					<div className="flex flex-col gap-2 items-center">
+						{error && (
+							<div className="w-full p-2 mb-2 bg-red-500/20 border border-red-500/50 rounded-md text-sm text-red-300">
+								<InformationCircleIcon className="inline-block w-5 h-5 mr-1" /> {error}
+							</div>
+						)}
 						<input
 							ref={usernameRef}
 							type="text"
 							className="username cursor-[var(--cursor-text)] rounded-[6px] px-[10px] py-[8px] text-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:placeholder-[#ffffff48] focus:text-[#ffffff] focus:outline-hidden focus:ring-2"
-							placeholder="username"
-							onKeyDown={(e: any) => {
-								// TODO
+							placeholder="email"
+							onKeyDown={e => {
+								if (e.key === "Enter") {
+									nextButtonClick();
+								}
 							}}
 						/>
 						<div className="flex flex-row gap-2">
@@ -587,7 +619,7 @@ export default function Setup() {
 				Next(3);
 				sessionStorage.setItem("tacc", "true");
 			} else {
-				Next(5);
+				Next(3.1);
 			}
 		};
 		return (
@@ -595,24 +627,20 @@ export default function Setup() {
 				ref={el => {
 					currentViewRef.current = el;
 				}}
-				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center"
+				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center gap-1.5"
 			>
 				<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Confirm Identity</span>
 				<img src={userdata.pfp} className="w-[100px] h-[100px] rounded-[50%] mb-[10px]" />
-				<p className="text-[#ffffffb3] text-center lg:w-[400px] md:w-[300px] sm:w-[250px]">Welcome, {userdata.username}!</p>
+				<p className="text-[#ffffffb3] text-center lg:w-[400px] md:w-[300px] sm:w-[250px] text-2xl">Welcome, {userdata.username}!</p>
 				{hasSettings ? (
-					<div className="flex flex-col justify-center items-center">
-						<div className="flex flex-row items-center justify-center gap-4">
-							<CheckIcon className="w-[50px] h-[50px] text-green-500" />
-							<p className="text-[#ffffffb3] text-center text-lg">We found Terbium Settings attached to your account</p>
+					<div>
+						<div className="w-full p-2 mb-2 bg-green-500/20 border border-green-500/50 rounded-md text-sm text-green-300">
+							<InformationCircleIcon className="inline-block w-5 h-5 mr-1" /> Terbium Settings were found for this account.
 						</div>
 					</div>
 				) : (
-					<div className="flex flex-col">
-						<div className="flex flex-row items-center justify-center gap-4">
-							<XMarkIcon className="w-[50px] h-[50px] text-red-500 my-[20px]" />
-							<p className="text-[#ffffffb3] text-center text-lg">No Terbium Settings were detected</p>
-						</div>
+					<div className="w-full p-2 mb-2 bg-red-500/20 border border-red-500/50 rounded-md text-sm text-red-300">
+						<InformationCircleIcon className="inline-block w-5 h-5 mr-1" /> Terbium Settings were not found for this account.
 					</div>
 				)}
 				<p>Click next to use this account</p>
@@ -633,7 +661,6 @@ export default function Setup() {
 
 		nextButtonClick = () => {
 			const pfp = pfpRef.current?.getAttribute("data-src");
-			const randomColors = ["orange", "red", "green", "blue", "purple", "pink", "yellow"];
 			const finalPfp = pfp || `/assets/img/default - ${randomColors[Math.floor(Math.random() * randomColors.length)]}.png`;
 			let passdata: any = JSON.parse(sessionStorage.getItem("new-user") as string) || {};
 			passdata["pfp"] = finalPfp;
@@ -654,7 +681,7 @@ export default function Setup() {
 			currentViewRef.current?.classList.add("-translate-x-6");
 			currentViewRef.current?.classList.add("opacity-0");
 			setTimeout(() => {
-				Next();
+				Next(3);
 			}, 150);
 		};
 		return (
@@ -779,6 +806,128 @@ export default function Setup() {
 							</div>
 						</div>
 					)}
+				</div>
+			</div>
+		);
+	};
+	const Step3SR = () => {
+		useEffect(() => {
+			const t = setTimeout(() => {
+				currentViewRef.current?.classList.remove("-translate-x-6", "opacity-0");
+			}, 150);
+			return () => clearTimeout(t);
+		}, []);
+		nextButtonClick = () => {
+			Next(5);
+		};
+		const opts = [
+			{
+				settings: {
+					wallpaper: "/assets/wallpapers/1.png",
+					wallpaperMode: "cover",
+					animations: true,
+					proxy: "Scramjet",
+					transport: "Default (Epoxy)",
+					wispServer: "wss://terbiumon.top:/wisp/",
+					"battery-percent": false,
+					accent: "#32ae62",
+					times: { format: "12h", internet: false, showSeconds: false },
+				},
+				apps: [],
+				davs: [{ name: "example dav", url: "https://terbiumon.top/dav/", username: "x", password: "a" }],
+				wallpaper: null,
+			},
+		];
+		type OptionItem = { id: string; label: string; raw: any };
+		const getOptions = (cat: string): OptionItem[] => {
+			const val = (opts[0] as any)[cat];
+			if (cat === "settings" && val && typeof val === "object") {
+				const copy = { ...val };
+				delete copy.wallpaper;
+				return Object.entries(copy).flatMap(([k, v]) => (v && typeof v === "object" && !Array.isArray(v) ? Object.entries(v).map(([kk, vv]) => ({ id: `settings.${k}.${kk}`, label: `${k}.${kk}`, raw: vv })) : [{ id: `settings.${k}`, label: k, raw: v }]));
+			}
+			if (Array.isArray(val)) {
+				return val.length === 0
+					? []
+					: val.map((item, i) => {
+							let label = typeof item === "object" && item ? item.name || item.url || JSON.stringify(item).slice(0, 30) : String(item);
+							return { id: `${cat}[${i}]`, label, raw: item };
+						});
+			}
+			if (val && typeof val === "object") {
+				return Object.keys(val).map(k => ({ id: `${cat}.${k}`, label: k, raw: val[k] }));
+			}
+			return [{ id: cat, label: `${cat}: ${String(val)}`, raw: val }];
+		};
+		const categories = Object.keys(opts[0]);
+		const [currMap, setCurrMap] = useState<Record<string, string[]>>(() =>
+			categories.reduce(
+				(acc, cat) => {
+					acc[cat] = getOptions(cat).map(o => o.id);
+					return acc;
+				},
+				{} as Record<string, string[]>,
+			),
+		);
+		const toggleOption = (cat: string, optionId: string) =>
+			setCurrMap(prev => {
+				const s = new Set(prev[cat] || []);
+				s.has(optionId) ? s.delete(optionId) : s.add(optionId);
+				return { ...prev, [cat]: Array.from(s) };
+			});
+		const setAll = (cat: string, enabled: boolean) => {
+			const ids = getOptions(cat).map(o => o.id);
+			setCurrMap(prev => ({ ...prev, [cat]: enabled ? ids : [] }));
+		};
+		const Card: React.FC<{ cat: string }> = ({ cat }) => {
+			const options = getOptions(cat);
+			const sel = currMap[cat] || [];
+			const allSelected = options.length > 0 && options.every(o => sel.includes(o.id));
+			const noneSelected = sel.length === 0;
+			return (
+				<div className="w-[420px] max-w-full p-4 rounded-md bg-[#111111] border border-[#2a2a2a] mb-4">
+					<div className="flex justify-between items-center mb-2">
+						<div className="font-[700] text-lg">{cat}</div>
+						<div className="flex items-center gap-2">
+							<button className="px-2 py-1 text-sm" onMouseDown={() => setAll(cat, true)}>
+								Select all
+							</button>
+							<button className="px-2 py-1 text-sm" onMouseDown={() => setAll(cat, false)}>
+								Clear
+							</button>
+						</div>
+					</div>
+					{options.length === 0 ? (
+						<div className="text-sm text-[#ffffff88]">There are no options at this time.</div>
+					) : (
+						<div className="flex flex-col gap-2">
+							{options.map(opt => (
+								<label key={opt.id} className="flex items-center gap-2 text-sm">
+									<input type="checkbox" checked={sel.includes(opt.id)} onChange={() => toggleOption(cat, opt.id)} />
+									<span className="text-[#ffffffb3]">{opt.label}</span>
+									{typeof opt.raw !== "object" && opt.raw !== null ? <span className="ml-auto text-[#ffffff44] text-xs">{String(opt.raw)}</span> : null}
+								</label>
+							))}
+							<div className="flex items-center gap-2 text-xs text-[#ffffff66] mt-1">
+								<span>{allSelected ? "All selected" : noneSelected ? "None selected" : `${sel.length} selected`}</span>
+							</div>
+						</div>
+					)}
+				</div>
+			);
+		};
+		return (
+			<div
+				ref={el => {
+					currentViewRef.current = el;
+				}}
+				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center"
+			>
+				<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Restore Terbium Settings</span>
+				<div className="flex flex-wrap gap-4 justify-center mt-4 overflow-y-auto max-h-[50%] p-2">
+					{categories.map(cat => (
+						<Card key={cat} cat={cat} />
+					))}
 				</div>
 			</div>
 		);
@@ -951,9 +1100,6 @@ export default function Setup() {
 								}}
 								className={`${currentStep === 5 && "translate-y-8 opacity-0"} cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150`}
 								onMouseDown={() => {
-									if (currentStep === 2.1 || currentStep === 2.2) {
-										setCurrentStep(2);
-									}
 									currentStep < 5 ? nextButtonClick() : null;
 								}}
 							>
@@ -989,6 +1135,8 @@ export default function Setup() {
 						<Step2CF />
 					) : currentStep === 3 ? (
 						<Step3 />
+					) : currentStep === 3.1 ? (
+						<Step3SR />
 					) : currentStep === 4 ? (
 						<Step4 />
 					) : currentStep === 5 ? (
