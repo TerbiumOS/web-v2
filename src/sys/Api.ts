@@ -1102,7 +1102,7 @@ export default async function Api() {
 	window.ExternalApp = ExternalApp;
 	window.ExternalLib = ExternalLib;
 	window.electron = new Lemonade();
-	window.tb.libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm")
+	window.tb.libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm");
 	const getupds = async () => {
 		if (hash !== (await window.tb.fs.promises.readFile("/system/etc/terbium/hash.cache", "utf8"))) {
 			window.tb.notification.Toast({
