@@ -1,7 +1,7 @@
 import { BareMuxConnection } from "@mercuryworkshop/bare-mux";
 import type { ScramjetController } from "@mercuryworkshop/scramjet";
 import * as fflate from "fflate";
-import { libcurl } from "libcurl.js/bundled";
+import { libcurl } from "libcurl.js";
 import apps from "../apps.json";
 import { hash } from "../hash.json";
 import pwd from "./apis/Crypto";
@@ -1002,11 +1002,10 @@ export default async function Api() {
 		},
 	};
 
-	//@ts-expect-error stfu
 	if (window.loadLock)
 		// this function seems to be called twice, anura doesn't like initing twice, so well, this is the weird fix I chose instead of tackling the root problem - Rafflesia
 		return;
-	(window as any).loadLock = true;
+	window.loadLock = true;
 
 	const anura = await Anura.new({
 		milestone: 5,
@@ -1103,6 +1102,7 @@ export default async function Api() {
 	window.ExternalApp = ExternalApp;
 	window.ExternalLib = ExternalLib;
 	window.electron = new Lemonade();
+	window.tb.libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm")
 	const getupds = async () => {
 		if (hash !== (await window.tb.fs.promises.readFile("/system/etc/terbium/hash.cache", "utf8"))) {
 			window.tb.notification.Toast({

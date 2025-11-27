@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { version } from "../package.json";
 import { unzipSync } from "fflate";
-import { libcurl } from "libcurl.js/bundled";
+import { libcurl } from "libcurl.js";
 import { dirExists } from "./sys/types";
 import { hash } from "./hash.json";
 import apps from "./apps.json";
@@ -243,7 +243,11 @@ export default function Recovery() {
 	}
 
 	async function download(url: string, location: string) {
-		// @ts-expect-error
+		if (!window.loadLock) {
+			window.loadLock = true;
+			await libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm");
+		}
+		// @ts-expect-error types
 		libcurl.set_websocket(`${window.location.protocol.replace("http", "ws")}//${window.location.hostname}:${window.location.port}/wisp/`);
 		const response = await libcurl.fetch(url);
 		if (!response.ok) {
