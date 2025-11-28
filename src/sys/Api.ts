@@ -1161,8 +1161,8 @@ export default async function Api() {
 	wsld();
 	await window.tb.proxy.updateSWs();
 	const getchangelog = async () => {
-		const reCache: Record<string, { hash: string; changeFile: string }> = await (await fetch("https://cdn.terbiumon.top/changelogs/versions.json")).json()
-		const vInf = reCache[system.version("string") as string]
+		const reCache: Record<string, { hash: string; changeFile: string }> = await (await fetch("https://cdn.terbiumon.top/changelogs/versions.json")).json();
+		const vInf = reCache[system.version("string") as string];
 		if (hash === vInf.hash) {
 			window.tb.window.create({
 				title: "Changelog",
@@ -1173,9 +1173,9 @@ export default async function Api() {
 					height: 400,
 				},
 				proxy: true,
-			})
+			});
 		}
-	}
+	};
 	getchangelog();
 	if (sessionStorage.getItem("justUpdated") === "true") {
 		getchangelog();
