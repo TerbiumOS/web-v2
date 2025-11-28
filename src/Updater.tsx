@@ -285,6 +285,7 @@ export default function Updater() {
 			setProgress(95);
 			await window.tb.sh.promises.rm(`/system/tmp/terb-upd/`, { recursive: true });
 			window.onbeforeunload = null;
+			sessionStorage.setItem("justUpdated", "true");
 			setProgress(100);
 			statusref.current!.innerText = "Restarting...";
 			window.location.reload();
