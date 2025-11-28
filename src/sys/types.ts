@@ -344,6 +344,12 @@ export interface UserSettings {
 		internet: boolean;
 		showSeconds: boolean;
 	};
+	window: {
+		winAccent: string;
+		blurlevel: number;
+		alwaysMaximized: boolean;
+		alwaysFullscreen: boolean;
+	};
 }
 
 export interface SysSettings {

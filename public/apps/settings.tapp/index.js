@@ -82,6 +82,8 @@ window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/setting
 	document.querySelector(`[action-for="transports"]`).querySelector(".select-title .text").innerText = data["transport"];
 	document.querySelector(`[action-for="show-seconds"]`).querySelector(".select-title .text").innerText = showSeconds ? "Yes" : "No";
 	document.querySelector(`[action-for="24h-12h"]`).querySelector(".select-title .text").innerText = twentyFourHour === "24h" ? "Yes" : "No";
+	document.querySelector(`[action-for="wmx"]`).querySelector(".select-title .text").innerText = data["window"]["alwaysMaximized"] ? "Yes" : "No";
+	document.querySelector(`[action-for="wfs"]`).querySelector(".select-title .text").innerText = data["window"]["alwaysFullscreen"] ? "Yes" : "No";
 });
 
 window.parent.tb.fs.readFile("/system/etc/terbium/settings.json", "utf8", (err, data) => {
@@ -137,7 +139,7 @@ const customWallpaper = () => {
 							delete_button.src = "/fs/apps/system/settings.tapp/delete.svg";
 							delete_button.classList.add("delete-wallpaper");
 							delete_button.addEventListener("click", async e => {
-								let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+								let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 								if (data["wallpaper"] === path) {
 									tb_wallpaper.set("/assets/wallpapers/1.png");
 								}
@@ -387,9 +389,9 @@ async function getWispSrvs() {
 getWispSrvs();
 
 async function updateTransport(transport) {
-	const st = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+	const st = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 	st["transport"] = transport;
-	await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(st), "utf8");
+	await window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(st), "utf8");
 }
 
 const accentPreview = document.querySelector(".accent-preview");
@@ -397,14 +399,14 @@ const accentMousedown = async () => {
 	const defaultAccent = "#32ae62";
 	accentPreview.classList.remove("group", "cursor-pointer");
 	accentPreview.style.setProperty("--accent", defaultAccent);
-	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 	settings["accent"] = defaultAccent;
-	window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings));
+	window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
 	accentPreview.removeEventListener("mousedown", accentMousedown);
 };
 
 const getAccent = async () => {
-	const settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+	const settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 	var accentColor = settings["accent"];
 	const defaultAccent = "#32ae62";
 	if (accentColor !== defaultAccent) {
@@ -432,13 +434,13 @@ custom_accent.addEventListener("click", e => {
 			const g = rgb[1];
 			const b = rgb[2];
 			color = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 			settings["accent"] = color;
-			window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings));
+			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
 		} else {
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 			settings["accent"] = color;
-			window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings));
+			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
 		}
 		accentPreview.style.setProperty("--accent", color);
 		accentPreview.classList.add("group", "cursor-pointer");
@@ -702,7 +704,7 @@ accountsButton.addEventListener("mousedown", e => {
 
 const batteryPercentage = document.querySelector(".battery-percentage");
 (async () => {
-	let showBatteryPercentage = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"))["battery-percent"];
+	let showBatteryPercentage = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"))["battery-percent"];
 	const realCheckbox = batteryPercentage.querySelector("input[type='checkbox']");
 	if (showBatteryPercentage) {
 		realCheckbox.checked = true;
@@ -716,7 +718,7 @@ const batteryPercentage = document.querySelector(".battery-percentage");
 })();
 
 batteryPercentage.addEventListener("mousedown", async e => {
-	let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+	let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 	const realCheckbox = batteryPercentage.querySelector("input[type='checkbox']");
 	realCheckbox.checked = !realCheckbox.checked;
 	const checkIcon = batteryPercentage.querySelector(".checkIcon");
@@ -728,11 +730,11 @@ batteryPercentage.addEventListener("mousedown", async e => {
 		tb.battery.hidePercentage();
 	}
 	data["battery-percent"] = realCheckbox.checked;
-	window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(data));
+	window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(data));
 });
 
 const getBat = async () => {
-	const battery = await window.tb.battery.canUse();
+	const battery = await window.parent.tb.battery.canUse();
 	if (!battery) {
 		document.querySelector(".battery").remove();
 	}
@@ -752,7 +754,7 @@ showCords.addEventListener("mousedown", async e => {
 });
 
 async function exportSettings() {
-	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 	let data = JSON.stringify(settings);
 	let blob = new Blob([data], { type: "application/json" });
 	let url = URL.createObjectURL(blob);
@@ -761,6 +763,66 @@ async function exportSettings() {
 	a.download = "settings.json";
 	a.click();
 }
+
+const range = document.getElementById("blurRange");
+const pct = document.getElementById("blurPercent");
+async function render(initial) {
+	const settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
+	const v = initial ? settings.window.blurlevel : Number(range.value);
+	const mapped = Math.round((v / 50) * 100);
+	pct.textContent = mapped + "%";
+	const fill = (v / 50) * 100;
+	range.style.background = `linear-gradient(90deg,#60a5fa ${fill}%, rgba(255,255,255,0.12) ${fill}%)`;
+	range.dataset.mappedPercent = mapped;
+	if (initial) return;
+	settings.window.blurlevel = v;
+	window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, JSON.stringify(settings, null, 4), "utf8");
+	window.parent.dispatchEvent(new Event("upd-accent"));
+}
+
+render(true);
+range.addEventListener("input", () => render(false));
+
+const winAccent = document.querySelector(".winaccent-preview");
+const winAccentPrev = async () => {
+	const defaultAccent = "#ffffff";
+	accentPreview.classList.remove("group", "cursor-pointer");
+	accentPreview.style.setProperty("--accent", defaultAccent);
+	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
+	settings.window.winAccent = defaultAccent;
+	window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
+	winAccent.removeEventListener("mousedown", winAccentPrev);
+};
+winAccentPrev();
+
+const custom_waccent = document.querySelector(".custom-waccent");
+custom_waccent.addEventListener("click", e => {
+	const color_picker = document.createElement("input");
+	color_picker.type = "color";
+	color_picker.click();
+	color_picker.addEventListener("change", async e => {
+		let color = color_picker.value;
+		if (color.charAt(0) !== "#") {
+			const rgb = color.match(/\d+/g);
+			const r = rgb[0];
+			const g = rgb[1];
+			const b = rgb[2];
+			color = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
+			settings["window"]["winAccent"] = color;
+			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
+			window.parent.dispatchEvent(new Event("upd-accent"));
+		} else {
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
+			settings["window"]["winAccent"] = color;
+			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
+			window.parent.dispatchEvent(new Event("upd-accent"));
+		}
+		winAccent.style.setProperty("--accent", color);
+		winAccent.classList.add("group", "cursor-pointer");
+		winAccent.addEventListener("mousedown", winAccentPrev);
+	});
+});
 
 async function convertTBSIF() {
 	const input = document.createElement("input");
@@ -771,8 +833,8 @@ async function convertTBSIF() {
 		let reader = new FileReader();
 		reader.onload = async () => {
 			let tbs_config = reader.result;
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-			let syssettings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
+			let syssettings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 			if (tbs_config.theme && tbs_config.theme !== "default") {
 				syssettings.theme = tbs_config.theme;
 			}
@@ -785,7 +847,7 @@ async function convertTBSIF() {
 			if (tbs_config.shadow === "yes") {
 				settings["system-blur"] = true;
 			}
-			await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
+			await window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
 			await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(syssettings, null, 2), "utf8");
 			parent.window.location.reload();
 		};

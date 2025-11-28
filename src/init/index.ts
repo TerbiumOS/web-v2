@@ -137,6 +137,12 @@ export async function init() {
 				internet: false,
 				showSeconds: false,
 			},
+			window: {
+				winAccent: "#ffffff",
+				blurlevel: 18,
+				alwaysMaximized: false,
+				alwaysFullscreen: false,
+			},
 		};
 		await window.tb.fs.promises.writeFile(`/home/${user}/settings.json`, JSON.stringify(userSettings));
 		await window.tb.fs.promises.mkdir(`/home/${user}/desktop`);
@@ -231,7 +237,7 @@ export async function init() {
 		iconNames.forEach(async name => {
 			iconArrays[name] = `/system/etc/terbium/file-icons/${name}.svg`; // name, path
 			const icon = icons[iconNames.indexOf(name)];
-			await window.tb.fs.promises.writeFile(`/system/etc/terbium/file-icons/${name}.svg`, icon);
+			await window.tb.fs.promises.writeFile(`/system/etc/terbium/file-icons/${name}.svg`, icon as any);
 		});
 		await window.tb.fs.promises.writeFile(
 			`/system/etc/terbium/file-icons.json`,

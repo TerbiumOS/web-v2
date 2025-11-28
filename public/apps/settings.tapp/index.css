@@ -297,3 +297,48 @@ h6 {
 	gap: 6px;
 	align-items: center;
 }
+
+.blur-slider input[type="range"] {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 100%;
+	height: 10px;
+	background: linear-gradient(90deg, #60a5fa 18%, rgba(255, 255, 255, 0.12) 18%);
+	border-radius: 999px;
+	outline: none;
+}
+.blur-slider input[type="range"]::-webkit-slider-runnable-track {
+	height: 10px;
+	border-radius: 999px;
+	background: transparent;
+}
+.blur-slider input[type="range"]::-moz-range-track {
+	height: 10px;
+	border-radius: 999px;
+	background: transparent;
+}
+.blur-slider input[type="range"]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	margin-top: -5px;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: #ffffff;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+	border: 3px solid rgba(255, 255, 255, 0.12);
+	cursor: pointer;
+}
+.blur-slider input[type="range"]::-moz-range-thumb {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: #ffffff;
+	border: 3px solid rgba(255, 255, 255, 0.12);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+	cursor: pointer;
+}
+.blur-hint {
+	font-size: 0.78rem;
+	color: rgba(255, 255, 255, 0.55);
+}

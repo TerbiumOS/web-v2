@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { dirExists, fileExists } from "./sys/types";
+import { dirExists, fileExists, UserSettings } from "./sys/types";
 import { hash } from "./hash.json";
 import paths from "./installer.json";
 
@@ -266,6 +266,19 @@ export default function Updater() {
 				await window.tb.fs.promises.mkdir(`/apps/user/${user}/browser/`);
 				await window.tb.fs.promises.writeFile(`/apps/user/${user}/browser/favorites.json`, JSON.stringify([]));
 				await window.tb.fs.promises.writeFile(`/apps/user/${user}/browser/userscripts.json`, JSON.stringify([]));
+			}
+			// v2.2 Update
+			for (const user of await window.tb.fs.promises.readdir("/home/")) {
+				const usrSettings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${user}/settings.json`, "utf8"));
+				if (!usrSettings.window) {
+					usrSettings.window = {
+						winAccent: "#ffffff",
+						blurlevel: 18,
+						alwaysMaximized: false,
+						alwaysFullscreen: false,
+					};
+					await window.tb.fs.promises.writeFile(`/home/${user}/settings.json`, JSON.stringify(usrSettings, null, 4));
+				}
 			}
 			setProgress(80);
 			statusref.current!.innerText = "Cleaning up...";

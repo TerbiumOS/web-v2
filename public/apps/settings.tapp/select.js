@@ -91,6 +91,22 @@ selects.forEach(select => {
 							window.tb.fs.writeFile("/system/etc/terbium/settings.json", JSON.stringify(settings));
 							window.parent.dispatchEvent(new Event("updWeather"));
 						});
+					} else if (select.getAttribute("action-for") === "wmx") {
+						window.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8", (err, data) => {
+							if (err) return console.log(err);
+							let settings = JSON.parse(data);
+							settings["window"]["alwaysMaximized"] = option.getAttribute("value").toLowerCase() === "yes" ? true : false;
+							window.tb.fs.writeFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, JSON.stringify(settings));
+							window.parent.dispatchEvent(new Event("upd-accent"));
+						});
+					} else if (select.getAttribute("action-for") === "wfs") {
+						window.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8", (err, data) => {
+							if (err) return console.log(err);
+							let settings = JSON.parse(data);
+							settings["window"]["alwaysFullscreen"] = option.getAttribute("value").toLowerCase() === "yes" ? true : false;
+							window.tb.fs.writeFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, JSON.stringify(settings));
+							window.parent.dispatchEvent(new Event("upd-accent"));
+						});
 					}
 				}
 			});

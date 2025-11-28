@@ -56,8 +56,12 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	const [src, setSrc] = useState(config.src);
 	const originalSize = useRef<{ width: number; height: number } | null>(null);
 	const [isSnapped, setIsSnapped] = useState(false);
+	const [accent, setAccent] = useState<string>("#ffffff18");
+	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 	const mobileCheck = async () => {
-		if ((await window.tb.platform.getPlatform()) === "mobile") {
+		const platform = await window.tb.platform.getPlatform();
+		const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
+		if (platform === "mobile" || settings.window.alwaysMaximized === true) {
 			setMaximized(true);
 		}
 	};
@@ -258,6 +262,13 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			if (!minimized) setMinimized(true);
 		};
 
+		const updAccent = async () => {
+			const settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8")) as UserSettings;
+			setAccent(`${settings.window.winAccent}${settings.window.blurlevel}`);
+			setIsFullscreen(settings.window.alwaysFullscreen === true);
+		};
+		updAccent();
+
 		window.addEventListener("reload-win", reload as EventListener);
 		window.addEventListener("max-win", max as EventListener);
 		window.addEventListener("min-win", min as EventListener);
@@ -269,6 +280,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		window.addEventListener("upd-src", changeURL as EventListener);
 		window.addEventListener("sel-win", selWin as EventListener);
 		window.addEventListener("min-wins", minall);
+		window.addEventListener("upd-accent", updAccent);
 		if (regionRef.current) regionRef.current.addEventListener("contextmenu", debugCTX);
 		return () => {
 			window.removeEventListener("reload-win", reload as EventListener);
@@ -282,6 +294,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			window.removeEventListener("upd-src", changeURL as EventListener);
 			window.removeEventListener("sel-win", selWin as EventListener);
 			window.removeEventListener("min-wins", minall);
+			window.removeEventListener("upd-accent", updAccent);
 			if (regionRef.current) regionRef.current.removeEventListener("contextmenu", debugCTX);
 		};
 	}, []);
@@ -482,10 +495,10 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			className={`
             ${className ? className : ""}
             absolute
-            bg-[#ffffff18]
+            bg-[${accent}]
             rounded-lg shadow-window-shadow overflow-hidden
             ${minimized ? "translate-y-3 opacity-0 duration-150 hidden" : " translate-y-0 opacity-100"}
-            ${maximized ? "left-0 right-0 top-0 bottom-0 opacity-100 w-full h-full" : `w-[${width}px] h-[${height}px]`}
+            ${maximized ? `left-0 right-0 top-0 bottom-0 opacity-100 w-full ${isFullscreen ? "h-[106%]" : "h-full"}` : `w-[${width}px] h-[${height}px]`}
         `}
 			style={{
 				left: maximized ? "" : x,
@@ -493,6 +506,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				height: maximized ? undefined : height,
 				width: maximized ? undefined : width,
 				zIndex: minimized ? 2 : zIndex,
+				backgroundColor: accent,
 			}}
 			onMouseDown={() => {
 				updateInfo({ appname: typeof config.title === "string" ? config.title : config.title?.text });
@@ -925,7 +939,7 @@ const DesktopItems = () => {
 						for (const item of addedItems) {
 							const itemExists = desktopConfig.some((config: any) => config.item === `/home/${user}/desktop/${item}`);
 							if (!itemExists) {
-								const type = (await window.tb.fs.promises.stat(`/home/${user}/desktop/${item}`)).type.toLowerCase();
+								const type = (await window.tb.fs.promises.stat(`/home/${user}/desktop/${item}`))!.type.toLowerCase();
 								if (type === "symlink") {
 									const isAppJson = (await window.tb.fs.promises.readFile(await window.tb.fs.promises.readlink(`/home/${user}/desktop/${item}`))).includes("config");
 									desktopConfig.push({
@@ -985,7 +999,7 @@ const DesktopItems = () => {
 			var allItems: any[] = [];
 			const items = JSON.parse(await window.tb.fs.promises.readFile(`/home/${user}/desktop/.desktop.json`, "utf8"));
 			for (const item of items) {
-				const type = (await window.tb.fs.promises.stat(item.item)).type.toLowerCase();
+				const type = (await window.tb.fs.promises.stat(item.item))!.type.toLowerCase();
 				const position = item.position;
 				if (type === "symlink") {
 					allItems.push({
@@ -1444,7 +1458,7 @@ const DesktopItems = () => {
 										text: "Delete Shortcut",
 										click: async () => {
 											const stat = await window.tb.fs.promises.stat(`/home/${user}/desktop/${item.item}`);
-											if (stat.isDirectory()) {
+											if (stat!.isDirectory()) {
 												// @ts-expect-error
 												await new window.tb.fs.Shell().promises.rm(`/home/${user}/desktop/${item.item}`, { recursive: true });
 											} else {
