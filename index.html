@@ -23,6 +23,14 @@
 		      window.tb.buffer = window.tfs.buffer;
 		      window.tb.sh = window.tfs.shell;
 	      }
+        if (localStorage.getItem("eruda")) {
+          const erudaScript = document.createElement("script");
+          erudaScript.src = "https://cdn.jsdelivr.net/npm/eruda";
+          erudaScript.onload = () => {
+            window.eruda.init();
+          };
+          document.head.appendChild(erudaScript);
+        }
       })();
     </script>
   </head>
@@ -32,6 +40,5 @@
     <script type="module" src="/src/main.tsx"></script>
     <script type="module" src="/src/init/index.ts"></script>
     <script src="assets/libs/filer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/eruda" onload="if (localStorage.getItem('eruda'))  window.eruda.init()"></script>
   </body>
 </html>

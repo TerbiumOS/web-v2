@@ -24,6 +24,7 @@ declare global {
 		ExternalLib: any;
 		electron: any;
 		tfs: TFSType;
+		loadLock: boolean;
 	}
 }
 
@@ -310,6 +311,7 @@ export type websocketUrl = `wss://${string}` | `ws://${string}`;
 export interface Libcurl {
 	set_websocket: (url: websocketUrl) => void;
 	fetch: (...args: any) => Promise<Response>;
+	load_wasm: (wasmPath: string) => Promise<void>;
 	ready: boolean;
 	version: {
 		lib: string;

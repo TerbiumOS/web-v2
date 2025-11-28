@@ -1,8 +1,9 @@
-declare module "libcurl.js/bundled" {
+declare module "libcurl.js" {
 	export type websocketUrl = `wss://${string}` | `ws://${string}`;
 	export const libcurl: {
 		set_websocket: (url: websocketUrl) => void;
 		fetch: (...args) => Promise<Response>;
+		load_wasm: (wasmPath: string) => Promise<void>;
 		ready: boolean;
 		version: {
 			lib: string;

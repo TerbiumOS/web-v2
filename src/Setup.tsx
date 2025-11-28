@@ -10,7 +10,7 @@ import { init } from "./init";
 import { fileExists, User } from "./sys/types";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { createAuthClient } from "better-auth/react";
-import { libcurl } from "libcurl.js/bundled";
+import { libcurl } from "libcurl.js";
 const pw = new pwd();
 
 export default function Setup() {
@@ -45,6 +45,10 @@ export default function Setup() {
 			setCurrentStep(prevStep => Math.max(prevStep - 1, 1));
 		}
 	};
+	if (!window.loadLock) {
+		window.loadLock = true;
+		libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm");
+	}
 	// @ts-expect-error no types
 	libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
 	const authClient = createAuthClient({
