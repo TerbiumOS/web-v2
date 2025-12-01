@@ -6,6 +6,8 @@
 import { TFSType, FSType, ShellType } from "@terbiumos/tfs";
 import { System } from "./apis/System";
 import { vFS } from "./vFS";
+import { ExternalApp } from "./liquor/coreapps/ExternalApp";
+import { WindowInformation } from "./liquor/AliceWM";
 
 declare global {
 	namespace React.JSX {
@@ -491,7 +493,7 @@ export interface COM {
 	};
 	process: {
 		kill(config: string | number | any): void;
-		list(): Object;
+		list(): Record<number, { name: string; size: { width: number | string; height: number | string }; icon: string; pid: number; src: string }>;
 		create(): void;
 		parse: {
 			build(src: string): void;
@@ -521,4 +523,33 @@ export interface COM {
 		start: () => void;
 		stop(): boolean;
 	};
+}
+
+export interface AnuraWMWeakRef {
+	element: HTMLDivElement | null;
+	content: HTMLDivElement | null;
+	app: ExternalApp;
+	dragForceX: 0;
+	dragForceY: 0;
+	dragging: false;
+	height: number | string;
+	width: number | string;
+	pid: number | null;
+	state: null;
+	maximized: false;
+	minimizing: false;
+	mouseLeft: null;
+	mouseTop: null;
+	onclose: () => null;
+	onfocus: () => null;
+	onresize: (_w: number, _h: number) => null;
+	onsnap: (_side: string) => null;
+	onunmaximize: () => null;
+	restoreSvg: null;
+	kill: () => void;
+	alive: boolean;
+	maximizeImg: null | SVGElement;
+	maximizeSvg: null | SVGElement;
+	wininfo: WindowInformation;
+	title: string;
 }

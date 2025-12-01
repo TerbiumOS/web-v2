@@ -827,6 +827,7 @@ export default async function Api() {
 						icon: win.icon,
 						pid: win.pid,
 						src: win.src,
+						size: win.size || { width: 800, height: 600 },
 					};
 				});
 				return list;
