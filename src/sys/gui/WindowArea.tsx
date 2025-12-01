@@ -106,7 +106,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
 				});
 			} else {
-				console.log("no proxy", window.anura.wm.getWeakRef(Number(config.pid)),);
+				console.log("no proxy", window.anura.wm.getWeakRef(Number(config.pid)));
 				Object.assign(srcRef.current?.contentWindow as typeof window, {
 					tb: window.parent.tb,
 					anura: window.parent.anura,
