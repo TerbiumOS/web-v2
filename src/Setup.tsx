@@ -185,6 +185,11 @@ export default function Setup() {
 		await init();
 		let data: User = JSON.parse(sessionStorage.getItem("new-user") as string);
 		sessionStorage.setItem("new-user", JSON.stringify(data));
+		// Types being weird idk
+		if (data.email) {
+			delete (data as any).password;
+			await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([data], null, 2), "utf8");
+		}
 		const usr = data["username"];
 		data["id"] = usr;
 		let pass: any;
@@ -199,6 +204,12 @@ export default function Setup() {
 			password: pass,
 			pfp: data["pfp"],
 			perm: data["perm"],
+			window: {
+				winAccent: "#ffffff",
+				blurlevel: 18,
+				alwaysMaximized: false,
+				alwaysFullscreen: false,
+			},
 		};
 		if (data.securityQuestion) {
 			userInf["securityQuestion"] = {
@@ -345,6 +356,7 @@ export default function Setup() {
 								password: password,
 								perm: "admin",
 								pfp: data.data.user.image,
+								email: data.data.user.email,
 							}),
 						);
 						Next(2.5);

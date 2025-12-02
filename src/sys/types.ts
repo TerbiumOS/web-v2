@@ -6,6 +6,7 @@
 import { TFSType, FSType, ShellType } from "@terbiumos/tfs";
 import { System } from "./apis/System";
 import { vFS } from "./vFS";
+import { createAuthClient } from "better-auth/react";
 
 declare global {
 	namespace React.JSX {
@@ -67,6 +68,12 @@ export interface User {
 	securityQuestion?: { question: string; answer: string };
 	email?: string;
 	groups?: string[];
+	window: {
+		winAccent: string;
+		blurlevel: number;
+		alwaysMaximized: boolean;
+		alwaysFullscreen: boolean;
+	};
 }
 
 /**
@@ -471,7 +478,7 @@ export interface COM {
 		download(url: string, location: string): Promise<void>;
 		exportfs(): void;
 		users: {
-			list(): Promise<void>;
+			list(): Promise<string[]>;
 			add(user: User): Promise<boolean>;
 			remove(id: string): Promise<boolean>;
 			update(user: User): Promise<void>;
@@ -485,6 +492,13 @@ export interface COM {
 	fflate: any;
 	fs: FSType;
 	vfs: vFS;
+	tauth: {
+		client: ReturnType<typeof createAuthClient>;
+		signIn(email: string, password: string): Promise<any>;
+		signOut(): Promise<void>;
+		isTACC(username: string): Promise<boolean>;
+		updateInfo(data: any): Promise<void>;
+	};
 	crypto(pass: string, file: string): Promise<string>;
 	platform: {
 		getPlatform(): Promise<"desktop" | "mobile">;

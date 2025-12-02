@@ -492,7 +492,7 @@ window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.js
 	pfpEl.src = data["pfp"];
 });
 
-pfpEl.addEventListener("click", e => {
+pfpEl.addEventListener("click", async e => {
 	const uploader = document.createElement("input");
 	uploader.type = "file";
 	uploader.accept = "img/*";
@@ -505,6 +505,30 @@ pfpEl.addEventListener("click", e => {
 				title: "Resize your Profile picture",
 				img: reader.result,
 				onOk: async img => {
+					if (await window.parent.tb.tauth.isTACC()) {
+						tb.dialog.Select({
+							title: "Do you want to upload this profile picture to your Terbium Account?",
+							options: [
+								{
+									text: "Yes",
+									value: "yes",
+								},
+								{
+									text: "No",
+									value: "no",
+								},
+							],
+							onOk: async choice => {
+								if (choice === "yes") {
+									await window.parent.tb.tauth.updateInfo({
+										pfp: img,
+									});
+								} else {
+									return;
+								}
+							},
+						});
+					}
 					const uSettings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"));
 					uSettings["pfp"] = img;
 					pfpEl.src = img;
@@ -628,6 +652,56 @@ permEl.addEventListener("click", async () => {
 				}
 			},
 		});
+	}
+});
+
+const actype = document.querySelector(".actype");
+actype.addEventListener("click", async () => {
+	await tb.dialog.Select({
+		title: "Select Option",
+		options: [
+			{
+				text: "Link Terbium Cloud™ Account",
+				value: "cloud",
+			},
+			{
+				text: "Convert to Local Account",
+				value: "local",
+			},
+		],
+		onOk: async choice => {
+			switch (choice) {
+				case "cloud":
+					const res = await window.parent.tb.tauth.signIn();
+					actype.innerHTML = "Terbium Cloud\u2122 Account";
+					window.parent.tb.system.users.update({
+						username: res.data.user.name,
+						pfp: res.data.user.image,
+					});
+					break;
+				case "local":
+					await window.parent.tb.tauth.signOut();
+					actype.innerHTML = "Local Account";
+					break;
+			}
+		},
+	});
+});
+
+window.parent.tb.fs.readFile(`/system/etc/terbium/taccs.json`, "utf8", (err, data) => {
+	if (err) return console.log(err);
+	const entries = JSON.parse(data);
+	const act = sessionStorage.getItem("currAcc");
+	try {
+		let isCloud = false;
+		if (Array.isArray(entries)) {
+			isCloud = entries.some(e => e && e.username === act);
+		} else if (entries && typeof entries === "object") {
+			isCloud = Object.values(entries).some(e => e && e.username === act);
+		}
+		actype.innerHTML = isCloud ? "Terbium Cloud\u2122 Account" : "Local Account";
+	} catch (e) {
+		actype.innerHTML = "Local Account";
 	}
 });
 

@@ -332,6 +332,12 @@ const createAccount = async () => {
 							const randomColorStr = ["blue", "green", "orange", "pink", "purple", "red", "yellow"][Math.floor(Math.random() * 7)];
 							data["pfp"] = `/assets/img/default - ${randomColorStr}.png`;
 							data["perm"] = "user";
+							data.window = {
+								winAccent: "#ffffff",
+								blurlevel: 18,
+								alwaysMaximized: false,
+								alwaysFullscreen: false,
+							};
 							await tb.system.users.add(data);
 							renderAccounts();
 						} else {
@@ -344,6 +350,12 @@ const createAccount = async () => {
 									onOk: async img => {
 										data["pfp"] = img;
 										data["perm"] = "user";
+										data.window = {
+											winAccent: "#ffffff",
+											blurlevel: 18,
+											alwaysMaximized: false,
+											alwaysFullscreen: false,
+										};
 										await tb.system.users.add(data);
 										renderAccounts();
 									},
@@ -356,6 +368,12 @@ const createAccount = async () => {
 					const randomColorStr = ["blue", "green", "orange", "pink", "purple", "red", "yellow"][Math.floor(Math.random() * 7)];
 					data["pfp"] = `/assets/img/default - ${randomColorStr}.png`;
 					data["perm"] = "user";
+					data.window = {
+						winAccent: "#ffffff",
+						blurlevel: 18,
+						alwaysMaximized: false,
+						alwaysFullscreen: false,
+					};
 					await tb.system.users.add(data);
 					renderAccounts();
 				}

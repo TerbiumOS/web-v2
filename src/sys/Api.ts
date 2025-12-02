@@ -26,6 +26,7 @@ import parse from "./Parser";
 import { useWindowStore } from "./Store";
 import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
 import { vFS } from "./vFS";
+import { createAuthClient } from "better-auth/react";
 
 const system = new System();
 const pw = new pwd();
@@ -541,17 +542,29 @@ export default async function Api() {
 				link.click();
 			},
 			users: {
-				async list() {},
+				async list() {
+					const usersDir = await window.tb.fs.promises.readdir("/home/");
+					const users: string[] = [];
+					for (const user of usersDir) {
+						const userJsonPath = `/home/${user}/user.json`;
+						if (await fileExists(userJsonPath)) {
+							const userData: User = JSON.parse(await window.tb.fs.promises.readFile(userJsonPath, "utf8"));
+							users.push(userData.username);
+						}
+					}
+					return users;
+				},
 				async add(user: User) {
-					const { username, password, pfp, perm, securityQuestion } = user;
+					const { username, password, pfp, perm, securityQuestion, window } = user;
 					const userDir = `/home/${username}`;
-					await window.tb.fs.promises.mkdir(userDir);
+					await parent.tb.fs.promises.mkdir(userDir);
 					const userJson: User = {
 						id: username,
 						username: username,
 						password: password,
 						pfp: pfp,
 						perm: perm,
+						window: window,
 					};
 					if (securityQuestion) {
 						userJson.securityQuestion = {
@@ -559,7 +572,7 @@ export default async function Api() {
 							answer: securityQuestion.answer,
 						};
 					}
-					await window.tb.fs.promises.writeFile(`${userDir}/user.json`, JSON.stringify(userJson));
+					await parent.tb.fs.promises.writeFile(`${userDir}/user.json`, JSON.stringify(userJson));
 					const userSettings = {
 						wallpaper: "/assets/wallpapers/1.png",
 						wallpaperMode: "cover",
@@ -575,14 +588,14 @@ export default async function Api() {
 							showSeconds: false,
 						},
 					};
-					await window.tb.fs.promises.writeFile(`${userDir}/settings.json`, JSON.stringify(userSettings));
+					await parent.tb.fs.promises.writeFile(`${userDir}/settings.json`, JSON.stringify(userSettings));
 					const defaultDirs = ["desktop", "documents", "downloads", "music", "pictures", "videos"];
 					defaultDirs.forEach(async dir => {
-						await window.tb.fs.promises.mkdir(`${userDir}/${dir}`);
+						await parent.tb.fs.promises.mkdir(`${userDir}/${dir}`);
 					});
-					await window.tb.fs.promises.mkdir(`/apps/user/${username}`);
-					await window.tb.fs.promises.mkdir(`/apps/user/${username}/files`);
-					await window.tb.fs.promises.writeFile(
+					await parent.tb.fs.promises.mkdir(`/apps/user/${username}`);
+					await parent.tb.fs.promises.mkdir(`/apps/user/${username}/files`);
+					await parent.tb.fs.promises.writeFile(
 						`/apps/user/${username}/files/config.json`,
 						JSON.stringify({
 							"quick-center": true,
@@ -601,11 +614,11 @@ export default async function Api() {
 						}),
 						"utf8",
 					);
-					await window.tb.fs.promises.writeFile(`/apps/user/${username}/files/davs.json`, JSON.stringify([]));
+					await parent.tb.fs.promises.writeFile(`/apps/user/${username}/files/davs.json`, JSON.stringify([]));
 					const response = await fetch("/apps/files.tapp/icons.json");
 					const dat = await response.json();
-					await window.tb.fs.promises.writeFile(`/apps/user/${username}/files/icns.json`, JSON.stringify(dat));
-					await window.tb.fs.promises.writeFile(
+					await parent.tb.fs.promises.writeFile(`/apps/user/${username}/files/icns.json`, JSON.stringify(dat));
+					await parent.tb.fs.promises.writeFile(
 						`/apps/user/${username}/files/quick-center.json`,
 						JSON.stringify({
 							paths: {
@@ -635,7 +648,7 @@ export default async function Api() {
 						} else {
 							leftPos = 1;
 						}
-						if (topPos * 66 > window.innerHeight - 130) {
+						if (topPos * 66 > parent.innerHeight - 130) {
 							leftPos = 1.15;
 							if (r2.length === 0) {
 								topPos = 0;
@@ -655,10 +668,10 @@ export default async function Api() {
 								left: leftPos,
 							},
 						});
-						await window.tb.fs.promises.symlink(`/apps/system/${name}.tapp/index.json`, `/home/${username}/desktop/${name}.lnk`);
+						await parent.tb.fs.promises.symlink(`/apps/system/${name}.tapp/index.json`, `/home/${username}/desktop/${name}.lnk`);
 					}
-					await window.tb.fs.promises.writeFile(`/home/${username}/desktop/.desktop.json`, JSON.stringify(items));
-					await window.tb.fs.promises.writeFile(
+					await parent.tb.fs.promises.writeFile(`/home/${username}/desktop/.desktop.json`, JSON.stringify(items));
+					await parent.tb.fs.promises.writeFile(
 						`/apps/user/${username}/app store/repos.json`,
 						JSON.stringify([
 							{
@@ -731,10 +744,10 @@ export default async function Api() {
 					return true;
 				},
 				async update(user: User) {
-					const { username, password, pfp, perm, securityQuestion } = user;
+					const { username, password, pfp, perm, securityQuestion, window } = user;
 					const userDir = `/home/${username}`;
-					const userConfig = JSON.parse(await window.tb.fs.promises.readFile(`${userDir}/user.json`, "utf8"));
-					await window.tb.fs.promises.writeFile(
+					const userConfig = JSON.parse(await parent.tb.fs.promises.readFile(`${userDir}/user.json`, "utf8"));
+					await parent.tb.fs.promises.writeFile(
 						`${userDir}/user.json`,
 						JSON.stringify({
 							id: userConfig.id,
@@ -742,6 +755,12 @@ export default async function Api() {
 							password: password === userConfig.password ? userConfig.password : password,
 							pfp: pfp === userConfig.pfp ? userConfig.pfp : pfp,
 							perm: perm === userConfig.perm ? userConfig.perm : perm,
+							window: {
+								winAccent: window.winAccent === userConfig.window.winAccent ? userConfig.window.winAccent : "#ffffff",
+								blurlevel: window.blurlevel === userConfig.window.blurlevel ? userConfig.window.blurlevel : 0,
+								alwaysMaximized: window.alwaysMaximized === userConfig.window.alwaysMaximized ? userConfig.window.alwaysMaximized : false,
+								alwaysFullscreen: window.alwaysFullscreen === userConfig.window.alwaysFullscreen ? userConfig.window.alwaysFullscreen : false,
+							},
 							...(securityQuestion !== undefined ? { securityQuestion: securityQuestion === userConfig.securityQuestion ? userConfig.securityQuestion : securityQuestion } : userConfig.securityQuestion !== undefined ? { securityQuestion: userConfig.securityQuestion } : {}),
 						}),
 					);
@@ -767,6 +786,109 @@ export default async function Api() {
 		fflate: fflate,
 		fs: window.tb.fs,
 		vfs: await vFS.create(),
+		tauth: {
+			client: createAuthClient({
+				baseURL: "https://auth.terbiumon.top",
+				fetchOptions: {
+					customFetchImpl: async (input: string | URL | Request, init?: RequestInit | undefined) => {
+						const response = await libcurl.fetch(input.toString(), init);
+						return response;
+					},
+				},
+			}),
+			signIn: () => {
+				return new Promise<any>((resolve, reject) => {
+					window.tb.dialog.WebAuth({
+						title: "Terbium Cloud Sign In",
+						message: "Please sign in to your Terbium Cloud Account to continue.",
+						onOk: async (username: string, password: string) => {
+							await window.tb.tauth.client.signIn.email({
+								email: username,
+								password: password,
+								fetchOptions: {
+									onSuccess: async response => {
+										const conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
+										conf.push({
+											username: response.data.user.name,
+											perm: "admin",
+											pfp: response.data.user.image,
+											email: response.data.user.email,
+										});
+										await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify(conf, null, 2), "utf8");
+										console.log("[TAUTH] Saved Account Info to FS");
+										resolve(response);
+									},
+									onError: error => {
+										reject(error);
+									},
+								},
+							});
+						},
+						onCancel: () => {
+							reject(new Error("User cancelled the sign-in process"));
+						},
+					});
+				});
+			},
+			signOut: async () => {
+				let conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
+				if (!Array.isArray(conf)) {
+					if (conf && typeof conf === "object") {
+						conf = Object.values(conf);
+					} else {
+						conf = [];
+					}
+				}
+				const currUser = sessionStorage.getItem("currAcc");
+				const idx = conf.findIndex((acc: any) => acc && acc.username === currUser);
+				if (idx !== -1) {
+					conf.splice(idx, 1);
+					await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify(conf, null, 2), "utf8");
+					console.log("[TAUTH] Removed Account Info from FS");
+				}
+			},
+			isTACC(username?: string) {
+				return new Promise<boolean>(async resolve => {
+					if (!username) {
+						username = sessionStorage.getItem("currAcc") || "Guest";
+					}
+					const conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
+					const exists = conf.some((acc: any) => acc && acc.username === username);
+					resolve(exists);
+				});
+			},
+			updateInfo: async (user: Partial<User>) => {
+				const target = (user as any).id || user.username || sessionStorage.getItem("currAcc");
+				if (!target) throw new Error("No target account specified");
+				const raw = await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8");
+				let conf: any = JSON.parse(raw);
+				if (!Array.isArray(conf)) {
+					if (conf && typeof conf === "object") conf = Object.values(conf);
+					else conf = [];
+				}
+				const idx = conf.findIndex((acc: any) => acc && (acc.username === target || acc.id === target));
+				if (idx === -1) throw new Error(`Account '${target}' not found`);
+				const existing = conf[idx] || {};
+				const updated = { ...existing, ...user };
+				if (!updated.id && existing.id) updated.id = existing.id;
+				conf[idx] = updated;
+				await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify(conf, null, 2), "utf8");
+				if (existing.username && updated.username && existing.username !== updated.username && sessionStorage.getItem("currAcc") === existing.username) {
+					sessionStorage.setItem("currAcc", updated.username);
+				}
+				const obj = {
+					name: updated.username,
+					email: updated.email,
+					image: updated.pfp,
+				};
+				try {
+					await window.tb.tauth.client.updateUser(obj);
+				} catch (e) {
+					console.error("Error updating TAuth user info:", e);
+				}
+				return updated;
+			},
+		},
 		node: {
 			webContainer: {},
 			servers: new Map<number, string>(),
@@ -851,6 +973,7 @@ export default async function Api() {
 				// @ts-expect-error
 				const stream = await navigator.mediaDevices.getDisplayMedia({ preferCurrentTab: true });
 				const capture = new ImageCapture(stream.getVideoTracks()[0]);
+				// @ts-expect-error
 				const frame = await capture.grabFrame();
 				stream.getVideoTracks()[0].stop();
 				const canvas: HTMLCanvasElement = document.createElement("canvas");
