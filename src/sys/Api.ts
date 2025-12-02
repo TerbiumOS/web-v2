@@ -555,16 +555,16 @@ export default async function Api() {
 					return users;
 				},
 				async add(user: User) {
-					const { username, password, pfp, perm, securityQuestion, window } = user;
+					const { username, password, pfp, perm, securityQuestion, window: userWinopts } = user;
 					const userDir = `/home/${username}`;
-					await parent.tb.fs.promises.mkdir(userDir);
+					await window.tb.fs.promises.mkdir(userDir);
 					const userJson: User = {
 						id: username,
 						username: username,
 						password: password,
 						pfp: pfp,
 						perm: perm,
-						window: window,
+						window: userWinopts,
 					};
 					if (securityQuestion) {
 						userJson.securityQuestion = {
@@ -572,7 +572,7 @@ export default async function Api() {
 							answer: securityQuestion.answer,
 						};
 					}
-					await parent.tb.fs.promises.writeFile(`${userDir}/user.json`, JSON.stringify(userJson));
+					await window.tb.fs.promises.writeFile(`${userDir}/user.json`, JSON.stringify(userJson));
 					const userSettings = {
 						wallpaper: "/assets/wallpapers/1.png",
 						wallpaperMode: "cover",
@@ -588,14 +588,14 @@ export default async function Api() {
 							showSeconds: false,
 						},
 					};
-					await parent.tb.fs.promises.writeFile(`${userDir}/settings.json`, JSON.stringify(userSettings));
+					await window.tb.fs.promises.writeFile(`${userDir}/settings.json`, JSON.stringify(userSettings));
 					const defaultDirs = ["desktop", "documents", "downloads", "music", "pictures", "videos"];
 					defaultDirs.forEach(async dir => {
-						await parent.tb.fs.promises.mkdir(`${userDir}/${dir}`);
+						await window.tb.fs.promises.mkdir(`${userDir}/${dir}`);
 					});
-					await parent.tb.fs.promises.mkdir(`/apps/user/${username}`);
-					await parent.tb.fs.promises.mkdir(`/apps/user/${username}/files`);
-					await parent.tb.fs.promises.writeFile(
+					await window.tb.fs.promises.mkdir(`/apps/user/${username}`);
+					await window.tb.fs.promises.mkdir(`/apps/user/${username}/files`);
+					await window.tb.fs.promises.writeFile(
 						`/apps/user/${username}/files/config.json`,
 						JSON.stringify({
 							"quick-center": true,
@@ -614,11 +614,11 @@ export default async function Api() {
 						}),
 						"utf8",
 					);
-					await parent.tb.fs.promises.writeFile(`/apps/user/${username}/files/davs.json`, JSON.stringify([]));
+					await window.tb.fs.promises.writeFile(`/apps/user/${username}/files/davs.json`, JSON.stringify([]));
 					const response = await fetch("/apps/files.tapp/icons.json");
 					const dat = await response.json();
-					await parent.tb.fs.promises.writeFile(`/apps/user/${username}/files/icns.json`, JSON.stringify(dat));
-					await parent.tb.fs.promises.writeFile(
+					await window.tb.fs.promises.writeFile(`/apps/user/${username}/files/icns.json`, JSON.stringify(dat));
+					await window.tb.fs.promises.writeFile(
 						`/apps/user/${username}/files/quick-center.json`,
 						JSON.stringify({
 							paths: {
@@ -668,10 +668,10 @@ export default async function Api() {
 								left: leftPos,
 							},
 						});
-						await parent.tb.fs.promises.symlink(`/apps/system/${name}.tapp/index.json`, `/home/${username}/desktop/${name}.lnk`);
+						await window.tb.fs.promises.symlink(`/apps/system/${name}.tapp/index.json`, `/home/${username}/desktop/${name}.lnk`);
 					}
-					await parent.tb.fs.promises.writeFile(`/home/${username}/desktop/.desktop.json`, JSON.stringify(items));
-					await parent.tb.fs.promises.writeFile(
+					await window.tb.fs.promises.writeFile(`/home/${username}/desktop/.desktop.json`, JSON.stringify(items));
+					await window.tb.fs.promises.writeFile(
 						`/apps/user/${username}/app store/repos.json`,
 						JSON.stringify([
 							{
@@ -744,10 +744,10 @@ export default async function Api() {
 					return true;
 				},
 				async update(user: User) {
-					const { username, password, pfp, perm, securityQuestion, window } = user;
+					const { username, password, pfp, perm, securityQuestion, window: userwinOpts } = user;
 					const userDir = `/home/${username}`;
-					const userConfig = JSON.parse(await parent.tb.fs.promises.readFile(`${userDir}/user.json`, "utf8"));
-					await parent.tb.fs.promises.writeFile(
+					const userConfig = JSON.parse(await window.tb.fs.promises.readFile(`${userDir}/user.json`, "utf8"));
+					await window.tb.fs.promises.writeFile(
 						`${userDir}/user.json`,
 						JSON.stringify({
 							id: userConfig.id,
@@ -756,10 +756,10 @@ export default async function Api() {
 							pfp: pfp === userConfig.pfp ? userConfig.pfp : pfp,
 							perm: perm === userConfig.perm ? userConfig.perm : perm,
 							window: {
-								winAccent: window.winAccent === userConfig.window.winAccent ? userConfig.window.winAccent : "#ffffff",
-								blurlevel: window.blurlevel === userConfig.window.blurlevel ? userConfig.window.blurlevel : 0,
-								alwaysMaximized: window.alwaysMaximized === userConfig.window.alwaysMaximized ? userConfig.window.alwaysMaximized : false,
-								alwaysFullscreen: window.alwaysFullscreen === userConfig.window.alwaysFullscreen ? userConfig.window.alwaysFullscreen : false,
+								winAccent: userwinOpts?.winAccent ?? userConfig.window?.winAccent ?? "#ffffff",
+								blurlevel: userwinOpts?.blurlevel ?? userConfig.window?.blurlevel ?? 18,
+								alwaysMaximized: userwinOpts?.alwaysMaximized ?? userConfig.window?.alwaysMaximized ?? false,
+								alwaysFullscreen: userwinOpts?.alwaysFullscreen ?? userConfig.window?.alwaysFullscreen ?? false,
 							},
 							...(securityQuestion !== undefined ? { securityQuestion: securityQuestion === userConfig.securityQuestion ? userConfig.securityQuestion : securityQuestion } : userConfig.securityQuestion !== undefined ? { securityQuestion: userConfig.securityQuestion } : {}),
 						}),
@@ -807,6 +807,10 @@ export default async function Api() {
 								password: password,
 								fetchOptions: {
 									onSuccess: async response => {
+										const exists = await window.tb.fs.promises.exists("/system/etc/terbium/taccs.json");
+										if (!exists) {
+											await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([], null, 2), "utf8");
+										}
 										const conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
 										conf.push({
 											username: response.data.user.name,
@@ -860,8 +864,11 @@ export default async function Api() {
 			updateInfo: async (user: Partial<User>) => {
 				const target = (user as any).id || user.username || sessionStorage.getItem("currAcc");
 				if (!target) throw new Error("No target account specified");
-				const raw = await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8");
-				let conf: any = JSON.parse(raw);
+				let conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
+				const exists = await window.tb.fs.promises.exists("/system/etc/terbium/taccs.json");
+				if (!exists) {
+					await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([], null, 2), "utf8");
+				}
 				if (!Array.isArray(conf)) {
 					if (conf && typeof conf === "object") conf = Object.values(conf);
 					else conf = [];
@@ -881,6 +888,7 @@ export default async function Api() {
 					email: updated.email,
 					image: updated.pfp,
 				};
+				console.log("Updating TAuth user info:", obj);
 				try {
 					await window.tb.tauth.client.updateUser(obj);
 				} catch (e) {
@@ -974,7 +982,6 @@ export default async function Api() {
 				// @ts-expect-error
 				const stream = await navigator.mediaDevices.getDisplayMedia({ preferCurrentTab: true });
 				const capture = new ImageCapture(stream.getVideoTracks()[0]);
-				// @ts-expect-error
 				const frame = await capture.grabFrame();
 				stream.getVideoTracks()[0].stop();
 				const canvas: HTMLCanvasElement = document.createElement("canvas");

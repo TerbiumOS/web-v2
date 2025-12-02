@@ -103,10 +103,16 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					ExternalApp: window.parent.ExternalApp,
 					ExternalLib: window.parent.ExternalLib,
 					Filer: window.parent.Filer,
-					instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
 				});
+				const aInstanceInt = setInterval(() => {
+					Object.assign(srcRef.current?.contentWindow as typeof window, {
+						instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
+					});
+					if (window.anura.wm.getWeakRef(Number(config.pid)) !== undefined) {
+						clearInterval(aInstanceInt);
+					}
+				}, 1);
 			} else {
-				console.log("no proxy", window.anura.wm.getWeakRef(Number(config.pid)));
 				Object.assign(srcRef.current?.contentWindow as typeof window, {
 					tb: window.parent.tb,
 					anura: window.parent.anura,
@@ -115,8 +121,16 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					ExternalApp: window.parent.ExternalApp,
 					ExternalLib: window.parent.ExternalLib,
 					Filer: window.parent.Filer,
-					instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
+					instanceWindow: {},
 				});
+				const aInstanceInt = setInterval(() => {
+					Object.assign(srcRef.current?.contentWindow as typeof window, {
+						instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
+					});
+					if (window.anura.wm.getWeakRef(Number(config.pid)) !== undefined) {
+						clearInterval(aInstanceInt);
+					}
+				}, 1);
 			}
 		};
 		prox();
@@ -137,7 +151,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 							Filer: window.parent.Filer,
 							instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
 						});
-					}, 500);
+					}, 100);
 				}
 			}
 		};
@@ -236,7 +250,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 										Filer: window.parent.Filer,
 										instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
 									});
-								}, 500);
+								}, 250);
 							}
 						},
 					},
@@ -266,7 +280,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 							Filer: window.parent.Filer,
 							instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
 						});
-					}, 500);
+					}, 250);
 				}
 			}
 		};

@@ -94,7 +94,7 @@ export class WMAPI {
 		for (const ref of this.windows) {
 			const r = ref.deref();
 			if (!r) continue;
-			if (r.pid === pid) return r;
+			if (Number(r.pid) === pid) return r;
 		}
 	}
 }
