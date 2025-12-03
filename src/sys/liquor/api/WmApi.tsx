@@ -54,9 +54,12 @@ export class WMAPI {
 			height: winInf.size.height,
 			allowMultipleInstance: false,
 		};
+		// Sorry, DOM has to be used here for cross compatability
+		const elem = document.querySelector(`div[pid="${pid}"]`);
+		const winControls = elem?.querySelectorAll(".controls.flex.gap-1") ?? [];
 		const obj: AnuraWMWeakRef = {
-			element: null,
-			content: null,
+			element: elem,
+			content: elem?.querySelector(".w-full.h-full"),
 			// @ts-expect-error keep same behavior — ExternalApp may be nonstandard
 			app: new ExternalApp(winInf),
 			dragForceX: 0,
@@ -75,15 +78,15 @@ export class WMAPI {
 			onresize: (_w: number, _h: number) => null,
 			onsnap: (_side: string) => null,
 			onunmaximize: () => null,
-			restoreSvg: null,
+			restoreSvg: winControls[0]?.childNodes[1] || null,
 			kill() {
 				if (obj.pid != null) window.tb.process.kill(obj.pid);
 			},
 			get alive() {
 				return window.tb.process.list()[pid] != null;
 			},
-			maximizeImg: null,
-			maximizeSvg: null,
+			maximizeImg: winControls[0]?.childNodes[1] || null,
+			maximizeSvg: winControls[0]?.childNodes[1] || null,
 			wininfo: tbanuraproperties,
 			title: winInf.name,
 		};

@@ -189,6 +189,8 @@ export default function Setup() {
 		if (data.email) {
 			delete (data as any).password;
 			await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([data], null, 2), "utf8");
+		} else {
+			await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([], null, 2), "utf8");
 		}
 		const usr = data["username"];
 		data["id"] = usr;

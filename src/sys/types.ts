@@ -540,8 +540,8 @@ export interface COM {
 }
 
 export interface AnuraWMWeakRef {
-	element: HTMLDivElement | null;
-	content: HTMLDivElement | null;
+	element: HTMLDivElement | Element | null;
+	content: HTMLDivElement | undefined | null;
 	app: ExternalApp;
 	dragForceX: 0;
 	dragForceY: 0;
@@ -559,11 +559,11 @@ export interface AnuraWMWeakRef {
 	onresize: (_w: number, _h: number) => null;
 	onsnap: (_side: string) => null;
 	onunmaximize: () => null;
-	restoreSvg: null;
+	restoreSvg: null | SVGElement | ChildNode;
 	kill: () => void;
 	alive: boolean;
-	maximizeImg: null | SVGElement;
-	maximizeSvg: null | SVGElement;
+	maximizeImg: null | SVGElement | ChildNode;
+	maximizeSvg: null | SVGElement | ChildNode;
 	wininfo: WindowInformation;
 	title: string;
 }

@@ -1696,8 +1696,48 @@ const createPath = async (title, path, type) => {
 	} else if (type === "folder") {
 		if (title.toLocaleLowerCase().endsWith(".tapp")) {
 			try {
-				const data = await window.parent.tb.fs.promises.readFile(`${path}/icon.svg`, "utf8");
-				icon.innerHTML = data;
+				if (await window.parent.tb.vfs.whatFS(path).promises.exists(`${path}/.tbconfig`)) {
+					const appData = JSON.parse(await window.parent.tb.vfs.whatFS(path).promises.readFile(`${path}/.tbconfig`, "utf8"));
+					const iconPath = appData.icon.includes("http") ? appData.icon : `${path}/${appData.icon}`;
+					if (iconPath.startsWith("http")) {
+						icon.innerHTML = `<img src="${iconPath}" alt="${appData.title || ""}" />`;
+					} else if (iconPath.toLowerCase().endsWith(".svg")) {
+						const imgData = await window.parent.tb.vfs.whatFS(path).promises.readFile(iconPath, "utf8");
+						icon.innerHTML = imgData;
+					} else {
+						const bin = await window.parent.tb.vfs.whatFS(path).promises.readFile(iconPath);
+						const b64 = window.parent.tb.buffer.from(bin).toString("base64");
+						let mime = "application/octet-stream";
+						if (iconPath.toLowerCase().endsWith(".png")) mime = "image/png";
+						else if (iconPath.toLowerCase().endsWith(".jpg") || iconPath.toLowerCase().endsWith(".jpeg")) mime = "image/jpeg";
+						else if (iconPath.toLowerCase().endsWith(".webp")) mime = "image/webp";
+						icon.innerHTML = `<img src="data:${mime};base64,${b64}" alt="${appData.title || ""}" />`;
+					}
+				} else if (await window.parent.tb.vfs.whatFS(path).promises.exists(`${path}/index.json`)) {
+					const appData = JSON.parse(await window.parent.tb.vfs.whatFS(path).promises.readFile(`${path}/index.json`, "utf8"));
+					const iconPath = appData.config.icon.includes("http") ? appData.config.icon : `${appData.config.icon.replace("/fs/", "/")}`;
+					const imgData = await window.parent.tb.vfs.whatFS(path).promises.readFile(iconPath, "utf8");
+					icon.innerHTML = imgData;
+				} else {
+					const data = await window.parent.tb.vfs.whatFS(path).promises.readFile(`${path}/icon.svg`, "utf8");
+					icon.innerHTML = data;
+				}
+			} catch {
+				icon.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+                        <path fill-rule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0016.5 9h-1.875a1.875 1.875 0 01-1.875-1.875V5.25A3.75 3.75 0 009 1.5H5.625zM7.5 15a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 017.5 15zm.75 2.25a.75.75 0 000 1.5H12a.75.75 0 000-1.5H8.25z" clip-rule="evenodd" />
+                        <path d="M12.971 1.816A5.23 5.23 0 0114.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 013.434 1.279 9.768 9.768 0 00-6.963-6.963z" />
+                    </svg>
+                `;
+			}
+		} else if (title.toLocaleLowerCase().endsWith(".app")) {
+			try {
+				if (await window.parent.tb.vfs.whatFS(path).promises.exists(`${path}/manifest.json`)) {
+					const appData = JSON.parse(await window.parent.tb.vfs.whatFS(path).promises.readFile(`${path}/manifest.json`, "utf8"));
+					const iconPath = appData.icon.includes("http") ? appData.icon : `${path}/${appData.icon}`;
+					const imgData = await window.parent.tb.vfs.whatFS(path).promises.readFile(iconPath, "utf8");
+					icon.innerHTML = imgData;
+				}
 			} catch {
 				icon.innerHTML = `
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
@@ -1796,7 +1836,7 @@ const createPath = async (title, path, type) => {
 	document.querySelector(".exp").appendChild(item);
 };
 
-const openPath = async path => {
+const openPath = async (path, override = false) => {
 	if (path === "/system/trash") {
 		if (parent.document.querySelector(`[control-id="files-et"]`)) {
 			parent.document.querySelector(`[control-id="files-et"]`).classList.remove("hidden");
@@ -2024,18 +2064,38 @@ const openPath = async path => {
 	const exp = document.querySelector(".exp");
 	exp.innerHTML = "";
 	exp.setAttribute("path", path);
-	if (path.toLowerCase().includes(".app")) {
-		try {
-			const anura = window.parent.anura;
-			const appPath = `/fs${path}`.replace("//", "/");
-			await anura.registerExternalApp(appPath);
-		} catch (e) {
-			window.parent.tb.dialog.Alert({
-				title: "Unexpected Error",
-				message: `❌ An Unexpected error occurred when trying to sideload the anura app: ${path} Error: ${e}`,
-			});
-		}
-		openPath(`/home/${user}`);
+	if (path.toLowerCase().endsWith(".app") && override !== true) {
+		tb.dialog.Select({
+			title: `Sideload App`,
+			message: `Do you want to sideload the anura app found at ${path}?`,
+			options: [
+				{ text: "Yes", value: "yes" },
+				{ text: "View Source", value: "source" },
+				{ text: "No", value: "no" },
+			],
+			onOk: async val => {
+				if (val === "yes") {
+					sideloadApp(path);
+				} else if (val === "source") {
+					openPath(path, true);
+				} else {
+					openPath("/home/" + user);
+				}
+			},
+		});
+		const sideloadApp = async path => {
+			try {
+				const anura = window.parent.anura;
+				const appPath = `/fs${path}`.replace("//", "/");
+				await anura.registerExternalApp(appPath);
+			} catch (e) {
+				window.parent.tb.dialog.Alert({
+					title: "Unexpected Error",
+					message: `❌ An Unexpected error occurred when trying to sideload the anura app: ${path} Error: ${e}`,
+				});
+			}
+			openPath(document.getElementById(".nav-input"));
+		};
 	} else {
 		window.parent.tb.fs.readdir(path, async (err, files) => {
 			if (err) return console.error(err);

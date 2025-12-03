@@ -1,4 +1,8 @@
 export class Processes {
+	processesDiv: HTMLDivElement | null;
+	constructor() {
+		this.processesDiv = document.querySelector("window-area");
+	}
 	get procs() {
 		const wins = window.anura.wm.windows;
 		const arr: WeakRef<any>[] = wins.reduce((out: WeakRef<any>[], w: any) => {

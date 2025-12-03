@@ -108,7 +108,7 @@ export const AliceWM = {
 						const winControls = elem?.querySelectorAll(".controls.flex.gap-1") ?? [];
 						window.tb.window.content.set("<div></div>");
 						obj.element = elem;
-						obj.content = elem?.querySelector("div:not([class]):not([pid]):not([style]):not([data-resizer]):not([message])");
+						obj.content = elem?.querySelector(".w-full.h-full");
 						// @ts-expect-error types
 						obj.app = new ExternalApp(wininfo);
 						obj.dragForceX = 0;
