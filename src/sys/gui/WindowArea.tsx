@@ -95,6 +95,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				} else {
 					setSrc(`${window.location.origin}/service/${await window.tb.proxy.encode(config.src, "XOR")}`);
 				}
+				const instanceWin = (await window.anura.wm.getWeakRef(Number(config.pid))) || {};
 				Object.assign(srcRef.current?.contentWindow as typeof window, {
 					tb: window.parent.tb,
 					anura: window.parent.anura,
@@ -103,16 +104,11 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					ExternalApp: window.parent.ExternalApp,
 					ExternalLib: window.parent.ExternalLib,
 					Filer: window.parent.Filer,
+					instanceWindow: instanceWin,
 				});
-				const aInstanceInt = setInterval(() => {
-					Object.assign(srcRef.current?.contentWindow as typeof window, {
-						instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
-					});
-					if (window.anura.wm.getWeakRef(Number(config.pid)) !== undefined) {
-						clearInterval(aInstanceInt);
-					}
-				}, 1);
 			} else {
+				console.log(await window.anura.wm.getWeakRef(Number(config.pid)));
+				const instanceWin = (await window.anura.wm.getWeakRef(Number(config.pid))) || {};
 				Object.assign(srcRef.current?.contentWindow as typeof window, {
 					tb: window.parent.tb,
 					anura: window.parent.anura,
@@ -121,16 +117,8 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					ExternalApp: window.parent.ExternalApp,
 					ExternalLib: window.parent.ExternalLib,
 					Filer: window.parent.Filer,
-					instanceWindow: {},
+					instanceWindow: instanceWin,
 				});
-				const aInstanceInt = setInterval(() => {
-					Object.assign(srcRef.current?.contentWindow as typeof window, {
-						instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
-					});
-					if (window.anura.wm.getWeakRef(Number(config.pid)) !== undefined) {
-						clearInterval(aInstanceInt);
-					}
-				}, 1);
 			}
 		};
 		prox();
@@ -140,18 +128,16 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			if (e.detail === config.pid) {
 				if (srcRef.current?.contentWindow) {
 					srcRef.current.contentWindow.location.reload();
-					setTimeout(() => {
-						Object.assign(srcRef.current?.contentWindow!, {
-							tb: window.parent.tb,
-							anura: window.parent.anura,
-							AliceWM: window.parent.AliceWM,
-							LocalFS: window.parent.LocalFS,
-							ExternalApp: window.parent.ExternalApp,
-							ExternalLib: window.parent.ExternalLib,
-							Filer: window.parent.Filer,
-							instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
-						});
-					}, 100);
+					Object.assign(srcRef.current?.contentWindow!, {
+						tb: window.parent.tb,
+						anura: window.parent.anura,
+						AliceWM: window.parent.AliceWM,
+						LocalFS: window.parent.LocalFS,
+						ExternalApp: window.parent.ExternalApp,
+						ExternalLib: window.parent.ExternalLib,
+						Filer: window.parent.Filer,
+						instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)) || {},
+					});
 				}
 			}
 		};
@@ -239,18 +225,16 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 						click: () => {
 							if (srcRef.current?.contentWindow) {
 								srcRef.current.contentWindow.location.reload();
-								setTimeout(() => {
-									Object.assign(srcRef.current?.contentWindow!, {
-										tb: window.parent.tb,
-										anura: window.parent.anura,
-										AliceWM: window.parent.AliceWM,
-										LocalFS: window.parent.LocalFS,
-										ExternalApp: window.parent.ExternalApp,
-										ExternalLib: window.parent.ExternalLib,
-										Filer: window.parent.Filer,
-										instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
-									});
-								}, 250);
+								Object.assign(srcRef.current?.contentWindow!, {
+									tb: window.parent.tb,
+									anura: window.parent.anura,
+									AliceWM: window.parent.AliceWM,
+									LocalFS: window.parent.LocalFS,
+									ExternalApp: window.parent.ExternalApp,
+									ExternalLib: window.parent.ExternalLib,
+									Filer: window.parent.Filer,
+									instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)) || {},
+								});
 							}
 						},
 					},
@@ -898,7 +882,6 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					key={config.src}
 					ref={srcRef}
 					src={src}
-					sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-downloads"
 					onLoad={() => {
 						if (config.message) {
 							srcRef.current?.contentWindow!.postMessage(config.message, "*");
@@ -907,10 +890,8 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 						const sr2 = document.createElement("script");
 						sr1.src = "/cursor_changer.js";
 						sr2.src = "/media_interactions.js";
-						if (srcRef.current?.contentDocument) {
-							srcRef.current?.contentDocument.head.appendChild(sr2);
-							srcRef.current?.contentDocument.head.appendChild(sr1);
-						}
+						srcRef.current?.contentDocument?.head.appendChild(sr1);
+						srcRef.current?.contentDocument?.head.appendChild(sr2);
 					}}
 					referrerPolicy="no-referrer"
 					style={{ border: "none", all: "initial", width: "100%", height: "calc(100% - 40px)", pointerEvents: isMouseDown ? "none" : "auto", userSelect: "none" }}

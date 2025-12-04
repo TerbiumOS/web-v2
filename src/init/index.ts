@@ -281,5 +281,6 @@ export async function init() {
 			]),
 		);
 	}
+	console.log("File System Inited");
 	return true;
 }

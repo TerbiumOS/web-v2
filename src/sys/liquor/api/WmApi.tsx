@@ -9,7 +9,7 @@ export class WMAPI {
 			for (const proc of Object.values(window.tb.process.list())) {
 				this.convertProc(proc.pid);
 			}
-		}, 50);
+		}, 1);
 	}
 	async create(ctx: App | any, _info: WindowInformation, _onfocus: (() => void) | null = null, _onresize: ((w: number, h: number) => void) | null = null) {
 		const win = await AliceWM.create(ctx);

@@ -182,7 +182,8 @@ export default function Setup() {
 		uploader.click();
 	};
 	const saveData = async () => {
-		await init();
+		const int = await init();
+		console.log(`Init State: ${int}`);
 		let data: User = JSON.parse(sessionStorage.getItem("new-user") as string);
 		sessionStorage.setItem("new-user", JSON.stringify(data));
 		// Types being weird idk

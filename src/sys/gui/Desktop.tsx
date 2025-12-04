@@ -31,7 +31,7 @@ const Desktop: FC<IDesktopProps> = ({ desktop, onContextMenu }) => {
 			setShowNotif(prev => !prev);
 		};
 		const getWallpaper = async () => {
-			const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`));
+			const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`));
 			if (settings.wallpaper.startsWith("/system")) {
 				if (!desktopRef.current) return;
 				desktopRef.current.style.backgroundImage = `url("/fs/${settings.wallpaper}")`;
