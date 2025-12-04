@@ -58,29 +58,27 @@ export default function Recovery() {
 				sessionStorage.setItem("boot", "true");
 				window.location.reload();
 			};
-
 			const cloak = () => {
 				const newWindow = window.open("about:blank", "_blank");
 				const newDocument = newWindow!.document.open();
 				sessionStorage.setItem("boot", "true");
 				newDocument.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style type="text/css">
-                    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-                </style>
-            </head>
-            <body>
-                <iframe style="border: none; width: 100%; height: 100vh;" src="${window.location.href}?boot=true"></iframe>
-            </body>
-            </html>
-        `);
+					<!DOCTYPE html>
+					<html>
+					<head>
+						<style type="text/css">
+							body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+						</style>
+					</head>
+					<body>
+						<iframe style="border: none; width: 100%; height: 100vh;" src="${window.location.href}?boot=true"></iframe>
+					</body>
+					</html>
+				`);
 				newDocument.close();
 				window.location.href = "https://google.com";
 				console.log("Cloak Opened!");
 			};
-
 			const recovery = () => {
 				sessionStorage.setItem("recovery", "true");
 				window.location.reload();
@@ -176,29 +174,27 @@ export default function Recovery() {
 						sessionStorage.setItem("boot", "true");
 						window.location.reload();
 					};
-
 					const cloak = () => {
 						const newWindow = window.open("about:blank", "_blank");
 						const newDocument = newWindow!.document.open();
 						sessionStorage.setItem("boot", "true");
 						newDocument.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style type="text/css">
-                    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-                </style>
-            </head>
-            <body>
-                <iframe style="border: none; width: 100%; height: 100vh;" src="${window.location.href}?boot=true"></iframe>
-            </body>
-            </html>
-        `);
+							<!DOCTYPE html>
+							<html>
+							<head>
+								<style type="text/css">
+									body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+								</style>
+							</head>
+							<body>
+								<iframe style="border: none; width: 100%; height: 100vh;" src="${window.location.href}?boot=true"></iframe>
+							</body>
+							</html>
+						`);
 						newDocument.close();
 						window.location.href = "https://google.com";
 						console.log("Cloak Opened!");
 					};
-
 					const recovery = () => {
 						sessionStorage.setItem("recovery", "true");
 						window.location.reload();
@@ -413,18 +409,18 @@ export default function Recovery() {
 							const newDocument = newWindow!.document.open();
 							sessionStorage.setItem("boot", "true");
 							newDocument.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style type="text/css">
-                    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-                </style>
-            </head>
-            <body>
-                <iframe style="border: none; width: 100%; height: 100vh;" src="${window.location.href}?boot=true"></iframe>
-            </body>
-            </html>
-        `);
+								<!DOCTYPE html>
+								<html>
+								<head>
+									<style type="text/css">
+										body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+									</style>
+								</head>
+								<body>
+									<iframe style="border: none; width: 100%; height: 100vh;" src="${window.location.href}?boot=true"></iframe>
+								</body>
+								</html>
+							`);
 							newDocument.close();
 							window.location.href = "https://google.com";
 							console.log("Cloak Opened!");
@@ -576,18 +572,18 @@ export default function Recovery() {
 									const newDocument = newWindow!.document.open();
 									sessionStorage.setItem("boot", "true");
 									newDocument.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style type="text/css">
-                    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-                </style>
-            </head>
-            <body>
-                <iframe style="border: none; width: 100%; height: 100vh;" src="${window.location.href}?boot=true"></iframe>
-            </body>
-            </html>
-        `);
+										<!DOCTYPE html>
+										<html>
+										<head>
+											<style type="text/css">
+												body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+											</style>
+										</head>
+										<body>
+											<iframe style="border: none; width: 100%; height: 100vh;" src="${window.location.href}?boot=true"></iframe>
+										</body>
+										</html>
+									`);
 									newDocument.close();
 									window.location.href = "https://google.com";
 									console.log("Cloak Opened!");
