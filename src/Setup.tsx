@@ -186,13 +186,6 @@ export default function Setup() {
 		console.log(`Init State: ${int}`);
 		let data: User = JSON.parse(sessionStorage.getItem("new-user") as string);
 		sessionStorage.setItem("new-user", JSON.stringify(data));
-		// Types being weird idk
-		if (data.email) {
-			delete (data as any).password;
-			await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([data], null, 2), "utf8");
-		} else {
-			await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([], null, 2), "utf8");
-		}
 		const usr = data["username"];
 		data["id"] = usr;
 		let pass: any;
@@ -200,6 +193,13 @@ export default function Setup() {
 			pass = pw.harden(data["password"]);
 		} else {
 			pass = false;
+		}
+		// Types being weird idk
+		if (data.email) {
+			delete (data as any).password;
+			await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([data], null, 2), "utf8");
+		} else {
+			await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([], null, 2), "utf8");
 		}
 		const userInf: User = {
 			id: usr,
