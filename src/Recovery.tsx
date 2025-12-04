@@ -54,16 +54,16 @@ export default function Recovery() {
 		progresscheck.current!.classList.add("flex");
 		if (localStorage.getItem("setup")) {
 			await window.tb.sh.format();
-		const boot = () => {
-		sessionStorage.setItem("boot", "true");
-		window.location.reload();
-	};
+			const boot = () => {
+				sessionStorage.setItem("boot", "true");
+				window.location.reload();
+			};
 
-	const cloak = () => {
-		const newWindow = window.open("about:blank", "_blank");
-		const newDocument = newWindow!.document.open();
-		sessionStorage.setItem("boot", "true");
-		newDocument.write(`
+			const cloak = () => {
+				const newWindow = window.open("about:blank", "_blank");
+				const newDocument = newWindow!.document.open();
+				sessionStorage.setItem("boot", "true");
+				newDocument.write(`
             <!DOCTYPE html>
             <html>
             <head>
@@ -76,20 +76,23 @@ export default function Recovery() {
             </body>
             </html>
         `);
-		newDocument.close();
-		window.location.href = "https://google.com";
-		console.log("Cloak Opened!");
-	};
+				newDocument.close();
+				window.location.href = "https://google.com";
+				console.log("Cloak Opened!");
+			};
 
-	const recovery = () => {
-		sessionStorage.setItem("recovery", "true");
-		window.location.reload();
-	};
-			await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify([
-				{ name: "TB React", action: boot.toString() },
-				{ name: "TB React (Cloaked)", action: cloak.toString() },
-				{ name: "TB System Recovery", action: recovery.toString() },
-			]));
+			const recovery = () => {
+				sessionStorage.setItem("recovery", "true");
+				window.location.reload();
+			};
+			await window.tb.fs.promises.writeFile(
+				"/bootentries.json",
+				JSON.stringify([
+					{ name: "TB React", action: boot.toString() },
+					{ name: "TB React (Cloaked)", action: cloak.toString() },
+					{ name: "TB System Recovery", action: recovery.toString() },
+				]),
+			);
 		}
 		await download("https://cdn.terbiumon.top/recovery/latest.zip", "/uploaded.zip");
 		setShowCursor(false);
@@ -168,17 +171,17 @@ export default function Recovery() {
 				const content = await file.arrayBuffer();
 				setProgress(10);
 				if (localStorage.getItem("setup")) {
-			await window.tb.sh.format();
-		const boot = () => {
-		sessionStorage.setItem("boot", "true");
-		window.location.reload();
-	};
+					await window.tb.sh.format();
+					const boot = () => {
+						sessionStorage.setItem("boot", "true");
+						window.location.reload();
+					};
 
-	const cloak = () => {
-		const newWindow = window.open("about:blank", "_blank");
-		const newDocument = newWindow!.document.open();
-		sessionStorage.setItem("boot", "true");
-		newDocument.write(`
+					const cloak = () => {
+						const newWindow = window.open("about:blank", "_blank");
+						const newDocument = newWindow!.document.open();
+						sessionStorage.setItem("boot", "true");
+						newDocument.write(`
             <!DOCTYPE html>
             <html>
             <head>
@@ -191,21 +194,24 @@ export default function Recovery() {
             </body>
             </html>
         `);
-		newDocument.close();
-		window.location.href = "https://google.com";
-		console.log("Cloak Opened!");
-	};
+						newDocument.close();
+						window.location.href = "https://google.com";
+						console.log("Cloak Opened!");
+					};
 
-	const recovery = () => {
-		sessionStorage.setItem("recovery", "true");
-		window.location.reload();
-	};
-			await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify([
-				{ name: "TB React", action: boot.toString() },
-				{ name: "TB React (Cloaked)", action: cloak.toString() },
-				{ name: "TB System Recovery", action: recovery.toString() },
-			]));
-		}
+					const recovery = () => {
+						sessionStorage.setItem("recovery", "true");
+						window.location.reload();
+					};
+					await window.tb.fs.promises.writeFile(
+						"/bootentries.json",
+						JSON.stringify([
+							{ name: "TB React", action: boot.toString() },
+							{ name: "TB React (Cloaked)", action: cloak.toString() },
+							{ name: "TB System Recovery", action: recovery.toString() },
+						]),
+					);
+				}
 				setProgress(25);
 				await window.tb.fs.promises.writeFile("//uploaded.zip", window.tb.buffer.from(content), "arraybuffer");
 				setProgress(35);
@@ -396,17 +402,17 @@ export default function Recovery() {
 					sessionStorage.clear();
 					sessionStorage.setItem("boot", "true");
 					if (localStorage.getItem("setup")) {
-			await window.tb.sh.format();
-		const boot = () => {
-		sessionStorage.setItem("boot", "true");
-		window.location.reload();
-	};
+						await window.tb.sh.format();
+						const boot = () => {
+							sessionStorage.setItem("boot", "true");
+							window.location.reload();
+						};
 
-	const cloak = () => {
-		const newWindow = window.open("about:blank", "_blank");
-		const newDocument = newWindow!.document.open();
-		sessionStorage.setItem("boot", "true");
-		newDocument.write(`
+						const cloak = () => {
+							const newWindow = window.open("about:blank", "_blank");
+							const newDocument = newWindow!.document.open();
+							sessionStorage.setItem("boot", "true");
+							newDocument.write(`
             <!DOCTYPE html>
             <html>
             <head>
@@ -419,21 +425,24 @@ export default function Recovery() {
             </body>
             </html>
         `);
-		newDocument.close();
-		window.location.href = "https://google.com";
-		console.log("Cloak Opened!");
-	};
+							newDocument.close();
+							window.location.href = "https://google.com";
+							console.log("Cloak Opened!");
+						};
 
-	const recovery = () => {
-		sessionStorage.setItem("recovery", "true");
-		window.location.reload();
-	};
-			await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify([
-				{ name: "TB React", action: boot.toString() },
-				{ name: "TB React (Cloaked)", action: cloak.toString() },
-				{ name: "TB System Recovery", action: recovery.toString() },
-			]));
-		}
+						const recovery = () => {
+							sessionStorage.setItem("recovery", "true");
+							window.location.reload();
+						};
+						await window.tb.fs.promises.writeFile(
+							"/bootentries.json",
+							JSON.stringify([
+								{ name: "TB React", action: boot.toString() },
+								{ name: "TB React (Cloaked)", action: cloak.toString() },
+								{ name: "TB System Recovery", action: recovery.toString() },
+							]),
+						);
+					}
 					window.location.reload();
 				} else if (selected === 1) {
 					msgbox.current!.classList.remove("hidden");
@@ -556,17 +565,17 @@ export default function Recovery() {
 							sessionStorage.clear();
 							sessionStorage.setItem("boot", "true");
 							if (localStorage.getItem("setup")) {
-			await window.tb.sh.format();
-		const boot = () => {
-		sessionStorage.setItem("boot", "true");
-		window.location.reload();
-	};
+								await window.tb.sh.format();
+								const boot = () => {
+									sessionStorage.setItem("boot", "true");
+									window.location.reload();
+								};
 
-	const cloak = () => {
-		const newWindow = window.open("about:blank", "_blank");
-		const newDocument = newWindow!.document.open();
-		sessionStorage.setItem("boot", "true");
-		newDocument.write(`
+								const cloak = () => {
+									const newWindow = window.open("about:blank", "_blank");
+									const newDocument = newWindow!.document.open();
+									sessionStorage.setItem("boot", "true");
+									newDocument.write(`
             <!DOCTYPE html>
             <html>
             <head>
@@ -579,21 +588,24 @@ export default function Recovery() {
             </body>
             </html>
         `);
-		newDocument.close();
-		window.location.href = "https://google.com";
-		console.log("Cloak Opened!");
-	};
+									newDocument.close();
+									window.location.href = "https://google.com";
+									console.log("Cloak Opened!");
+								};
 
-	const recovery = () => {
-		sessionStorage.setItem("recovery", "true");
-		window.location.reload();
-	};
-			await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify([
-				{ name: "TB React", action: boot.toString() },
-				{ name: "TB React (Cloaked)", action: cloak.toString() },
-				{ name: "TB System Recovery", action: recovery.toString() },
-			]));
-		}
+								const recovery = () => {
+									sessionStorage.setItem("recovery", "true");
+									window.location.reload();
+								};
+								await window.tb.fs.promises.writeFile(
+									"/bootentries.json",
+									JSON.stringify([
+										{ name: "TB React", action: boot.toString() },
+										{ name: "TB React (Cloaked)", action: cloak.toString() },
+										{ name: "TB System Recovery", action: recovery.toString() },
+									]),
+								);
+							}
 							window.location.reload();
 						}}
 					>
