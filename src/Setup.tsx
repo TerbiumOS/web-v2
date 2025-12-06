@@ -207,12 +207,6 @@ export default function Setup() {
 			password: pass,
 			pfp: data["pfp"],
 			perm: data["perm"],
-			window: {
-				winAccent: "#ffffff",
-				blurlevel: 18,
-				alwaysMaximized: false,
-				alwaysFullscreen: false,
-			},
 		};
 		if (data.securityQuestion) {
 			userInf["securityQuestion"] = {
@@ -453,6 +447,15 @@ export default function Setup() {
 				fetchOptions: {
 					onSuccess: async data => {
 						console.log("Successfully registered:", data);
+						sessionStorage.setItem(
+							"new-user",
+							JSON.stringify({
+								username: usernameRef.current?.value,
+								password: passwordRef.current?.value,
+								perm: "admin",
+								pfp: pfpRef.current?.getAttribute("data-src") || `/assets/img/default - ${randomColors[Math.floor(Math.random() * randomColors.length)]}.png`,
+							}),
+						);
 						Next(2.5);
 					},
 					onError: error => {
@@ -461,16 +464,6 @@ export default function Setup() {
 				},
 				image: pfpRef.current?.getAttribute("data-src") || `/assets/img/default - ${randomColors[Math.floor(Math.random() * randomColors.length)]}.png`,
 			});
-			sessionStorage.setItem(
-				"new-user",
-				JSON.stringify({
-					username: usernameRef.current?.value,
-					password: passwordRef.current?.value,
-					perm: "admin",
-					pfp: pfpRef.current?.getAttribute("data-src") || `/assets/img/default - ${randomColors[Math.floor(Math.random() * randomColors.length)]}.png`,
-				}),
-			);
-			Next(2.5);
 		};
 		return (
 			<div

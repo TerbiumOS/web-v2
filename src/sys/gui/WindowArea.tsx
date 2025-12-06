@@ -128,16 +128,18 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			if (e.detail === config.pid) {
 				if (srcRef.current?.contentWindow) {
 					srcRef.current.contentWindow.location.reload();
-					Object.assign(srcRef.current?.contentWindow!, {
-						tb: window.parent.tb,
-						anura: window.parent.anura,
-						AliceWM: window.parent.AliceWM,
-						LocalFS: window.parent.LocalFS,
-						ExternalApp: window.parent.ExternalApp,
-						ExternalLib: window.parent.ExternalLib,
-						Filer: window.parent.Filer,
-						instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)) || {},
-					});
+					srcRef.current.onload = () => {
+						Object.assign(srcRef.current?.contentWindow!, {
+							tb: window.parent.tb,
+							anura: window.parent.anura,
+							AliceWM: window.parent.AliceWM,
+							LocalFS: window.parent.LocalFS,
+							ExternalApp: window.parent.ExternalApp,
+							ExternalLib: window.parent.ExternalLib,
+							Filer: window.parent.Filer,
+							instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)) || {},
+						});
+					};
 				}
 			}
 		};
@@ -253,7 +255,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			if (det.pid === config.pid) {
 				if (srcRef.current?.contentWindow) {
 					setSrc(det.url);
-					setTimeout(() => {
+					srcRef.current.onload = () => {
 						Object.assign(srcRef.current?.contentWindow!, {
 							tb: window.parent.tb,
 							anura: window.parent.anura,
@@ -262,9 +264,9 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 							ExternalApp: window.parent.ExternalApp,
 							ExternalLib: window.parent.ExternalLib,
 							Filer: window.parent.Filer,
-							instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)),
+							instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)) || {},
 						});
-					}, 250);
+					};
 				}
 			}
 		};
@@ -275,7 +277,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		const updAccent = async () => {
 			const settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8")) as UserSettings;
 			setAccent(`${settings.window.winAccent}${settings.window.blurlevel}`);
-			setIsFullscreen(settings.window.alwaysFullscreen === true);
+			setIsFullscreen(settings.window.alwaysFullscreen);
 		};
 		updAccent();
 

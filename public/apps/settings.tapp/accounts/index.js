@@ -274,7 +274,7 @@ const createAccount = async () => {
 				},
 			});
 		};
-		const ping = await fetch(`/service/${await window.parent.tb.proxy.encode(`https://auth.terbiumon.top/ping`, "XOR")}`, { method: "GET" });
+		const ping = await parent.tb.libcurl.fetch("https://auth.terbiumon.top/ping");
 		if (ping.ok) {
 			await tb.dialog.Select({
 				title: "Select Account Type",
@@ -292,14 +292,24 @@ const createAccount = async () => {
 					if (accountType === "user") {
 						makeAccount();
 					} else {
-						await tb.dialog.WebAuth({
-							title: "Terbium Cloud Authentication",
-							onOk: async (username, password) => {
-								try {
-									// TODO Add actual auth n stuff
-								} catch {}
-							},
-						});
+						const run = async () => {
+							try {
+								const resp = await window.parent.tb.tauth.signIn();
+								const userDataConv = {
+									id: resp.data.user.id,
+									username: resp.data.user.name,
+									email: resp.data.user.email,
+									pfp: resp.data.user.image,
+									password: await tb.crypto(resp.data.user.password),
+									perm: "user",
+								};
+								await tb.system.users.add(userDataConv);
+								renderAccounts();
+							} catch (e) {
+								run();
+							}
+						};
+						run();
 					}
 				},
 			});
@@ -332,12 +342,6 @@ const createAccount = async () => {
 							const randomColorStr = ["blue", "green", "orange", "pink", "purple", "red", "yellow"][Math.floor(Math.random() * 7)];
 							data["pfp"] = `/assets/img/default - ${randomColorStr}.png`;
 							data["perm"] = "user";
-							data.window = {
-								winAccent: "#ffffff",
-								blurlevel: 18,
-								alwaysMaximized: false,
-								alwaysFullscreen: false,
-							};
 							await tb.system.users.add(data);
 							renderAccounts();
 						} else {
@@ -350,12 +354,6 @@ const createAccount = async () => {
 									onOk: async img => {
 										data["pfp"] = img;
 										data["perm"] = "user";
-										data.window = {
-											winAccent: "#ffffff",
-											blurlevel: 18,
-											alwaysMaximized: false,
-											alwaysFullscreen: false,
-										};
 										await tb.system.users.add(data);
 										renderAccounts();
 									},
@@ -368,12 +366,6 @@ const createAccount = async () => {
 					const randomColorStr = ["blue", "green", "orange", "pink", "purple", "red", "yellow"][Math.floor(Math.random() * 7)];
 					data["pfp"] = `/assets/img/default - ${randomColorStr}.png`;
 					data["perm"] = "user";
-					data.window = {
-						winAccent: "#ffffff",
-						blurlevel: 18,
-						alwaysMaximized: false,
-						alwaysFullscreen: false,
-					};
 					await tb.system.users.add(data);
 					renderAccounts();
 				}

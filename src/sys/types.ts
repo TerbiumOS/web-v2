@@ -70,12 +70,6 @@ export interface User {
 	securityQuestion?: { question: string; answer: string };
 	email?: string;
 	groups?: string[];
-	window: {
-		winAccent: string;
-		blurlevel: number;
-		alwaysMaximized: boolean;
-		alwaysFullscreen: boolean;
-	};
 }
 
 /**
@@ -498,8 +492,13 @@ export interface COM {
 		client: ReturnType<typeof createAuthClient>;
 		signIn(email: string, password: string): Promise<any>;
 		signOut(): Promise<void>;
-		isTACC(username: string): Promise<boolean>;
+		isTACC(username?: string): Promise<boolean>;
 		updateInfo(data: any): Promise<void>;
+		sync: {
+			retreive: () => {};
+			upload: () => {};
+		};
+		getInfo(username?: string): Promise<any>;
 	};
 	crypto(pass: string, file: string): Promise<string>;
 	platform: {

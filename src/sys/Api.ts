@@ -555,7 +555,7 @@ export default async function Api() {
 					return users;
 				},
 				async add(user: User) {
-					const { username, password, pfp, perm, securityQuestion, window: userWinopts } = user;
+					const { username, password, pfp, perm, securityQuestion } = user;
 					const userDir = `/home/${username}`;
 					await window.tb.fs.promises.mkdir(userDir);
 					const userJson: User = {
@@ -564,7 +564,6 @@ export default async function Api() {
 						password: password,
 						pfp: pfp,
 						perm: perm,
-						window: userWinopts,
 					};
 					if (securityQuestion) {
 						userJson.securityQuestion = {
@@ -586,6 +585,12 @@ export default async function Api() {
 							format: "12h",
 							internet: false,
 							showSeconds: false,
+						},
+						window: {
+							winAccent: "#ffffff",
+							blurlevel: 18,
+							alwaysMaximized: false,
+							alwaysFullscreen: false,
 						},
 					};
 					await window.tb.fs.promises.writeFile(`${userDir}/settings.json`, JSON.stringify(userSettings));
@@ -744,7 +749,7 @@ export default async function Api() {
 					return true;
 				},
 				async update(user: User) {
-					const { username, password, pfp, perm, securityQuestion, window: userwinOpts } = user;
+					const { username, password, pfp, perm, securityQuestion } = user;
 					const userDir = `/home/${username}`;
 					const userConfig = JSON.parse(await window.tb.fs.promises.readFile(`${userDir}/user.json`, "utf8"));
 					await window.tb.fs.promises.writeFile(
@@ -755,12 +760,6 @@ export default async function Api() {
 							password: password === userConfig.password ? userConfig.password : password,
 							pfp: pfp === userConfig.pfp ? userConfig.pfp : pfp,
 							perm: perm === userConfig.perm ? userConfig.perm : perm,
-							window: {
-								winAccent: userwinOpts?.winAccent ?? userConfig.window?.winAccent ?? "#ffffff",
-								blurlevel: userwinOpts?.blurlevel ?? userConfig.window?.blurlevel ?? 18,
-								alwaysMaximized: userwinOpts?.alwaysMaximized ?? userConfig.window?.alwaysMaximized ?? false,
-								alwaysFullscreen: userwinOpts?.alwaysFullscreen ?? userConfig.window?.alwaysFullscreen ?? false,
-							},
 							...(securityQuestion !== undefined ? { securityQuestion: securityQuestion === userConfig.securityQuestion ? userConfig.securityQuestion : securityQuestion } : userConfig.securityQuestion !== undefined ? { securityQuestion: userConfig.securityQuestion } : {}),
 						}),
 					);
@@ -817,10 +816,13 @@ export default async function Api() {
 											perm: "admin",
 											pfp: response.data.user.image,
 											email: response.data.user.email,
+											id: response.data.user.id,
 										});
 										await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify(conf, null, 2), "utf8");
 										console.log("[TAUTH] Saved Account Info to FS");
-										resolve(response);
+										const info = response;
+										info.data.user.password = password;
+										resolve(info);
 									},
 									onError: error => {
 										reject(error);
@@ -883,18 +885,51 @@ export default async function Api() {
 				if (existing.username && updated.username && existing.username !== updated.username && sessionStorage.getItem("currAcc") === existing.username) {
 					sessionStorage.setItem("currAcc", updated.username);
 				}
-				const obj = {
-					name: updated.username,
-					email: updated.email,
-					image: updated.pfp,
-				};
-				console.log("Updating TAuth user info:", obj);
-				try {
-					await window.tb.tauth.client.updateUser(obj);
-				} catch (e) {
-					console.error("Error updating TAuth user info:", e);
+				return new Promise((resolve, reject) => {
+					window.tb.dialog.WebAuth({
+						title: "Verify Identity to Update Account",
+						message: "Please sign in to your Terbium Cloud Account to verify it's you.",
+						onOk: async (username: string, password: string) => {
+							await window.tb.tauth.client.signIn.email({
+								email: username,
+								password: password,
+								fetchOptions: {
+									onSuccess: async response => {
+										console.log(response);
+										const obj = {
+											name: updated.username,
+											email: updated.email,
+											image: updated.pfp,
+										};
+										const t = await window.tb.tauth.client.updateUser(obj);
+										console.log(t);
+										resolve(updated);
+									},
+									onError: error => {
+										reject(new Error(error.error.message));
+									},
+								},
+							});
+						},
+						onCancel: () => {
+							reject(new Error("User cancelled the sign-in process"));
+						},
+					});
+				});
+			},
+			sync: {
+				retreive: async () => {},
+				upload: async () => {
+					console.log("API Stub, KV is broken");
+				},
+			},
+			getInfo: async (username?: string) => {
+				const conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
+				if (!conf.find((acc: any) => acc && acc.username === username)) {
+					username = sessionStorage.getItem("currAcc") || "Guest";
 				}
-				return updated;
+				const account = conf.find((acc: any) => acc && acc.username === username) || null;
+				return account;
 			},
 		},
 		node: {
@@ -1236,6 +1271,7 @@ export default async function Api() {
 	window.tb.libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm");
 	const getupds = async () => {
 		if (hash !== (await window.tb.fs.promises.readFile("/system/etc/terbium/hash.cache", "utf8"))) {
+			await window.tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", "invalid");
 			window.tb.notification.Toast({
 				application: "System",
 				iconSrc: "/fs/apps/system/about.tapp/icon.svg",
@@ -1307,11 +1343,17 @@ export default async function Api() {
 			});
 		}
 	};
-	getchangelog();
 	if (sessionStorage.getItem("justUpdated") === "true") {
 		getchangelog();
 		sessionStorage.removeItem("justUpdated");
 	}
 	window.tb.node.webContainer = await initializeWebContainer();
+	if (await window.tb.tauth.isTACC()) {
+		window.tb.fs.watch(`/home/${await window.tb.user.username()}/settings.json`, { recursive: true }, (e: string) => {
+			if (e === "change") {
+				window.tb.tauth.sync.upload();
+			}
+		});
+	}
 	document.addEventListener("libcurl_load", wsld);
 }

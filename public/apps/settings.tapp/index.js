@@ -874,6 +874,7 @@ const pct = document.getElementById("blurPercent");
 async function render(initial) {
 	const settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
 	const v = initial ? settings.window.blurlevel : Number(range.value);
+	if (initial) range.value = v;
 	const mapped = Math.round((v / 50) * 100);
 	pct.textContent = mapped + "%";
 	const fill = (v / 50) * 100;
@@ -897,6 +898,7 @@ const winAccentPrev = async () => {
 	settings.window.winAccent = defaultAccent;
 	window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
 	winAccent.removeEventListener("mousedown", winAccentPrev);
+	window.parent.dispatchEvent(new Event("upd-accent"));
 };
 winAccentPrev();
 
