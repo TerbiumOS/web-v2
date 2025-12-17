@@ -27,6 +27,7 @@ import { useWindowStore } from "./Store";
 import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
 import { vFS } from "./vFS";
 import { createAuthClient } from "better-auth/react";
+import { getinfo, setinfo } from "./apis/utils/tauth";
 
 const system = new System();
 const pw = new pwd();
@@ -901,7 +902,7 @@ export default async function Api() {
 											email: updated.email,
 											image: updated.pfp,
 										};
-										const t = await window.tb.tauth.client.updateUser(obj);
+										const t = await window.tb.tauth.client.updateUser(obj, { headers: { "Content-Type": "application/json" }, method: "POST" });
 										console.log(t);
 										resolve(updated);
 									},
@@ -918,9 +919,19 @@ export default async function Api() {
 				});
 			},
 			sync: {
-				retreive: async () => {},
+				retreive: async () => {
+					const info = await window.tb.tauth.getInfo();
+					if (!info) throw new Error("No TACC info found");
+					const data = await getinfo(info.email, info.password, "tbs");
+					console.log("[TAUTH] Retrieved synced data from cloud");
+					await window.tb.fs.promises.writeFile(`/home/${info.username}/settings.json`, JSON.stringify(data.settings, null, 2), "utf8");
+				},
 				upload: async () => {
-					console.log("API Stub, KV is broken");
+					const info = await window.tb.tauth.getInfo();
+					if (!info) throw new Error("No TACC info found");
+					const settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
+					setinfo(info.email, info.password, "tbs", settings);
+					console.log("[TAUTH] Uploaded synced data to cloud");
 				},
 			},
 			getInfo: async (username?: string) => {

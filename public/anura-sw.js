@@ -637,7 +637,7 @@ workbox.routing.registerRoute(
 	"POST",
 );
 
-workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/service\/))/, async ({ url }) => {
+workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/service\/))/, async ({ url, request }) => {
 	if (cacheenabled === undefined) {
 		console.debug("retrieving cache value");
 		const result = await idbKeyval.get("cacheenabled");
@@ -652,7 +652,7 @@ workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/
 		});
 	}
 	if (!cacheenabled) {
-		const fetchResponse = await fetch(url);
+		const fetchResponse = await fetch(request);
 		return new Response(await fetchResponse.arrayBuffer(), {
 			headers: {
 				...Object.fromEntries(fetchResponse.headers.entries()),
@@ -682,7 +682,7 @@ workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/
 		} else {
 		*/
 	try {
-		const fetchResponse = await fetch(url);
+		const fetchResponse = await fetch(request);
 		// Promise so that we can return the response before we cache it, for faster response times
 		return new Promise(async resolve => {
 			const corsResponse = new Response(await fetchResponse.clone().arrayBuffer(), {

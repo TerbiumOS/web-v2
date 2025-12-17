@@ -11,6 +11,7 @@ import { fileExists, User } from "./sys/types";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { createAuthClient } from "better-auth/react";
 import { libcurl } from "libcurl.js";
+import { getinfo, setinfo } from "./sys/apis/utils/tauth";
 const pw = new pwd();
 
 export default function Setup() {
@@ -53,9 +54,10 @@ export default function Setup() {
 	libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
 	const authClient = createAuthClient({
 		baseURL: "https://auth.terbiumon.top",
+		credentials: "include",
 		fetchOptions: {
 			customFetchImpl: async (input: string | URL | Request, init?: RequestInit | undefined) => {
-				const response = await libcurl.fetch(input.toString(), init);
+				const response = await libcurl.fetch(input.toString(), { ...init, credentials: "include", headers: { ...(init?.headers || {}), "Content-Type": "application/json" } });
 				return response;
 			},
 		},
@@ -194,9 +196,8 @@ export default function Setup() {
 		} else {
 			pass = false;
 		}
-		// Types being weird idk
-		if (data.email) {
-			delete (data as any).password;
+		const email = data["email"];
+		if (email) {
 			await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([data], null, 2), "utf8");
 		} else {
 			await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([], null, 2), "utf8");
@@ -213,6 +214,9 @@ export default function Setup() {
 				question: data.securityQuestion.question,
 				answer: pw.harden(data.securityQuestion.answer),
 			};
+		}
+		if (sessionStorage.getItem("tacc-settings") === "null") {
+			await setinfo(email as string, data["password"] as string, "tbs", userInf);
 		}
 		await window.tb.fs.promises.writeFile(`/home/${usr}/user.json`, JSON.stringify(userInf), "utf8");
 		await window.tb.fs.promises.writeFile("/system/etc/terbium/sudousers.json", JSON.stringify([usr]), "utf8");
@@ -346,6 +350,12 @@ export default function Setup() {
 				rememberMe: true,
 				fetchOptions: {
 					onSuccess: async data => {
+						const p = await getinfo(usernameRef.current?.value || "", password, "tbs");
+						if (p.settings === "" || p.settings.value === null || p.settings.value === undefined || p.settings.data === "Unauthorized") {
+							sessionStorage.setItem("tacc-settings", "null");
+						} else {
+							sessionStorage.setItem("tacc-settings", JSON.stringify(p.settings.data));
+						}
 						sessionStorage.setItem(
 							"new-user",
 							JSON.stringify({
@@ -622,7 +632,7 @@ export default function Setup() {
 			currentViewRef.current?.classList.remove("opacity-0");
 		}, 150);
 		useEffect(() => {
-			if (sessionStorage.getItem("tacc-settings")) {
+			if (sessionStorage.getItem("tacc-settings") !== "null") {
 				setHasSettings(true);
 			}
 		}, [hasSettings]);
