@@ -20,15 +20,17 @@ export async function getinfo(user: string, pass: string, setting?: string) {
 		})
 	).json();
 
-	const settings = setting ? await (
-		await fetch(`https://auth.terbiumon.top/kv/retrieve/${setting}`, {
-			credentials: "include",
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json",
-			},
-		})
-	).json() : null;
+	const settings = setting
+		? await (
+				await fetch(`https://auth.terbiumon.top/kv/retrieve/${setting}`, {
+					credentials: "include",
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+					},
+				})
+			).json()
+		: null;
 
 	return {
 		user: uinf,
@@ -47,7 +49,7 @@ export async function setinfo(user: string, pass: string, setting: string, toset
 			credentials: "include",
 			method: "POST",
 			body: JSON.stringify({
-				"value": JSON.stringify({toset}),
+				value: JSON.stringify({ toset }),
 			}),
 			headers: {
 				"Content-Type": "application/json",
