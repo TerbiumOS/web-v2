@@ -1,4 +1,4 @@
-import { dirExists } from "../sys/types";
+import { dirExists, TAuthSSData } from "../sys/types";
 import apps from "../apps.json";
 import { copyfs } from "./fs.init";
 import { hash } from "../hash.json";
@@ -119,6 +119,8 @@ export async function init() {
 		let recentApps: any[] = [];
 		await window.tb.fs.promises.writeFile("/system/var/terbium/recent.json", JSON.stringify(recentApps));
 	}
+
+	const tcaccSettings: TAuthSSData = sessionStorage.getItem("tacc-settings") ? JSON.parse(sessionStorage.getItem("tacc-settings")!) : null;
 	var items: any[] = [];
 
 	if (!(await dirExists(`/home/${user}`))) {
@@ -144,6 +146,12 @@ export async function init() {
 				alwaysFullscreen: false,
 			},
 		};
+		if (tcaccSettings && Array.isArray(tcaccSettings) && tcaccSettings[0] && tcaccSettings[0].settings) {
+			userSettings = {
+				...userSettings,
+				...tcaccSettings[0].settings,
+			};
+		}
 		await window.tb.fs.promises.writeFile(`/home/${user}/settings.json`, JSON.stringify(userSettings));
 		await window.tb.fs.promises.mkdir(`/home/${user}/desktop`);
 		let r2 = [];
@@ -202,27 +210,56 @@ export async function init() {
 		}
 		await copyfs();
 		await window.tb.fs.promises.writeFile(`/home/${user}/desktop/.desktop.json`, JSON.stringify(items));
-		await window.tb.fs.promises.writeFile(
-			`/apps/user/${user}/files/config.json`,
-			JSON.stringify({
-				"quick-center": true,
-				"sidebar-width": 180,
-				drives: {
-					"File System": `/home/${user}/`,
-				},
-				storage: {
-					"File System": "storage-device",
-					localStorage: "storage-device",
-				},
-				"open-collapsibles": {
+		if (tcaccSettings && Array.isArray(tcaccSettings) && tcaccSettings[0]) {
+			await window.tb.fs.promises.writeFile(
+				`/apps/user/${user}/files/config.json`,
+				JSON.stringify({
 					"quick-center": true,
-					drives: true,
-				},
-				"show-hidden-files": false,
-			}),
-			"utf8",
-		);
-		await window.tb.fs.promises.writeFile(`/apps/user/${user}/files/davs.json`, JSON.stringify([]));
+					"sidebar-width": 180,
+					drives: {
+						"File System": `/home/${user}/`,
+						...tcaccSettings[0].davs.reduce((acc: any, d: any) => {
+							const driveName = d.name || d.driveName;
+							acc[driveName] = `/mnt/${driveName}/`;
+							return acc;
+						}, {}),
+					},
+					storage: {
+						"File System": "storage-device",
+						localStorage: "storage-device",
+					},
+					"open-collapsibles": {
+						"quick-center": true,
+						drives: true,
+					},
+					"show-hidden-files": false,
+				}),
+				"utf8",
+			);
+			await window.tb.fs.promises.writeFile(`/apps/user/${user}/files/davs.json`, JSON.stringify(tcaccSettings[0].davs, null, 2));
+		} else {
+			await window.tb.fs.promises.writeFile(
+				`/apps/user/${user}/files/config.json`,
+				JSON.stringify({
+					"quick-center": true,
+					"sidebar-width": 180,
+					drives: {
+						"File System": `/home/${user}/`,
+					},
+					storage: {
+						"File System": "storage-device",
+						localStorage: "storage-device",
+					},
+					"open-collapsibles": {
+						"quick-center": true,
+						drives: true,
+					},
+					"show-hidden-files": false,
+				}),
+				"utf8",
+			);
+			await window.tb.fs.promises.writeFile(`/apps/user/${user}/files/davs.json`, JSON.stringify([]));
+		}
 		await window.tb.fs.promises.mkdir(`/apps/user/${user}/browser`);
 		await window.tb.fs.promises.writeFile(`/apps/user/${user}/browser/favorites.json`, JSON.stringify([]));
 		await window.tb.fs.promises.writeFile(`/apps/user/${user}/browser/userscripts.json`, JSON.stringify([]));

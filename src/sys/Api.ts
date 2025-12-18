@@ -26,8 +26,7 @@ import parse from "./Parser";
 import { useWindowStore } from "./Store";
 import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
 import { vFS } from "./vFS";
-import { createAuthClient } from "better-auth/react";
-import { getinfo, setinfo } from "./apis/utils/tauth";
+import { auth, getinfo, setinfo } from "./apis/utils/tauth";
 
 const system = new System();
 const pw = new pwd();
@@ -787,15 +786,7 @@ export default async function Api() {
 		fs: window.tb.fs,
 		vfs: await vFS.create(),
 		tauth: {
-			client: createAuthClient({
-				baseURL: "https://auth.terbiumon.top",
-				fetchOptions: {
-					customFetchImpl: async (input: string | URL | Request, init?: RequestInit | undefined) => {
-						const response = await libcurl.fetch(input.toString(), init);
-						return response;
-					},
-				},
-			}),
+			client: auth,
 			signIn: () => {
 				return new Promise<any>((resolve, reject) => {
 					window.tb.dialog.WebAuth({
@@ -924,13 +915,23 @@ export default async function Api() {
 					if (!info) throw new Error("No TACC info found");
 					const data = await getinfo(info.email, info.password, "tbs");
 					console.log("[TAUTH] Retrieved synced data from cloud");
-					await window.tb.fs.promises.writeFile(`/home/${info.username}/settings.json`, JSON.stringify(data.settings, null, 2), "utf8");
+					console.log(data.settings[0]);
+					await window.tb.fs.promises.writeFile(`/home/${info.username}/settings.json`, JSON.stringify(data.settings[0].settings, null, 2), "utf8");
+					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/files/davs.json`, JSON.stringify(data.settings[0].davs, null, 2), "utf8");
 				},
 				upload: async () => {
 					const info = await window.tb.tauth.getInfo();
 					if (!info) throw new Error("No TACC info found");
 					const settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
-					setinfo(info.email, info.password, "tbs", settings);
+					const davs = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/files/davs.json`, "utf8"));
+					const toupload = [
+						{
+							settings: settings,
+							apps: [],
+							davs: davs,
+						},
+					];
+					setinfo(info.email, info.password, "tbs", toupload);
 					console.log("[TAUTH] Uploaded synced data to cloud");
 				},
 			},
@@ -1361,6 +1362,11 @@ export default async function Api() {
 	window.tb.node.webContainer = await initializeWebContainer();
 	if (await window.tb.tauth.isTACC()) {
 		window.tb.fs.watch(`/home/${await window.tb.user.username()}/settings.json`, { recursive: true }, (e: string) => {
+			if (e === "change") {
+				window.tb.tauth.sync.upload();
+			}
+		});
+		window.tb.fs.watch(`/apps/user/${await window.tb.user.username()}/files/davs.json`, { recursive: true }, (e: string) => {
 			if (e === "change") {
 				window.tb.tauth.sync.upload();
 			}

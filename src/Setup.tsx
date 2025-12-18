@@ -9,9 +9,8 @@ import pwd from "./sys/apis/Crypto";
 import { init } from "./init";
 import { fileExists, User } from "./sys/types";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
-import { createAuthClient } from "better-auth/react";
 import { libcurl } from "libcurl.js";
-import { getinfo, setinfo } from "./sys/apis/utils/tauth";
+import { auth, getinfo, setinfo } from "./sys/apis/utils/tauth";
 const pw = new pwd();
 
 export default function Setup() {
@@ -46,22 +45,13 @@ export default function Setup() {
 			setCurrentStep(prevStep => Math.max(prevStep - 1, 1));
 		}
 	};
-	if (!window.loadLock) {
-		window.loadLock = true;
+	if (!window.libcurlLock) {
+		window.libcurlLock = true;
 		libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm");
 	}
 	// @ts-expect-error no types
 	libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
-	const authClient = createAuthClient({
-		baseURL: "https://auth.terbiumon.top",
-		credentials: "include",
-		fetchOptions: {
-			customFetchImpl: async (input: string | URL | Request, init?: RequestInit | undefined) => {
-				const response = await libcurl.fetch(input.toString(), { ...init, credentials: "include", headers: { ...(init?.headers || {}), "Content-Type": "application/json" } });
-				return response;
-			},
-		},
-	});
+	const authClient = auth;
 	const randomColors = ["orange", "red", "green", "blue", "purple", "pink", "yellow"];
 	const makePFP = () => {
 		const uploader = document.createElement("input");
@@ -216,7 +206,12 @@ export default function Setup() {
 			};
 		}
 		if (sessionStorage.getItem("tacc-settings") === "null") {
-			await setinfo(email as string, data["password"] as string, "tbs", userInf);
+			const tosave = {
+				settings: userInf,
+				apps: [],
+				davs: [],
+			};
+			await setinfo(email as string, data["password"] as string, "tbs", tosave);
 		}
 		await window.tb.fs.promises.writeFile(`/home/${usr}/user.json`, JSON.stringify(userInf), "utf8");
 		await window.tb.fs.promises.writeFile("/system/etc/terbium/sudousers.json", JSON.stringify([usr]), "utf8");
@@ -351,10 +346,10 @@ export default function Setup() {
 				fetchOptions: {
 					onSuccess: async data => {
 						const p = await getinfo(usernameRef.current?.value || "", password, "tbs");
-						if (p.settings === "" || p.settings.value === null || p.settings.value === undefined || p.settings.data === "Unauthorized") {
+						if (p.settings === null || p.settings === undefined) {
 							sessionStorage.setItem("tacc-settings", "null");
 						} else {
-							sessionStorage.setItem("tacc-settings", JSON.stringify(p.settings.data));
+							sessionStorage.setItem("tacc-settings", JSON.stringify(p.settings));
 						}
 						sessionStorage.setItem(
 							"new-user",
@@ -842,30 +837,12 @@ export default function Setup() {
 		nextButtonClick = () => {
 			Next(5);
 		};
-		const opts = [
-			{
-				settings: {
-					wallpaper: "/assets/wallpapers/1.png",
-					wallpaperMode: "cover",
-					animations: true,
-					proxy: "Scramjet",
-					transport: "Default (Epoxy)",
-					wispServer: "wss://terbiumon.top:/wisp/",
-					"battery-percent": false,
-					accent: "#32ae62",
-					times: { format: "12h", internet: false, showSeconds: false },
-				},
-				apps: [],
-				davs: [{ name: "example dav", url: "https://terbiumon.top/dav/", username: "x", password: "a" }],
-				wallpaper: null,
-			},
-		];
+		const opts = JSON.parse(sessionStorage.getItem("tacc-settings") as string) || [];
 		type OptionItem = { id: string; label: string; raw: any };
 		const getOptions = (cat: string): OptionItem[] => {
 			const val = (opts[0] as any)[cat];
 			if (cat === "settings" && val && typeof val === "object") {
 				const copy = { ...val };
-				delete copy.wallpaper;
 				return Object.entries(copy).flatMap(([k, v]) => (v && typeof v === "object" && !Array.isArray(v) ? Object.entries(v).map(([kk, vv]) => ({ id: `settings.${k}.${kk}`, label: `${k}.${kk}`, raw: vv })) : [{ id: `settings.${k}`, label: k, raw: v }]));
 			}
 			if (Array.isArray(val)) {

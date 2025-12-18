@@ -5,10 +5,11 @@
 
 import { TFSType, FSType, ShellType } from "@terbiumos/tfs";
 import { System } from "./apis/System";
-import { vFS } from "./vFS";
+import { ServerInfo, vFS } from "./vFS";
 import { ExternalApp } from "./liquor/coreapps/ExternalApp";
 import { WindowInformation } from "./liquor/AliceWM";
-import { createAuthClient } from "better-auth/react";
+import { createAuthClient } from "better-auth/client";
+import type { HTTPSession, libcurl } from "libcurl.js";
 
 declare global {
 	namespace React.JSX {
@@ -28,6 +29,8 @@ declare global {
 		electron: any;
 		tfs: TFSType;
 		loadLock: boolean;
+		libcurlLock: boolean;
+		libcurlSession: HTTPSession;
 	}
 }
 
@@ -311,29 +314,6 @@ export interface MediaProps {
 }
 
 export type websocketUrl = `wss://${string}` | `ws://${string}`;
-export interface Libcurl {
-	set_websocket: (url: websocketUrl) => void;
-	fetch: (...args: any) => Promise<Response>;
-	load_wasm: (wasmPath: string) => Promise<void>;
-	ready: boolean;
-	version: {
-		lib: string;
-		curl: string;
-		ssl: string;
-		brotli: string;
-		nghttp2: string;
-		protocols: string[];
-		wisp: string;
-	};
-	wisp: {
-		wisp_connections: Record<string, unknown>;
-	};
-	transport: "wisp";
-	copyright: string;
-	websocket_url: websocketUrl;
-	events: Record<string, unknown>;
-	onload: (callback: () => void) => void;
-}
 
 export interface UserSettings {
 	wallpaper: string;
@@ -484,7 +464,7 @@ export interface COM {
 			removeEntry(name: string): void;
 		};
 	};
-	libcurl: Libcurl;
+	libcurl: typeof libcurl;
 	fflate: any;
 	fs: FSType;
 	vfs: vFS;
@@ -565,4 +545,23 @@ export interface AnuraWMWeakRef {
 	maximizeSvg: null | SVGElement | ChildNode;
 	wininfo: WindowInformation;
 	title: string;
+}
+
+export interface TAuthReturnType {
+	user: any;
+	settings: [
+		{
+			settings: UserSettings;
+			apps: any[];
+			davs: ServerInfo[];
+		},
+	];
+}
+
+export interface TAuthSSData {
+	settings: {
+		settings: UserSettings;
+		apps: any[];
+		davs: ServerInfo[];
+	}[];
 }
