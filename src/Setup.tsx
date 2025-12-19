@@ -364,7 +364,12 @@ export default function Setup() {
 						Next(2.5);
 					},
 					onError: error => {
-						setError(error.error.message || "An unknown error occurred during authentication.");
+						if (error.error.message.toLocaleLowerCase() === "missing or null origin") {
+							localStorage.removeItem("libcurl_cookies");
+							nextButtonClick();
+						} else {
+							setError(error.error.message || "An unknown error occurred during registration.");
+						}
 					},
 				},
 			});
@@ -464,7 +469,12 @@ export default function Setup() {
 						Next(2.5);
 					},
 					onError: error => {
-						setError(error.error.message || "An unknown error occurred during registration.");
+						if (error.error.message.toLocaleLowerCase() === "missing or null origin") {
+							localStorage.removeItem("libcurl_cookies");
+							nextButtonClick();
+						} else {
+							setError(error.error.message || "An unknown error occurred during registration.");
+						}
 					},
 				},
 				image: pfpRef.current?.getAttribute("data-src") || `/assets/img/default - ${randomColors[Math.floor(Math.random() * randomColors.length)]}.png`,
@@ -539,6 +549,7 @@ export default function Setup() {
 			</div>
 		);
 	};
+	// @ts-expect-error future
 	const Step2FG = () => {
 		const usernameRef = useRef<HTMLInputElement>(null);
 		const sendBTNRef = useRef<HTMLButtonElement>(null);
@@ -1129,7 +1140,7 @@ export default function Setup() {
 					) : currentStep === 2.3 ? (
 						<Step2CR />
 					) : currentStep === 2.4 ? (
-						<Step2FG />
+						<Step2CA />
 					) : currentStep === 2.5 ? (
 						<Step2CF />
 					) : currentStep === 3 ? (

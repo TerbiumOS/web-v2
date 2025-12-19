@@ -19,6 +19,7 @@ export async function init() {
 	if (!(await dirExists("/apps"))) {
 		await window.tb.fs.promises.mkdir("/apps");
 		await window.tb.fs.promises.mkdir("/apps/system");
+		await copyfs();
 		await window.tb.fs.promises.mkdir("/apps/user");
 		await window.tb.fs.promises.writeFile("/apps/web_apps.json", JSON.stringify({ apps: [] }));
 	} else {
@@ -208,7 +209,6 @@ export async function init() {
 			});
 			await window.tb.fs.promises.symlink(`/apps/system/${name}.tapp/index.json`, `/home/${user}/desktop/${name}.lnk`);
 		}
-		await copyfs();
 		await window.tb.fs.promises.writeFile(`/home/${user}/desktop/.desktop.json`, JSON.stringify(items));
 		if (tcaccSettings && Array.isArray(tcaccSettings) && tcaccSettings[0]) {
 			await window.tb.fs.promises.writeFile(
