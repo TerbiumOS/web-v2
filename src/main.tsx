@@ -77,7 +77,7 @@ const Root = () => {
 					sha = hash;
 				}
 				if (localStorage.getItem("setup")) {
-					if (localStorage.getItem("setup") && (sha !== hash || sessionStorage.getItem("skipUpd"))) {
+					if (localStorage.getItem("setup") && (sha !== hash || sessionStorage.getItem("migrateFs"))) {
 						setPag(<Updater />);
 					} else {
 						if (sessionStorage.getItem("logged-in") && sessionStorage.getItem("logged-in") === "true") {

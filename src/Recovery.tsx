@@ -365,21 +365,16 @@ export default function Recovery() {
 		}
 		setProgress(93);
 		statusref.current!.innerText = "Formatting Filer...";
-		const entries = await Filer.fs.promises.readdir("/");
-		for (const entry of entries as string[]) {
-			const stats = await Filer.fs.promises.stat(entry);
-			if (stats && stats.type === "DIRECTORY") {
-				// @ts-expect-error types
-				await new Filer.fs.Shell().promises.rm(entry, { recursive: true });
-			} else {
-				await Filer.fs.promises.unlink(entry);
-			}
+		const fsh = new Filer.fs.Shell();
+		for (const loc of await Filer.fs.promises.readdir("//")) {
+			await fsh.promises.rm(`/${loc}`, { recursive: true });
 		}
 		setProgress(100);
 		statusref.current!.innerText = "Migration complete!";
 		sessionStorage.clear();
 		sessionStorage.setItem("boot", "true");
 		localStorage.setItem("setup", "true");
+		sessionStorage.removeItem("migrateFs");
 		window.location.reload();
 	};
 
