@@ -989,7 +989,7 @@ const setupWindowOptimizations = async () => {
 	const realCheckbox = windowOptimizationsCheckbox.querySelector("input[type='checkbox']");
 	const checkIcon = windowOptimizationsCheckbox.querySelector(".checkIcon");
 
-	const setState = async (enabled) => {
+	const setState = async enabled => {
 		realCheckbox.checked = enabled;
 		if (enabled) {
 			checkIcon.classList.remove("opacity-0", "scale-85");
@@ -1021,7 +1021,7 @@ const setupFPSCounter = async () => {
 	const realCheckbox = fpsCounterCheckbox.querySelector("input[type='checkbox']");
 	const checkIcon = fpsCounterCheckbox.querySelector(".checkIcon");
 
-	const setState = async (enabled) => {
+	const setState = async enabled => {
 		realCheckbox.checked = enabled;
 		if (enabled) {
 			checkIcon.classList.remove("opacity-0", "scale-85");
@@ -1033,7 +1033,7 @@ const setupFPSCounter = async () => {
 		settings.showFPS = enabled;
 		await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
 
-		window.parent.dispatchEvent(new CustomEvent('settings-changed', { detail: { showFPS: enabled } }));
+		window.parent.dispatchEvent(new CustomEvent("settings-changed", { detail: { showFPS: enabled } }));
 	};
 
 	try {
@@ -1053,7 +1053,7 @@ setupFPSCounter();
 const realCheckbox = animationCheckbox.querySelector("input[type='checkbox']");
 realCheckbox.checked = !realCheckbox.checked;
 const checkIcon = animationCheckbox.querySelector(".checkIcon");
-if(realCheckbox.checked) {
+if (realCheckbox.checked) {
 	checkIcon.classList.remove("opacity-0", "scale-85");
 } else {
 	checkIcon.classList.add("opacity-0", "scale-85");

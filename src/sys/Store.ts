@@ -182,16 +182,16 @@ const useWindowStore = create<WindowState>()(set => ({
 		set((state: WindowState) => {
 			const window = state.windows.find(w => w.wid === wid);
 			if (!window) return state;
-			
+
 			const indexes = state.windows.map(w => w.zIndex ?? 0);
 			const maxIndex = Math.max(...indexes);
-			
+
 			// Optimization: Check if window is already at highest z-index
 			// This can be disabled if window optimization setting is off
 			if (window.focused && window.zIndex === maxIndex) {
 				return state; // No update needed
 			}
-			
+
 			set({ currentPID: window.pid });
 
 			window.zIndex = maxIndex + 1;

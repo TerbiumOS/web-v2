@@ -10,12 +10,7 @@ export const FPSCounter = () => {
 	useEffect(() => {
 		const loadSettings = async () => {
 			try {
-				const settings = JSON.parse(
-					await window.tb.fs.promises.readFile(
-						`/home/${sessionStorage.getItem("currAcc")}/settings.json`,
-						"utf8"
-					)
-				);
+				const settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
 				setShowFPS(settings.showFPS ?? false);
 			} catch (err) {
 				console.error("Failed to load FPS counter setting:", err);
@@ -67,11 +62,9 @@ export const FPSCounter = () => {
 	if (!showFPS) return null;
 
 	return (
-        <div className="flex gap-2">
-            <div className="font-bold cursor-default">
-                {fps} FPS
-            </div>
-            <span className="w-1 h-4.5 bg-[#ffffff28] rounded-full" />
-        </div>
+		<div className="flex gap-2">
+			<div className="font-bold cursor-default">{fps} FPS</div>
+			<span className="w-1 h-4.5 bg-[#ffffff28] rounded-full" />
+		</div>
 	);
 };

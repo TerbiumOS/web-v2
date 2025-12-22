@@ -67,16 +67,11 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		}
 	};
 	mobileCheck();
-	
+
 	useEffect(() => {
 		const loadOptimizationSettings = async () => {
 			try {
-				const settings: UserSettings = JSON.parse(
-					await window.tb.fs.promises.readFile(
-						`/home/${sessionStorage.getItem("currAcc")}/settings.json`,
-						"utf8"
-					)
-				);
+				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
 				setOptimizationsEnabled(settings.windowOptimizations ?? true);
 			} catch (err) {
 				console.error("Failed to load optimization settings:", err);
@@ -397,14 +392,14 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	// Disable pointer events on all iframes when dragging
 	useEffect(() => {
 		if (isDragging || isResizing) {
-			const iframes = document.querySelectorAll('iframe');
+			const iframes = document.querySelectorAll("iframe");
 			iframes.forEach(iframe => {
-				iframe.style.pointerEvents = 'none';
+				iframe.style.pointerEvents = "none";
 			});
 		} else {
-			const iframes = document.querySelectorAll('iframe');
+			const iframes = document.querySelectorAll("iframe");
 			iframes.forEach(iframe => {
-				iframe.style.pointerEvents = 'auto';
+				iframe.style.pointerEvents = "auto";
 			});
 		}
 	}, [isDragging, isResizing]);
@@ -511,15 +506,15 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				}
 				return;
 			}
-			
+
 			// With optimizations: use requestAnimationFrame
 			lastMouseEvent = e;
-			
+
 			if (!animationFrameId) {
 				animationFrameId = requestAnimationFrame(() => {
 					if (!lastMouseEvent) return;
 					const e = lastMouseEvent;
-					
+
 					setIsResizing(true);
 					setMaximized(false);
 					windowRef.current!.style.transform = "";
@@ -560,7 +555,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 							setY(newY);
 						}
 					}
-					
+
 					animationFrameId = null;
 				});
 			}
@@ -685,15 +680,15 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 							if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
 							return;
 						}
-						
+
 						// With optimizations: use requestAnimationFrame
 						lastMouseEvent = e;
-						
+
 						if (!animationFrameId) {
 							animationFrameId = requestAnimationFrame(() => {
 								if (!lastMouseEvent) return;
 								const e = lastMouseEvent;
-								
+
 								if (windowRef.current) windowRef.current.style.transform = "";
 								setIsDragging(true);
 								setMaximized(false);
@@ -702,7 +697,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 								handleSnap(newX, newY);
 								if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
 								if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
-								
+
 								animationFrameId = null;
 							});
 						}
@@ -1027,12 +1022,12 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 						srcRef.current?.contentDocument?.head.appendChild(sr2);
 					}}
 					referrerPolicy="no-referrer"
-					style={{ 
-						border: "none", 
-						all: "initial", 
-						width: "100%", 
-						height: "calc(100% - 40px)", 
-						pointerEvents: isMouseDown ? "none" : "auto", 
+					style={{
+						border: "none",
+						all: "initial",
+						width: "100%",
+						height: "calc(100% - 40px)",
+						pointerEvents: isMouseDown ? "none" : "auto",
 						userSelect: "none",
 						...(optimizationsEnabled && { contain: "strict" }),
 					}}
@@ -1045,12 +1040,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 // Memoize WindowElement to prevent unnecessary re-renders
 const MemoizedWindowElement = memo(WindowElement, (prevProps, nextProps) => {
 	// Only re-render if config changes in meaningful ways
-	return (
-		prevProps.config.wid === nextProps.config.wid &&
-		prevProps.config.zIndex === nextProps.config.zIndex &&
-		prevProps.config.focused === nextProps.config.focused &&
-		prevProps.className === nextProps.className
-	);
+	return prevProps.config.wid === nextProps.config.wid && prevProps.config.zIndex === nextProps.config.zIndex && prevProps.config.focused === nextProps.config.focused && prevProps.className === nextProps.className;
 });
 
 const DesktopItems = () => {
