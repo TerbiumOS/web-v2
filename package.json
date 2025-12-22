@@ -23,7 +23,7 @@
 		"@hono/node-server": "^1.19.7",
 		"@mercuryworkshop/bare-mux": "^2.1.8",
 		"@mercuryworkshop/epoxy-transport": "^2.1.28",
-		"@mercuryworkshop/libcurl-transport": "^2.0.4",
+		"@mercuryworkshop/libcurl-transport": "^1.5.2",
 		"@mercuryworkshop/scramjet": "https://cdn.terbiumon.top/scramjet-v2.0-alpha.tgz",
 		"@mercuryworkshop/wisp-js": "^0.4.1",
 		"@paralleldrive/cuid2": "^3.0.4",

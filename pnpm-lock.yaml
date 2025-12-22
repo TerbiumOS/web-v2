@@ -27,8 +27,8 @@ importers:
         specifier: ^2.1.28
         version: 2.1.28
       '@mercuryworkshop/libcurl-transport':
-        specifier: ^2.0.4
-        version: 2.0.4
+        specifier: ^1
+        version: 1.5.2
       '@mercuryworkshop/scramjet':
         specifier: https://cdn.terbiumon.top/scramjet-v2.0-alpha.tgz
         version: https://cdn.terbiumon.top/scramjet-v2.0-alpha.tgz(typescript@5.9.3)
@@ -632,8 +632,8 @@ packages:
   '@mercuryworkshop/epoxy-transport@2.1.28':
     resolution: {integrity: sha512-lv/Kfdn37y8ZCXQaIT3Ebj4OSztBqeXdbR9rchbHQBKIw/fNSQJLGNBHV5ScXSzqt7NCwv8ZiZx7urRyk7Ua/Q==}
 
-  '@mercuryworkshop/libcurl-transport@2.0.4':
-    resolution: {integrity: sha512-4iQVJ381Z27LZ00h+wo8BP7E1+zfp/gsGH8NZfvxKn77hSfZQ7yUGIRLmYfo4XpfACuB2oy3OvGOtAvnA+2WPQ==}
+  '@mercuryworkshop/libcurl-transport@1.5.2':
+    resolution: {integrity: sha512-E0tD/3W6HE99ypc7CStpchU6xs+TP5u2vms/9q/46BShblB2pbRCNeXHBlvXqdz97nh2Xh4A68DryDt5CM29Dg==}
 
   '@mercuryworkshop/scramjet@https://cdn.terbiumon.top/scramjet-v2.0-alpha.tgz':
     resolution: {tarball: https://cdn.terbiumon.top/scramjet-v2.0-alpha.tgz}
@@ -2624,7 +2624,7 @@ snapshots:
     dependencies:
       '@mercuryworkshop/epoxy-tls': 2.1.18-1
 
-  '@mercuryworkshop/libcurl-transport@2.0.4':
+  '@mercuryworkshop/libcurl-transport@1.5.2':
     dependencies:
       libcurl.js: 0.7.4
 
