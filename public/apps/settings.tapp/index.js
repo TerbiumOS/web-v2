@@ -445,6 +445,7 @@ custom_accent.addEventListener("click", e => {
 		accentPreview.style.setProperty("--accent", color);
 		accentPreview.classList.add("group", "cursor-pointer");
 		accentPreview.addEventListener("mousedown", accentMousedown);
+		window.parent.window.dispatchEvent(new Event("upd-accent"));
 	});
 });
 
