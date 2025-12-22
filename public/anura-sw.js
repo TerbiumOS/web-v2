@@ -1,4 +1,5 @@
 /* global workbox */
+/** @type {import('@terbiumos/tfs').TFS} */
 
 // was a workaround for a firefox quirk where crossOriginIsolated
 // is not reported properly in a service worker, now its just assumed for
@@ -8,10 +9,14 @@ Object.defineProperty(globalThis, "crossOriginIsolated", {
 	writable: false,
 });
 
+// Not recommended but a bypass for libs that expect window to exist
+self.window = self;
+
 // Due to anura's filesystem only being available once an anura instance is running,
 // we need a temporary filesystem to store files that are requested for caching.
 // As the anura filesystem is a wrapper around Filer, we can use default Filer here.
 importScripts("/assets/libs/filer.min.js");
+importScripts("/tfs/tfs.js");
 
 // Importing mime
 importScripts("/assets/libs/mime.iife.js");
@@ -27,8 +32,12 @@ const filerfs = new Filer.FileSystem({
 });
 const filersh = new filerfs.Shell();
 
-let opfs;
-let opfssh;
+(async () => {
+	const handle = await navigator.storage.getDirectory();
+	window.tfs = new window.tfs(handle);
+	self.opfs = window.tfs.fs;
+	self.opfssh = window.tfs.sh;
+})();
 
 async function currentFs() {
 	// isConnected will return true if the anura instance is running, and otherwise infinitely wait.
@@ -39,8 +48,8 @@ async function currentFs() {
 		// An anura instance has not been started yet to populate the isConnected promise.
 		// We automatically know that the filesystem is not connected.
 		return {
-			fs: opfs || filerfs,
-			sh: opfssh || filersh,
+			fs: self.opfs || filerfs,
+			sh: self.opfssh || filersh,
 		};
 	}
 
@@ -49,8 +58,8 @@ async function currentFs() {
 		new Promise(resolve =>
 			setTimeout(() => {
 				resolve({
-					fs: opfs || filerfs,
-					sh: opfssh || filersh,
+					fs: self.opfs || filerfs,
+					sh: self.opfssh || filersh,
 					fallback: true,
 				});
 			}, CONN_TIMEOUT),
@@ -99,7 +108,7 @@ const supportedWebDAVMethods = [
 async function handleDavRequest({ request, url }) {
 	const fsCallback = (await currentFs()).fs;
 	const fs = fsCallback.promises;
-	const shell = await new fsCallback.Shell();
+	const shell = new (await currentFs()).sh();
 	const method = request.method;
 	const path = decodeURIComponent(url.pathname.replace(/^\/dav/, "") || "/");
 
@@ -210,7 +219,7 @@ async function handleDavRequest({ request, url }) {
 			case "GET":
 			case "HEAD": {
 				try {
-					const data = await fs.readFile(path);
+					const data = await fs.readFile(path, "arraybuffer");
 					return new Response(method === "HEAD" ? null : new Blob([data]), {
 						headers: {
 							"Content-Type": mime.default.getType(path) || "application/octet-stream",
@@ -502,7 +511,7 @@ async function serveFile(path, fsOverride, shOverride) {
 		}
 		const type = mime.default.getType(path) || "application/octet-stream";
 
-		return new Response(await fs.promises.readFile(path), {
+		return new Response(await fs.promises.readFile(path, "arraybuffer"), {
 			headers: {
 				"Content-Type": type,
 				"Content-Disposition": `inline; filename="${path.split("/").pop()}"`,
@@ -628,7 +637,7 @@ workbox.routing.registerRoute(
 	"POST",
 );
 
-workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/service\/))/, async ({ url }) => {
+workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/service\/))/, async ({ url, request }) => {
 	if (cacheenabled === undefined) {
 		console.debug("retrieving cache value");
 		const result = await idbKeyval.get("cacheenabled");
@@ -643,7 +652,7 @@ workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/
 		});
 	}
 	if (!cacheenabled) {
-		const fetchResponse = await fetch(url);
+		const fetchResponse = await fetch(request);
 		return new Response(await fetchResponse.arrayBuffer(), {
 			headers: {
 				...Object.fromEntries(fetchResponse.headers.entries()),
@@ -661,8 +670,8 @@ workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/
 	const path = decodeURI(url.pathname);
 
 	// Force Filer to be used in cache routes, as it does not require waiting for anura to be connected
-	const fs = opfs || filerfs;
-	const sh = opfssh || filersh;
+	const fs = self.opfs || filerfs;
+	const sh = self.opfssh || filersh;
 
 	// Terbium already has its own way for caching files to the file system so doing it again is just a waste of space
 	/*
@@ -673,7 +682,7 @@ workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/
 		} else {
 		*/
 	try {
-		const fetchResponse = await fetch(url);
+		const fetchResponse = await fetch(request);
 		// Promise so that we can return the response before we cache it, for faster response times
 		return new Promise(async resolve => {
 			const corsResponse = new Response(await fetchResponse.clone().arrayBuffer(), {

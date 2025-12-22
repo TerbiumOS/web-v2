@@ -64,10 +64,10 @@ tb_island.addControl({
 										const path = document.querySelector(".exp").getAttribute("path");
 										const createUniqueFolder = async (path, folderName, number = null) => {
 											const folderPath = `${path}/${folderName}${number !== null ? ` (${number})` : ""}`;
-											try {
-												await window.parent.tb.fs.promises.access(folderPath);
-												return createUniqueFolder(path, folderName, number + 1);
-											} catch (error) {
+											const exists = await window.parent.tb.fs.promises.exists(folderPath);
+											if (exists) {
+												return createUniqueFolder(path, folderName, number !== null ? number + 1 : 2);
+											} else {
 												await window.parent.tb.fs.promises.mkdir(folderPath);
 											}
 										};
@@ -90,19 +90,18 @@ tb_island.addControl({
 										const content = await file.arrayBuffer();
 										const path = document.querySelector(".exp").getAttribute("path");
 										const filePath = `${path}/${file.name}`;
-										try {
-											await window.parent.tb.fs.promises.access(filePath);
+										if (await window.parent.tb.fs.promises.exists(filePath)) {
 											await tb.dialog.Message({
 												title: `File "${file.name}" already exists`,
 												defaultValue: file.name,
 												onOk: async newFileName => {
 													if (newFileName !== null && newFileName !== "") {
-														await window.parent.tb.fs.promises.writeFile(`${path}/${newFileName}`, Filer.Buffer.from(content));
+														await window.parent.tb.fs.promises.writeFile(`${path}/${newFileName}`, window.parent.tb.buffer.from(content), "arraybuffer");
 													}
 												},
 											});
-										} catch (error) {
-											await window.parent.tb.fs.promises.writeFile(filePath, Filer.Buffer.from(content));
+										} else {
+											await window.parent.tb.fs.promises.writeFile(filePath, window.parent.tb.buffer.from(content), "arraybuffer");
 										}
 									}
 									openPath(document.querySelector(".nav-input.dir").value);
@@ -136,18 +135,17 @@ tb_island.addControl({
 				text: "Go To",
 				click: async () => {
 					const response = await tb.dialog.Message({
-						title: "Enter a name for the new folder",
+						title: "Enter the directory to navigate to",
 						defaultValue: "",
 						onOk: async response => {
-							await window.parent.tb.fs.exists(response, async exists => {
-								if (exists) openPath(response);
-								else {
-									tb.dialog.Alert({
-										title: "Error",
-										message: `Cannot find ${response}. Check your spelling and try again.`,
-									});
-								}
-							});
+							try {
+								openPath(response);
+							} catch {
+								tb.dialog.Alert({
+									title: "Error",
+									message: `Cannot find ${response}. Check your spelling and try again.`,
+								});
+							}
 						},
 					});
 				},

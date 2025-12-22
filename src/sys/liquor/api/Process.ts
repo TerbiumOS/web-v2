@@ -1,6 +1,20 @@
 export class Processes {
+	processesDiv: HTMLDivElement | null;
+	constructor() {
+		this.processesDiv = document.querySelector("window-area");
+	}
 	get procs() {
-		return window.tb.process.list();
+		const wins = window.anura.wm.windows;
+		const arr: WeakRef<any>[] = wins.reduce((out: WeakRef<any>[], w: any) => {
+			if (!w) return out;
+			out.push(typeof w?.deref === "function" ? (w as WeakRef<any>) : new WeakRef(w));
+			return out;
+		}, []);
+		const s1 = Symbol();
+		const s2 = Symbol();
+		(arr as any)[s1] = [];
+		(arr as any)[s2] = Array.from(arr);
+		return new Proxy(arr, {});
 	}
 
 	set procs(value) {

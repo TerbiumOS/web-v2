@@ -94,6 +94,8 @@ const useWindowStore = create<WindowState>()(set => ({
 					title: appName,
 					icon: config.icon,
 					src: config.src,
+					size: config.size,
+					proxy: config.proxy,
 					weight: 1,
 				};
 			}

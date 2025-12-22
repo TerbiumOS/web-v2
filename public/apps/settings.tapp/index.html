@@ -187,6 +187,54 @@
                     </div>
                     <div class="p-3 rounded-lg bg-[#4acd6018] border border-[#4acd6038]">
                         <p class="text-sm text-[#ffffffcc]">💡 <strong>Tip:</strong> If you notice Terbium lagging with this feature enabled, try disabling it to improve performance on older or potato devices.</p>
+                    <div class="flex flex-col gap-1.5">
+                        <h3>Window Accent Color</h3>
+                        <div class="flex gap-2 items-center">
+                            <div class="winaccent-preview flex justify-center items-center size-6 rounded-md inset-shadow-[0_0_0_0.5px_#ffffff38] bg-(--accent)">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="group-hover:opacity-100 group-hover:scale-100 size-4 opacity-0 scale-75 duration-150">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                </svg>
+                            </div>
+                            <button class="custom-waccent w-max py-2 px-4 rounded-md font-semibold bg-[#ffffff10] shadow-[0px_0px_6px_0px_#00000052,_inset_0_0_0_0.5px_#ffffff38] hover:bg-[#ffffff20] duration-150">Custom Color</button>
+                        </div>
+                    </div>
+                    <h3>Force Windows to be Maximized</h3>
+                    <div class="flex flex-col gap-1.5">
+                        <div class="select" action="fs" action-for="wmx">
+                            <div class="select-title">
+                                <div class="text">No</div>
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                                </svg>
+                            </div>
+                            <div class="options">
+                                <div class="option" value="No">No</div>
+                                <div class="option" value="Yes">Yes</div>
+                            </div>
+                        </div>
+                    </div>
+                    <h3>Make Maximized windows in "Full Screen" mode</h3>
+                    <div class="flex flex-col gap-1.5">
+                        <div class="select" action="fs" action-for="wfs">
+                            <div class="select-title">
+                                <div class="text">No</div>
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                                </svg>
+                            </div>
+                            <div class="options">
+                                <div class="option" value="No">No</div>
+                                <div class="option" value="Yes">Yes</div>
+                            </div>
+                        </div>
+                    </div>
+                    <h3>Window Blur Intensity</h3>
+                    <div class="blur-slider flex flex-col gap-2 w-full max-w-md">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-[#ffffffb3]">Window Blur Intensity</span>
+                            <span id="blurPercent" class="text-sm font-semibold">18%</span>
+                        </div>
+                        <input id="blurRange" type="range" min="0" max="50" step="1" value="9" aria-label="Window blur intensity" />
                     </div>
                 </div>
                 <div class="settings-category absolute flex flex-col gap-3 overflow-y-auto overflow-x-hidden rounded-md size-full opacity-0 pointer-events-none scale-[1.01] duration-75 ease-in" category="networking" data-visible="false">
@@ -242,7 +290,10 @@
                                     <span class="font-bold text-xl text-[#ffffff68] leading-none">@</span>
                                     <input class="hostname font-bold text-xl text-[#ffffff68] leading-none bg-transparent p-0 rounded-none focus-within:outline-none w-28" />
                                 </div>
-                                <span class="perm w-max bg-[#ffffff28] py-1 px-1.5 rounded-md font-bold text-[#ffffff68] text-sm leading-none mt-1.5 select-none"></span>
+                                <div class="flex flex-row gap-1.5">
+                                    <span class="perm w-max bg-[#ffffff28] py-1 px-1.5 rounded-md font-bold text-[#ffffff68] text-sm leading-none mt-1.5 select-none"></span>
+                                    <span class="actype w-max bg-[#ffffff28] py-1 px-1.5 rounded-md font-bold text-[#ffffff68] text-sm leading-none mt-1.5 select-none"></span>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -24,7 +24,7 @@ tb_island.addControl({
 							filename: "untitled.txt",
 							onOk: async file => {
 								document.body.setAttribute("path", file);
-								textarea.value = await tb.fs.promises.readFile(file, "utf8");
+								textarea.value = await tb.vfs.whatFS(file).promises.readFile(file, "utf8");
 							},
 						});
 					},
@@ -40,7 +40,7 @@ tb_island.addControl({
 								title: "Save Text File",
 								filename: "untitled.txt",
 								onOk: async txt => {
-									tb.fs.writeFile(`${txt}`, textarea.value, err => {
+									tb.vfs.whatFS(txt).writeFile(`${txt}`, textarea.value, err => {
 										if (err) return alert(err);
 									});
 								},

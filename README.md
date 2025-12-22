@@ -8,7 +8,7 @@
 - [Vite](https://vite.dev)
 - [React](https://react.dev)
 - [TailwindCSS](https://tailwindcss.com)
-- [FilerJS](https://github.com/filerjs/filer)
+- [TFS](https://github.com/terbiumos/tfs)
 - [Fflate](https://github.com/101arrowz/fflate/)
 - [BareMux](https://github.com/mercuryworkshop/bare-mux)
 

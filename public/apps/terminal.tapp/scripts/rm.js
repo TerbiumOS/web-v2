@@ -64,15 +64,8 @@ async function rm(args) {
 		try {
 			const match = path.match(/\/mnt\/([^\/]+)\//);
 			const davName = match ? match[1].toLowerCase() : "";
-			const davInstances = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${sessionStorage.getItem("currAcc")}/files/davs.json`, "utf8"));
-			const dav = davInstances.find(d => d.name.toLowerCase() === davName);
-			const client = window.webdav.createClient(dav.url, {
-				username: dav.username,
-				password: dav.password,
-				authType: window.webdav.AuthType.Password,
-			});
 			const np = path.replace(`/mnt/${davName.toLowerCase()}/`, "");
-			await client.deleteFile(`${np}/${args._raw}`);
+			await tb.vfs.servers.get(davName).connection.promises.unlink(`${np}/${args._raw}`);
 			createNewCommandInput();
 		} catch (e) {
 			displayError(`TNSM rmdir: ${e.message}`);

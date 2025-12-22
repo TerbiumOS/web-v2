@@ -1,7 +1,7 @@
 import { BareMuxConnection } from "@mercuryworkshop/bare-mux";
 import type { ScramjetController } from "@mercuryworkshop/scramjet";
 import * as fflate from "fflate";
-import { libcurl } from "libcurl.js/bundled";
+import { libcurl } from "libcurl.js";
 import apps from "../apps.json";
 import { hash } from "../hash.json";
 import pwd from "./apis/Crypto";
@@ -25,6 +25,8 @@ import { initializeWebContainer } from "./Node/runtimes/Webcontainers/nodeProc";
 import parse from "./Parser";
 import { useWindowStore } from "./Store";
 import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
+import { vFS } from "./vFS";
+import { auth, getinfo, setinfo } from "./apis/utils/tauth";
 
 const system = new System();
 const pw = new pwd();
@@ -43,6 +45,7 @@ export default async function Api() {
 	window.tb = {
 		registry: registry,
 		sh: window.tb.sh,
+		buffer: window.tb.buffer,
 		battery: {
 			async showPercentage() {
 				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
@@ -508,7 +511,7 @@ export default async function Api() {
 						throw new Error(`Failed to download the file. Status: ${response.status}`);
 					}
 					const content = await response.arrayBuffer();
-					await window.tb.fs.promises.writeFile(location, Filer.Buffer.from(content));
+					await window.tb.fs.promises.writeFile(location, window.tb.buffer.from(content), "arraybuffer");
 					console.log(`File saved successfully at: ${location}`);
 				} catch (error) {
 					console.error(error);
@@ -516,26 +519,22 @@ export default async function Api() {
 			},
 			exportfs: async () => {
 				const zip: { [key: string]: Uint8Array } = {};
-				// @ts-expect-error No Types as TFS is not production ready yet
-				if (window.tb.fs.mode === "OPFS") {
-					throw new Error("OPFS export is not implemented yet, Check back later");
-				} else {
-					async function addzip(inp: string, aPath = "") {
-						const files = await window.tb.fs.promises.readdir(inp);
-						for (const file of files) {
-							const fullPath = `${inp}/${file}`;
-							const stats = await window.tb.fs.promises.stat(fullPath);
-							const zipPath = `${aPath}${file}`;
-							if (stats.isDirectory()) {
-								await addzip(fullPath, `${zipPath}/`);
-							} else {
-								const fileData = await window.tb.fs.promises.readFile(fullPath);
-								zip[zipPath] = new Uint8Array(fileData);
-							}
+				// This is a very inefficient way of zipping the fs but it will be replaced soon
+				async function addzip(inp: string, aPath = "") {
+					const files = await window.tb.fs.promises.readdir(inp);
+					for (const file of files) {
+						const fullPath = `${inp}/${file}`;
+						const stats = await window.tb.fs.promises.stat(fullPath);
+						const zipPath = `${aPath}${file}`;
+						if (stats && stats.isDirectory()) {
+							await addzip(fullPath, `${zipPath}/`);
+						} else {
+							const fileData = await window.tb.fs.promises.readFile(fullPath);
+							zip[zipPath] = new Uint8Array(fileData);
 						}
 					}
-					await addzip("//");
 				}
+				await addzip("//");
 				const link = document.createElement("a");
 				const zipBlob = new Blob([window.tb.fflate.zipSync(zip)], { type: "application/zip" });
 				link.href = URL.createObjectURL(zipBlob);
@@ -543,7 +542,18 @@ export default async function Api() {
 				link.click();
 			},
 			users: {
-				async list() {},
+				async list() {
+					const usersDir = await window.tb.fs.promises.readdir("/home/");
+					const users: string[] = [];
+					for (const user of usersDir) {
+						const userJsonPath = `/home/${user}/user.json`;
+						if (await fileExists(userJsonPath)) {
+							const userData: User = JSON.parse(await window.tb.fs.promises.readFile(userJsonPath, "utf8"));
+							users.push(userData.username);
+						}
+					}
+					return users;
+				},
 				async add(user: User) {
 					const { username, password, pfp, perm, securityQuestion } = user;
 					const userDir = `/home/${username}`;
@@ -575,6 +585,12 @@ export default async function Api() {
 							format: "12h",
 							internet: false,
 							showSeconds: false,
+						},
+						window: {
+							winAccent: "#ffffff",
+							blurlevel: 18,
+							alwaysMaximized: false,
+							alwaysFullscreen: false,
 						},
 					};
 					await window.tb.fs.promises.writeFile(`${userDir}/settings.json`, JSON.stringify(userSettings));
@@ -637,7 +653,7 @@ export default async function Api() {
 						} else {
 							leftPos = 1;
 						}
-						if (topPos * 66 > window.innerHeight - 130) {
+						if (topPos * 66 > parent.innerHeight - 130) {
 							leftPos = 1.15;
 							if (r2.length === 0) {
 								topPos = 0;
@@ -660,13 +676,31 @@ export default async function Api() {
 						await window.tb.fs.promises.symlink(`/apps/system/${name}.tapp/index.json`, `/home/${username}/desktop/${name}.lnk`);
 					}
 					await window.tb.fs.promises.writeFile(`/home/${username}/desktop/.desktop.json`, JSON.stringify(items));
+					await window.tb.fs.promises.writeFile(
+						`/apps/user/${username}/app store/repos.json`,
+						JSON.stringify([
+							{
+								name: "TB App Repo",
+								url: "https://raw.githubusercontent.com/TerbiumOS/tb-repo/refs/heads/main/manifest.json",
+							},
+							{
+								name: "XSTARS XTRAS",
+								url: "https://raw.githubusercontent.com/Notplayingallday383/app-repo/refs/heads/main/manifest.json",
+							},
+							{
+								name: "Anura App Repo",
+								url: "https://raw.githubusercontent.com/MercuryWorkshop/anura-repo/refs/heads/master/manifest.json",
+								icon: "https://anura.pro/icon.png",
+							},
+						]),
+					);
 					return true;
 				},
 				async remove(id: string) {
 					const userDir = `/home/${id}`;
 					try {
 						const uDir = await window.tb.fs.promises.stat(userDir);
-						if (uDir.type === "DIRECTORY") {
+						if (uDir && uDir.type === "DIRECTORY") {
 							await window.tb.sh.promises.rm(userDir, { recursive: true });
 						}
 					} catch (err: any) {
@@ -674,7 +708,7 @@ export default async function Api() {
 					}
 					try {
 						const appDir = await window.tb.fs.promises.stat(`/apps/user/${id}`);
-						if (appDir.type === "DIRECTORY") {
+						if (appDir && appDir.type === "DIRECTORY") {
 							await window.tb.sh.promises.rm(`/apps/user/${id}`, { recursive: true });
 						}
 					} catch (err: any) {
@@ -750,6 +784,166 @@ export default async function Api() {
 		libcurl: libcurl,
 		fflate: fflate,
 		fs: window.tb.fs,
+		vfs: await vFS.create(),
+		tauth: {
+			client: auth,
+			signIn: () => {
+				return new Promise<any>((resolve, reject) => {
+					window.tb.dialog.WebAuth({
+						title: "Terbium Cloud Sign In",
+						message: "Please sign in to your Terbium Cloud Account to continue.",
+						onOk: async (username: string, password: string) => {
+							await window.tb.tauth.client.signIn.email({
+								email: username,
+								password: password,
+								fetchOptions: {
+									onSuccess: async response => {
+										const exists = await window.tb.fs.promises.exists("/system/etc/terbium/taccs.json");
+										if (!exists) {
+											await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([], null, 2), "utf8");
+										}
+										const conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
+										conf.push({
+											username: response.data.user.name,
+											perm: "admin",
+											pfp: response.data.user.image,
+											email: response.data.user.email,
+											id: response.data.user.id,
+										});
+										await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify(conf, null, 2), "utf8");
+										console.log("[TAUTH] Saved Account Info to FS");
+										const info = response;
+										info.data.user.password = password;
+										resolve(info);
+									},
+									onError: error => {
+										reject(error);
+									},
+								},
+							});
+						},
+						onCancel: () => {
+							reject(new Error("User cancelled the sign-in process"));
+						},
+					});
+				});
+			},
+			signOut: async () => {
+				let conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
+				if (!Array.isArray(conf)) {
+					if (conf && typeof conf === "object") {
+						conf = Object.values(conf);
+					} else {
+						conf = [];
+					}
+				}
+				const currUser = sessionStorage.getItem("currAcc");
+				const idx = conf.findIndex((acc: any) => acc && acc.username === currUser);
+				if (idx !== -1) {
+					conf.splice(idx, 1);
+					await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify(conf, null, 2), "utf8");
+					console.log("[TAUTH] Removed Account Info from FS");
+				}
+			},
+			isTACC(username?: string) {
+				return new Promise<boolean>(async resolve => {
+					if (!username) {
+						username = sessionStorage.getItem("currAcc") || "Guest";
+					}
+					const conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
+					const exists = conf.some((acc: any) => acc && acc.username === username);
+					resolve(exists);
+				});
+			},
+			updateInfo: async (user: Partial<User>) => {
+				const target = (user as any).id || user.username || sessionStorage.getItem("currAcc");
+				if (!target) throw new Error("No target account specified");
+				let conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
+				const exists = await window.tb.fs.promises.exists("/system/etc/terbium/taccs.json");
+				if (!exists) {
+					await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([], null, 2), "utf8");
+				}
+				if (!Array.isArray(conf)) {
+					if (conf && typeof conf === "object") conf = Object.values(conf);
+					else conf = [];
+				}
+				const idx = conf.findIndex((acc: any) => acc && (acc.username === target || acc.id === target));
+				if (idx === -1) throw new Error(`Account '${target}' not found`);
+				const existing = conf[idx] || {};
+				const updated = { ...existing, ...user };
+				if (!updated.id && existing.id) updated.id = existing.id;
+				conf[idx] = updated;
+				await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify(conf, null, 2), "utf8");
+				if (existing.username && updated.username && existing.username !== updated.username && sessionStorage.getItem("currAcc") === existing.username) {
+					sessionStorage.setItem("currAcc", updated.username);
+				}
+				return new Promise((resolve, reject) => {
+					window.tb.dialog.WebAuth({
+						title: "Verify Identity to Update Account",
+						message: "Please sign in to your Terbium Cloud Account to verify it's you.",
+						onOk: async (username: string, password: string) => {
+							await window.tb.tauth.client.signIn.email({
+								email: username,
+								password: password,
+								fetchOptions: {
+									onSuccess: async response => {
+										console.log(response);
+										const obj = {
+											name: updated.username,
+											email: updated.email,
+											image: updated.pfp,
+										};
+										const t = await window.tb.tauth.client.updateUser(obj, { headers: { "Content-Type": "application/json" }, method: "POST" });
+										console.log(t);
+										resolve(updated);
+									},
+									onError: error => {
+										reject(new Error(error.error.message));
+									},
+								},
+							});
+						},
+						onCancel: () => {
+							reject(new Error("User cancelled the sign-in process"));
+						},
+					});
+				});
+			},
+			sync: {
+				retreive: async () => {
+					const info = await window.tb.tauth.getInfo();
+					if (!info) throw new Error("No TACC info found");
+					const data = await getinfo(info.email, info.password, "tbs");
+					console.log("[TAUTH] Retrieved synced data from cloud");
+					console.log(data.settings[0]);
+					await window.tb.fs.promises.writeFile(`/home/${info.username}/settings.json`, JSON.stringify(data.settings[0].settings, null, 2), "utf8");
+					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/files/davs.json`, JSON.stringify(data.settings[0].davs, null, 2), "utf8");
+				},
+				upload: async () => {
+					const info = await window.tb.tauth.getInfo();
+					if (!info) throw new Error("No TACC info found");
+					const settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
+					const davs = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/files/davs.json`, "utf8"));
+					const toupload = [
+						{
+							settings: settings,
+							apps: [],
+							davs: davs,
+						},
+					];
+					setinfo(info.email, info.password, "tbs", toupload);
+					console.log("[TAUTH] Uploaded synced data to cloud");
+				},
+			},
+			getInfo: async (username?: string) => {
+				const conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
+				if (!conf.find((acc: any) => acc && acc.username === username)) {
+					username = sessionStorage.getItem("currAcc") || "Guest";
+				}
+				const account = conf.find((acc: any) => acc && acc.username === username) || null;
+				return account;
+			},
+		},
 		node: {
 			webContainer: {},
 			servers: new Map<number, string>(),
@@ -810,6 +1004,7 @@ export default async function Api() {
 						icon: win.icon,
 						pid: win.pid,
 						src: win.src,
+						size: win.size || { width: 800, height: 600 },
 					};
 				});
 				return list;
@@ -834,7 +1029,6 @@ export default async function Api() {
 				// @ts-expect-error
 				const stream = await navigator.mediaDevices.getDisplayMedia({ preferCurrentTab: true });
 				const capture = new ImageCapture(stream.getVideoTracks()[0]);
-				// @ts-expect-error
 				const frame = await capture.grabFrame();
 				stream.getVideoTracks()[0].stop();
 				const canvas: HTMLCanvasElement = document.createElement("canvas");
@@ -986,11 +1180,10 @@ export default async function Api() {
 		},
 	};
 
-	//@ts-expect-error stfu
 	if (window.loadLock)
 		// this function seems to be called twice, anura doesn't like initing twice, so well, this is the weird fix I chose instead of tackling the root problem - Rafflesia
 		return;
-	(window as any).loadLock = true;
+	window.loadLock = true;
 
 	const anura = await Anura.new({
 		milestone: 5,
@@ -1087,8 +1280,10 @@ export default async function Api() {
 	window.ExternalApp = ExternalApp;
 	window.ExternalLib = ExternalLib;
 	window.electron = new Lemonade();
+	window.tb.libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm");
 	const getupds = async () => {
 		if (hash !== (await window.tb.fs.promises.readFile("/system/etc/terbium/hash.cache", "utf8"))) {
+			await window.tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", "invalid");
 			window.tb.notification.Toast({
 				application: "System",
 				iconSrc: "/fs/apps/system/about.tapp/icon.svg",
@@ -1144,6 +1339,38 @@ export default async function Api() {
 	document.addEventListener("keyup", up);
 	wsld();
 	await window.tb.proxy.updateSWs();
+	const getchangelog = async () => {
+		const reCache: Record<string, { hash: string; changeFile: string }> = await (await window.tb.libcurl.fetch("https://cdn.terbiumon.top/changelogs/versions.json")).json();
+		const vInf = reCache[system.version("string") as string];
+		if (hash === vInf.hash) {
+			window.tb.window.create({
+				title: "Changelog",
+				src: vInf.changeFile,
+				icon: "/fs/apps/system/about.tapp/icon.svg",
+				size: {
+					width: 600,
+					height: 400,
+				},
+				proxy: true,
+			});
+		}
+	};
+	if (sessionStorage.getItem("justUpdated") === "true") {
+		getchangelog();
+		sessionStorage.removeItem("justUpdated");
+	}
 	window.tb.node.webContainer = await initializeWebContainer();
+	if (await window.tb.tauth.isTACC()) {
+		window.tb.fs.watch(`/home/${await window.tb.user.username()}/settings.json`, { recursive: true }, (e: string) => {
+			if (e === "change") {
+				window.tb.tauth.sync.upload();
+			}
+		});
+		window.tb.fs.watch(`/apps/user/${await window.tb.user.username()}/files/davs.json`, { recursive: true }, (e: string) => {
+			if (e === "change") {
+				window.tb.tauth.sync.upload();
+			}
+		});
+	}
 	document.addEventListener("libcurl_load", wsld);
 }

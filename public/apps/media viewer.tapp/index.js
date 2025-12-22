@@ -1,7 +1,3 @@
-import * as webdav from "/fs/apps/system/files.tapp/webdav.js";
-
-window.webdav = webdav;
-
 window.addEventListener("load", async () => {
 	parent.postMessage(JSON.stringify({ type: "ready" }), "*");
 });
@@ -51,11 +47,7 @@ async function openFile(url, ext, dav) {
 				const davUrl = url.split("/dav/")[0] + "/dav/";
 				const dav = davInstances.find(d => d.url.toLowerCase().includes(davUrl));
 				if (!dav) throw new Error("No matching dav instance found");
-				const client = window.webdav.createClient(dav.url, {
-					username: dav.username,
-					password: dav.password,
-					authType: window.webdav.AuthType.Password,
-				});
+				const client = window.parent.tb.vfs.servers.get(dav.name);
 				let filePath;
 				if (url.startsWith("http")) {
 					const match = url.match(/^https?:\/\/[^\/]+\/dav\/([^\/]+\/)?(.+)$/);
@@ -208,11 +200,7 @@ async function openFile(url, ext, dav) {
 				const davUrl = url.split("/dav/")[0] + "/dav/";
 				const dav = davInstances.find(d => d.url.toLowerCase().includes(davUrl));
 				if (!dav) throw new Error("No matching dav instance found");
-				const client = window.webdav.createClient(dav.url, {
-					username: dav.username,
-					password: dav.password,
-					authType: window.webdav.AuthType.Password,
-				});
+				const client = window.parent.tb.vfs.servers.get(dav.name);
 				let filePath;
 				if (url.startsWith("http")) {
 					const match = url.match(/^https?:\/\/[^\/]+\/dav\/([^\/]+\/)?(.+)$/);
@@ -266,11 +254,7 @@ async function openFile(url, ext, dav) {
 				const davUrl = url.split("/dav/")[0] + "/dav/";
 				const dav = davInstances.find(d => d.url.toLowerCase().includes(davUrl));
 				if (!dav) throw new Error("No matching dav instance found");
-				const client = window.webdav.createClient(dav.url, {
-					username: dav.username,
-					password: dav.password,
-					authType: window.webdav.AuthType.Password,
-				});
+				const client = window.parent.tb.vfs.servers.get(dav.name);
 				let filePath;
 				if (url.startsWith("http")) {
 					const match = url.match(/^https?:\/\/[^\/]+\/dav\/([^\/]+\/)?(.+)$/);
@@ -412,7 +396,7 @@ window.addEventListener("message", async e => {
 			const ext = data.path.split(".").pop();
 			let json = JSON.parse(await window.parent.tb.fs.promises.readFile("/apps/system/files.tapp/extensions.json", "utf8"));
 			if (data.path.includes("http")) {
-				openFile(data.path, ext, true);
+				openFile(data.path, ext);
 			} else if (json["image"].includes(ext)) {
 				let img = await window.parent.tb.fs.promises.readFile(data.path);
 				let blob = new Blob([img], { type: "image/" + ext });

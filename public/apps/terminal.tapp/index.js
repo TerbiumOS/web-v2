@@ -1,7 +1,6 @@
 import parser from "yargs-parser";
 import http from "iso-http";
 import git from "git";
-import * as webdav from "/fs/apps/system/files.tapp/webdav.js";
 
 /**
  * @typedef {import("yargs-parser").Arguments} argv
@@ -21,7 +20,6 @@ const tb = window.tb || window.parent.tb || {};
 
 window.http = http;
 window.gitfetch = git;
-window.webdav = webdav;
 
 /**
  * Converts a hex color to an RGB string
@@ -211,14 +209,16 @@ async function handleCommand(name, args) {
 	}
 	try {
 		const script = await scriptRes.text();
-		const fn = new Function("args", "displayOutput", "createNewCommandInput", "displayError", "term", "path", "terbium", script);
-		fn(args, displayOutput, createNewCommandInput, displayError, term, path, window.parent.tb);
+		const fn = new Function("args", "displayOutput", "createNewCommandInput", "displayError", "term", "path", "terbium", "buffer", script);
+		fn(args, displayOutput, createNewCommandInput, displayError, term, path, window.parent.tb, window.parent.tb.buffer);
 	} catch (error) {
 		displayError(`Failed to execute command '${name}': ${error.message}`);
 		createNewCommandInput();
 		return;
 	}
 }
+
+window.handleCommand = handleCommand;
 
 window.addEventListener("updPath", e => {
 	path = e.detail;

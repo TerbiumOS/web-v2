@@ -15,6 +15,7 @@ If your version of terbium is unsupported, please do not make a GitHub Issue abo
 
 | Version | Supported |
 | ------- | --------- |
+| 2.1.0 (stable) | ❌ |
 | 2.1.1 (stable) | ✅ |
 
 ### Supported Lemonade Versions

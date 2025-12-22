@@ -14,7 +14,6 @@ dist-ssr
 *.local
 *.tsbuildinfo
 .npmrc
-pnpm-lock.yaml
 package-lock.json
 
 # Editor directories and files

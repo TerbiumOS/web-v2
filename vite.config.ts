@@ -10,6 +10,7 @@ import react from "@vitejs/plugin-react-swc";
 import config from "dotenv";
 import { defineConfig } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
+import { tfsPath } from "@terbiumos/tfs";
 
 config.config();
 
@@ -43,6 +44,11 @@ export default defineConfig({
 				{
 					src: `${libcurlPath}/**/*`.replace(/\\/g, "/"),
 					dest: "libcurl",
+					overwrite: false,
+				},
+				{
+					src: `${tfsPath}/**/*`.replace(/\\/g, "/"),
+					dest: "tfs",
 					overwrite: false,
 				},
 			],

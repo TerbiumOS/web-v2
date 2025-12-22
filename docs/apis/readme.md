@@ -15,6 +15,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - [Platform](#platform)
   - [Process](#process)
   - [Screen](#screen)
+  - [VFS](#vfs)
   - [System](#system)
   - [Mediaisland](#mediaisland)
   - [File](#file)
@@ -456,7 +457,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **FileBrowser**
     - Description: Simple FileBrowser Dialog
     - Parameters:
-      - `props: { title: string, filter: string, onOk: Function }` - FileBrowser dialog properties.
+      - `props: { title: string, filter: string, onOk: Function, onCancel: Function, local: boolean }` - FileBrowser dialog properties.
     - Example:
       ```javascript
       await tb.dialog.FileBrowser({
@@ -469,7 +470,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **DirectoryBrowser**
     - Description: Simple FileBrowser Dialog
     - Parameters:
-      - `props: { title: string, filter: string, onOk: Function }` - FileBrowser dialog properties.
+      - `props: { title: string, filter: string, onOk: Function, onCancel: Function, local: boolean }` - FileBrowser dialog properties.
     - Example:
       ```javascript
       await tb.dialog.DirectoryBrowser({
@@ -482,7 +483,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **SaveFile**
     - Description: Simple File Saving Dialog
     - Parameters:
-      - `props: { title: string, defualtDir: string, filename: string, onOk: Function }` - SaveFile dialog properties.
+      - `props: { title: string, defualtDir: string, filename: string, onOk: Function, onCancel: Function, local: boolean }` - SaveFile dialog properties.
     - Example:
     ```javascript
     await tb.dialog.SaveFile({
@@ -582,6 +583,184 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
     ```javascript
     tb.screen.capture()
     ```
+
+### VFS
+  - **servers**
+    - Description: A Map of the current users webdav servers
+    - Returns: `Object` - VFSOperations
+    - Example:
+    ```js
+    for (const instance of tb.vfs.servers) {
+      const davInfo = instance[1];
+      // Use dav instance info here including a already established connection if one is availible
+    }
+    ```
+  - **currentServer**
+    - Description: The current WebDav server to use for operations
+    - Returns: `Object` - VFSOperations
+    - Example:
+    ```js
+    const client = tb.vfs.currentServer.connection.client;
+    // use webdav methods here or use VFS Operations as a drop in for working between TFS and VFS
+    ```
+
+  - **create**
+    - Description: (async) Returns a new instance of VFS, You will probably not use this function unless your directly modifying terbiums codebase
+    - Returns: `Promise<VFS>`
+    - Example:
+    ```js
+    const vfs = await vfs.create();
+    ```
+
+  - **mount**
+    - Description: Mounts the inputed server from vfs.servers
+    - Parameters:
+      - `serverName: string` - the name of the server to mount
+    - Example:
+    ```js
+    await tb.vfs.mount("servername");
+    ```
+
+  - **mountAll**
+    - Description: Mounts all servers avalible in vfs.servers
+    - Example:
+    ```js
+    await tb.vfs.mountAll()
+    ```
+
+  - **addServer**
+    - Description: Adds a server to the users WebDav server list
+    - Parameters:
+      - `Server: ServerInfo[]` - The server information to put in
+    - Example:
+    ```js
+    await tb.vfs.addServer({
+      name: "any name you want for the drive name";
+      url: "https://somedavendpoint.com/";
+      username: "IloveTerbiumDev";
+      password: "XSTARSwasHere";
+    })
+    ```
+
+  - **removeServer**
+    - Description: Removes a server from the users WebDav server list
+    - Parameters:
+      - `ServerName: string` - The name of the server to remove
+    - Example:
+    ```js
+    await tb.vfs.removeServer("webdav1")
+    ```
+
+  - **setServer**
+    - Description: Sets `currentServer` to the requested server
+    - Parameters:
+      - `ServerName: string` - The server name to set the server too **NOTE** Server MUST be mounted to perform this operation.
+    - Example:
+    ```js
+    await tb.vfs.setServer("webdav1");
+    // tb.vfs.currentServer is now the instance of VFSOperations that webdav1 uses
+    ```
+
+  - **whatFS**
+    - Description: Returns Either TFS or VFSOperations as the suitable File System for you to use for said drive
+    - Parameters:
+      - `Path: string` - The path to check
+    - Example:
+    ```js
+    const fs = await tb.vfs.whatFS("/mnt/dav");
+    // FS is VFSOperations
+    const fs = await tb.vfs.whatFS("/home/XSTARS/");
+    // FS is TFS.fs
+    ```
+
+  - **VFSOperations**
+    > **NOTE:** This is **NOT** an API. This is an instance representing File System actions, WebDav client information, etc., and is referenced by several APIs above.
+    #### Properties
+
+    - **client**: `WebDavClient`  
+      The WebDav Client Interface.
+
+    #### Methods
+
+    - **readdir(path, callback)**
+      - Reads the contents of a directory at the given path.
+      - **Parameters:**
+        - `path: string` — Directory path.
+        - `callback: (err: any, files?: any[]) => void` — Called with error or array of file names.
+
+    - **readFile(path, callback)**
+      - Reads the contents of a file as text.
+      - **Parameters:**
+        - `path: string` — File path.
+        - `callback: (err: any, data?: string) => void` — Called with error or file data.
+
+    - **writeFile(path, data, callback)**
+      - Writes data to a file, replacing its contents.
+      - **Parameters:**
+        - `path: string` — File path.
+        - `data: string | ArrayBuffer` — Data to write.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **delete(path, callback)**
+      - Deletes a file at the specified path.
+      - **Parameters:**
+        - `path: string` — File path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **rename(oldPath, newPath, callback)**
+      - Renames or moves a file from `oldPath` to `newPath`.
+      - **Parameters:**
+        - `oldPath: string` — Original file path.
+        - `newPath: string` — New file path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **createDirectory(path, callback)**
+      - Creates a new directory at the specified path.
+      - **Parameters:**
+        - `path: string` — Directory path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **exists(path, callback)**
+      - Checks if a file or directory exists at the given path.
+      - **Parameters:**
+        - `path: string` — Path to check.
+        - `callback: (err: any, exists?: boolean) => void` — Called with error or existence boolean.
+
+    - **stat(path, callback)**
+      - Retrieves metadata/statistics about a file or directory.
+      - **Parameters:**
+        - `path: string` — Path to check.
+        - `callback: (err: any, stat?: any) => void` — Called with error or stat object.
+
+    - **copy(source, destination, callback)**
+      - Copies a file from source to destination.
+      - **Parameters:**
+        - `source: string` — Source file path.
+        - `destination: string` — Destination file path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **unlink(path, callback)**
+      - Deletes a file at the specified path (alias for `delete`).
+      - **Parameters:**
+        - `path: string` — File path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **move(source, destination, callback)**
+      - Moves a file from source to destination (alias for `rename`).
+      - **Parameters:**
+        - `source: string` — Source file path.
+        - `destination: string` — Destination file path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **appendFile(path, data, callback)**
+      - Appends data to the end of a file.
+      - **Parameters:**
+        - `path: string` — File path.
+        - `data: string | ArrayBuffer` — Data to append.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    All of these functions also have a Promises variant that has the exact same syntax except it does not have a callback instead you use it asynchronously
+
 
 ### System
   - **version**

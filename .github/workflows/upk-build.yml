@@ -1,0 +1,47 @@
+name: Build UPK for Anura
+on:
+  push:
+      paths:
+          - 'package.json'
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v5
+            - name: Set up Node
+              uses: actions/setup-node@v6
+              with:
+                node-version: 'lts/*'
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                version: 10
+            - name: Setup Python
+              uses: actions/setup-python@v6
+              with:
+                python-version: '3.13'
+            - name: Install dependencies
+              run: pnpm i
+            - name: Install BareMux v1
+              run: pnpm i @mercuryworkshop/bare-mux@^1.1.4
+            - name: Download upk-tools.zip
+              run: curl -L -o upk-tools.zip https://cdn.terbiumon.top/upk-tools.zip
+            - name: Extract upk-tools
+              run: unzip -o upk-tools.zip
+            - name: replace BCC Client v2 with v1
+              run: mv bx1bcc.ts src/sys/liquor/bcc.ts
+            - name: Add BareMux Script
+              run: npx replace-in-file "<head>" "<head>    <script src=\"libs/bare-mux/bare.cjs\"></script>" index.html
+            - name: Replace BareMux in codebase
+              run: bash replace.sh
+            - name: Build TB React
+              run: pnpm run build-static
+            - name: "Run UPK Builder"
+              run: python3 upk.py
+            - name: Upload UPK
+              uses: actions/upload-artifact@v4
+              with:
+                name: UPK
+                path: terbium-upk.app.zip

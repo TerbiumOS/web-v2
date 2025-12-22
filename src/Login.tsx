@@ -31,11 +31,11 @@ export default function Login() {
 			const dirEntries = await Promise.all(
 				entries.map(async entry => {
 					const stat = await window.tb.fs.promises.stat(`/home/${entry}`);
-					if (stat.isDirectory()) {
-						try {
-							await window.tb.fs.promises.access(`/home/${entry}/user.json`);
+					if (stat && stat.isDirectory()) {
+						const exists = await window.tb.fs.promises.exists(`/home/${entry}/user.json`);
+						if (exists) {
 							return entry;
-						} catch (error) {
+						} else {
 							return null;
 						}
 					}
@@ -116,22 +116,24 @@ export default function Login() {
 
 	useEffect(() => {
 		const keyCheck = async (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				setIsLoggingIn(false);
-			}
-			if ((!isLoggingIn && e.key !== "Escape") || e.key.match(/^[a-zA-Z0-9]$/)) {
-				const user = JSON.parse(await window.tb.fs.promises.readFile(`/home/${selectedUser}/user.json`, "utf8"));
-				if (user.password !== false) {
+			switch (e.key) {
+				case "Enter":
+					if (isLoggingIn && !changingpw) {
+						login();
+					}
+					break;
+				case "Escape":
+					if (isLoggingIn) {
+						setIsLoggingIn(false);
+					} else {
+					}
+					break;
+				default:
 					setIsLoggingIn(true);
-					setTimeout(() => {
-						if (passwordRef.current && !changingpw) {
-							passwordRef.current.focus();
-							if (e.key.match(/^[a-zA-Z0-9]$/) && passwordRef.current.value.length === 0) {
-								passwordRef.current.value = e.key;
-							}
-						}
-					}, 200);
-				}
+					if (passwordRef.current && !changingpw) {
+						passwordRef.current.focus();
+					}
+					break;
 			}
 		};
 		window.addEventListener("keydown", keyCheck);
@@ -148,6 +150,8 @@ export default function Login() {
 				style={{
 					backgroundImage: `url("${wallpaper?.includes("/system/etc/") ? `/fs/${wallpaper}` : wallpaper || ""}")`,
 					backgroundSize: "cover",
+					backgroundRepeat: "no-repeat",
+					backgroundPosition: "center",
 				}}
 			></div>
 			<div

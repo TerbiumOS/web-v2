@@ -3,7 +3,13 @@
  * @description This file contains all the types and interfaces used in the Terbium system.
  */
 
+import { TFSType, FSType, ShellType } from "@terbiumos/tfs";
 import { System } from "./apis/System";
+import { ServerInfo, vFS } from "./vFS";
+import { ExternalApp } from "./liquor/coreapps/ExternalApp";
+import { WindowInformation } from "./liquor/AliceWM";
+import { createAuthClient } from "better-auth/client";
+import type { HTTPSession, libcurl } from "libcurl.js";
 
 declare global {
 	namespace React.JSX {
@@ -21,6 +27,10 @@ declare global {
 		ExternalApp: any;
 		ExternalLib: any;
 		electron: any;
+		tfs: TFSType;
+		loadLock: boolean;
+		libcurlLock: boolean;
+		libcurlSession: HTTPSession;
 	}
 }
 
@@ -28,36 +38,18 @@ export const isURL = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0
 
 export const dirExists = async (path: string): Promise<boolean> => {
 	return new Promise(resolve => {
-		window.tb.fs.stat(path, (err: any, stats: any) => {
-			if (err) {
-				if (err.code === "ENOENT") {
-					resolve(false);
-				} else {
-					console.error(err);
-					resolve(false);
-				}
-			} else {
-				const exists = stats.type === "DIRECTORY";
-				resolve(exists);
-			}
+		if (!window.tb.fs) return resolve(false);
+		window.tb.fs.exists(path, (exists: boolean) => {
+			resolve(exists);
 		});
 	});
 };
 
 export const fileExists = async (path: string): Promise<boolean> => {
 	return new Promise(resolve => {
-		window.tb.fs.stat(path, (err: any, stats: any) => {
-			if (err) {
-				if (err.code === "ENOENT") {
-					resolve(false);
-				} else {
-					console.error(err);
-					resolve(false);
-				}
-			} else {
-				const exists = stats.type === "FILE";
-				resolve(exists);
-			}
+		if (!window.tb.fs) return resolve(false);
+		window.tb.fs.exists(path, (exists: boolean) => {
+			resolve(exists);
 		});
 	});
 };
@@ -268,6 +260,7 @@ export interface dialogProps {
 	onOk: void | any;
 	onCancel?: void | any;
 	sudo?: boolean;
+	local?: boolean;
 }
 
 export interface cmprops {
@@ -321,28 +314,6 @@ export interface MediaProps {
 }
 
 export type websocketUrl = `wss://${string}` | `ws://${string}`;
-export interface Libcurl {
-	set_websocket: (url: websocketUrl) => void;
-	fetch: (...args: any) => Promise<Response>;
-	ready: boolean;
-	version: {
-		lib: string;
-		curl: string;
-		ssl: string;
-		brotli: string;
-		nghttp2: string;
-		protocols: string[];
-		wisp: string;
-	};
-	wisp: {
-		wisp_connections: Record<string, unknown>;
-	};
-	transport: "wisp";
-	copyright: string;
-	websocket_url: websocketUrl;
-	events: Record<string, unknown>;
-	onload: (callback: () => void) => void;
-}
 
 export interface UserSettings {
 	wallpaper: string;
@@ -359,6 +330,12 @@ export interface UserSettings {
 		format: "12h" | "24h";
 		internet: boolean;
 		showSeconds: boolean;
+	};
+	window: {
+		winAccent: string;
+		blurlevel: number;
+		alwaysMaximized: boolean;
+		alwaysFullscreen: boolean;
 	};
 }
 
@@ -383,7 +360,8 @@ export interface SysSettings {
 
 export interface COM {
 	registry: any;
-	sh: any;
+	sh: ShellType;
+	buffer: any;
 	battery: {
 		showPercentage(): void;
 		hidePercentage(): void;
@@ -478,7 +456,7 @@ export interface COM {
 		download(url: string, location: string): Promise<void>;
 		exportfs(): void;
 		users: {
-			list(): Promise<void>;
+			list(): Promise<string[]>;
 			add(user: User): Promise<boolean>;
 			remove(id: string): Promise<boolean>;
 			update(user: User): Promise<void>;
@@ -488,16 +466,29 @@ export interface COM {
 			removeEntry(name: string): void;
 		};
 	};
-	libcurl: Libcurl;
+	libcurl: typeof libcurl;
 	fflate: any;
-	fs: FilerFS;
+	fs: FSType;
+	vfs: vFS;
+	tauth: {
+		client: ReturnType<typeof createAuthClient>;
+		signIn(email: string, password: string): Promise<any>;
+		signOut(): Promise<void>;
+		isTACC(username?: string): Promise<boolean>;
+		updateInfo(data: any): Promise<void>;
+		sync: {
+			retreive: () => {};
+			upload: () => {};
+		};
+		getInfo(username?: string): Promise<any>;
+	};
 	crypto(pass: string, file: string): Promise<string>;
 	platform: {
 		getPlatform(): Promise<"desktop" | "mobile">;
 	};
 	process: {
 		kill(config: string | number | any): void;
-		list(): Object;
+		list(): Record<number, { name: string; size: { width: number | string; height: number | string }; icon: string; pid: number; src: string }>;
 		create(): void;
 		parse: {
 			build(src: string): void;
@@ -527,4 +518,52 @@ export interface COM {
 		start: () => void;
 		stop(): boolean;
 	};
+}
+
+export interface AnuraWMWeakRef {
+	element: HTMLDivElement | Element | null;
+	content: HTMLDivElement | undefined | null;
+	app: ExternalApp;
+	dragForceX: 0;
+	dragForceY: 0;
+	dragging: false;
+	height: number | string;
+	width: number | string;
+	pid: number | null;
+	state: null;
+	maximized: false;
+	minimizing: false;
+	mouseLeft: null;
+	mouseTop: null;
+	onclose: () => null;
+	onfocus: () => null;
+	onresize: (_w: number, _h: number) => null;
+	onsnap: (_side: string) => null;
+	onunmaximize: () => null;
+	restoreSvg: null | SVGElement | ChildNode;
+	kill: () => void;
+	alive: boolean;
+	maximizeImg: null | SVGElement | ChildNode;
+	maximizeSvg: null | SVGElement | ChildNode;
+	wininfo: WindowInformation;
+	title: string;
+}
+
+export interface TAuthReturnType {
+	user: any;
+	settings: [
+		{
+			settings: UserSettings;
+			apps: any[];
+			davs: ServerInfo[];
+		},
+	];
+}
+
+export interface TAuthSSData {
+	settings: {
+		settings: UserSettings;
+		apps: any[];
+		davs: ServerInfo[];
+	}[];
 }

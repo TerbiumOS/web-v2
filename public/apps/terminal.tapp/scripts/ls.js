@@ -14,24 +14,12 @@ async function ls(args) {
 		];
 		const header = "| " + columns.map(col => centerText(col.name, col.width)).join(" | ") + " |";
 		const separator = "|" + columns.map(col => "-".repeat(col.width + 2)).join("|") + "|";
-		displayOutput(centerText(`TerbiumOS Network Storage Manager v1.0.1`, header.length));
+		displayOutput(centerText(`TerbiumOS Network Storage Manager v1.2.0`, header.length));
 		displayOutput(header);
 		displayOutput(separator);
-		const davInstances = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${sessionStorage.getItem("currAcc")}/files/davs.json`, "utf8"));
-		for (const dav of davInstances) {
-			let mounted;
-			try {
-				const client = window.webdav.createClient(dav.url, {
-					username: dav.username,
-					password: dav.password,
-					authType: window.webdav.AuthType.Password,
-				});
-				await client.getDirectoryContents("/");
-				mounted = true;
-			} catch {
-				mounted = false;
-			}
-			const row = [centerText(dav.name, columns[0].width), centerText(dav.url, columns[1].width), centerText(mounted ? "Yes" : "No", columns[2].width), centerText(`/mnt/${dav.name.toLowerCase()}`, columns[3].width)];
+		for (const instance of window.parent.tb.vfs.servers) {
+			const dav = instance[1];
+			const row = [centerText(dav.name, columns[0].width), centerText(dav.url, columns[1].width), centerText(dav.connected ? "Yes" : "No", columns[2].width), centerText(`/mnt/${dav.name.toLowerCase()}`, columns[3].width)];
 			displayOutput("| " + row.join(" | ") + " |");
 		}
 		createNewCommandInput();
@@ -39,15 +27,7 @@ async function ls(args) {
 		try {
 			const match = args._raw.match(/\/mnt\/([^\/]+)\//) || path.match(/\/mnt\/([^\/]+)\//);
 			const davName = match ? match[1].toLowerCase() : "";
-			const davInstances = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${sessionStorage.getItem("currAcc")}/files/davs.json`, "utf8"));
-			const dav = davInstances.find(d => d.name.toLowerCase() === davName);
-			const client = window.webdav.createClient(dav.url, {
-				username: dav.username,
-				password: dav.password,
-				authType: window.webdav.AuthType.Password,
-			});
-			const np = args._raw.replace(`/mnt/${davName.toLowerCase()}/`, "") || path.replace(`/mnt/${davName.toLowerCase()}/`, "");
-			const contents = await client.getDirectoryContents(np);
+			const contents = await tb.vfs.servers.get(davName).connection.promises.readdir(`${path}/${args._raw}`);
 			for (const entry of contents) {
 				if (entry.type === "directory") {
 					displayOutput(`${entry.basename}/`);
@@ -63,42 +43,24 @@ async function ls(args) {
 		createNewCommandInput();
 	} else if (args._raw) {
 		try {
-			tb.sh.ls(path + args._raw, (err, entries) => {
-				if (err) {
-					displayError(`ls: ${err.message}`);
-					createNewCommandInput();
-				} else {
-					entries.forEach(entry => {
-						displayOutput(entry.name);
-					});
-					createNewCommandInput();
-				}
+			const entries = await tb.sh.promises.ls(path + args._raw);
+			entries.forEach(entry => {
+				displayOutput(entry.name);
 			});
+			createNewCommandInput();
 		} catch {
-			tb.sh.ls(args._raw, (err, entries) => {
-				if (err) {
-					displayError(`ls: ${err.message}`);
-					createNewCommandInput();
-				} else {
-					entries.forEach(entry => {
-						displayOutput(entry.name);
-					});
-					createNewCommandInput();
-				}
+			const entries = await tb.sh.promises.ls(args._raw);
+			entries.forEach(entry => {
+				displayOutput(entry.name);
 			});
+			createNewCommandInput();
 		}
 	} else {
-		tb.sh.ls(path, (err, entries) => {
-			if (err) {
-				displayError(`ls: ${err.message}`);
-				createNewCommandInput();
-			} else {
-				entries.forEach(entry => {
-					displayOutput(entry.name);
-				});
-				createNewCommandInput();
-			}
+		const entries = await tb.sh.promises.ls(path);
+		entries.forEach(entry => {
+			displayOutput(entry.name);
 		});
+		createNewCommandInput();
 	}
 }
 ls(args);

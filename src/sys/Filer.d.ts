@@ -28,7 +28,7 @@ type FilerFS = {
 				) => Promise<any>;
 				ls: (dir: string) => Promise<string[]>;
 				mkdirp: (dir: string) => Promise<void>;
-				rm: (path: string) => Promise<void>;
+				rm: (path: string, options?: { recursive?: boolean; force?: boolean }) => Promise<void>;
 				tempDir: () => Promise<string>;
 				touch: (filePath: string) => Promise<void>;
 			};
