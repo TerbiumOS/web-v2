@@ -77,7 +77,7 @@ export default function AppIsland() {
 
 	return (
 		<div className="island-container">
-			<div className={`island relative p-3 py-2 flex gap-2 items-center rounded-xl h-min ${activeApp ? "opacity-100" : "opacity-0"}`}>
+			<div className={`island app_island relative p-3 py-2 flex gap-2 items-center rounded-xl h-min ${activeApp ? "opacity-100" : "opacity-0"}`}>
 				{Object.entries(islands).map(([appname, island]) => (
 					<div className={`flex gap-3 ${activeApp === appname ? "opacity-100 z-1" : "opacity-0 absolute pointer-events-none"} duration-150`} key={appname} id={island.props?.id} data-app-name={appname}>
 						<div className="font-bold text-white text-2xl cursor-(--cursor-text)">{appname}</div>

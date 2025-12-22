@@ -1046,11 +1046,18 @@ export default function Setup() {
 		);
 	};
 	const Step5 = () => {
+		const ranRef = useRef(false);
 		setTimeout(() => {
 			currentViewRef.current?.classList.remove("-translate-x-6");
 			currentViewRef.current?.classList.remove("opacity-0");
 		}, 150);
-		saveData();
+		useEffect(() => {
+			if (ranRef.current) return;
+			ranRef.current = true;
+			(async () => {
+				await saveData();
+			})();
+		}, []);
 		return (
 			<p
 				ref={el => {

@@ -1,4 +1,4 @@
-import { dirExists, TAuthSSData } from "../sys/types";
+import { dirExists, TAuthSSData, UserSettings } from "../sys/types";
 import apps from "../apps.json";
 import { copyfs } from "./fs.init";
 import { hash } from "../hash.json";
@@ -126,10 +126,11 @@ export async function init() {
 
 	if (!(await dirExists(`/home/${user}`))) {
 		await window.tb.fs.promises.mkdir(`/home/${user}`);
-		let userSettings = {
+		let userSettings: UserSettings = {
 			wallpaper: "/assets/wallpapers/1.png",
 			wallpaperMode: "cover",
 			animations: true,
+			// @ts-ignore
 			proxy: sessionStorage.getItem("selectedProxy") || "Scramjet",
 			transport: "Default (Epoxy)",
 			wispServer: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`,
@@ -140,6 +141,8 @@ export async function init() {
 				internet: false,
 				showSeconds: false,
 			},
+			showFPS: false,
+			windowOptimizations: false,
 			window: {
 				winAccent: "#ffffff",
 				blurlevel: 18,
@@ -267,15 +270,15 @@ export async function init() {
 		const response = await fetch("/apps/files.tapp/icons.json");
 		const dat = await response.json();
 		const iconNames = Object.keys(dat["name-to-path"]);
-		const icons = Object.values(dat["name-to-path"]);
 		var iconArrays: { [key: string]: string } = {};
 
 		await window.tb.fs.promises.mkdir(`/system/etc/terbium/file-icons`);
-		iconNames.forEach(async name => {
-			iconArrays[name] = `/system/etc/terbium/file-icons/${name}.svg`; // name, path
-			const icon = icons[iconNames.indexOf(name)];
-			await window.tb.fs.promises.writeFile(`/system/etc/terbium/file-icons/${name}.svg`, icon as any);
-		});
+		for (const name of iconNames) {
+			const path = `/system/etc/terbium/file-icons/${name}.svg`;
+			iconArrays[name] = path;
+			const icon = dat["name-to-path"][name];
+			await window.tb.fs.promises.writeFile(path, icon as any);
+		}
 		await window.tb.fs.promises.writeFile(
 			`/system/etc/terbium/file-icons.json`,
 			JSON.stringify({
@@ -318,6 +321,5 @@ export async function init() {
 			]),
 		);
 	}
-	console.log("File System Inited");
 	return true;
 }

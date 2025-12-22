@@ -6,7 +6,6 @@ import paths from "./installer.json";
 export default function Updater() {
 	const [progress, setProgress] = useState(0);
 	const statusref = useRef<HTMLDivElement>(null);
-	const isDev = import.meta.env.DEV;
 
 	async function copyDir(inp: string, dest: string, rn?: boolean) {
 		if (rn === true) {
@@ -278,6 +277,7 @@ export default function Updater() {
 						alwaysMaximized: false,
 						alwaysFullscreen: false,
 					};
+					usrSettings.showFPS = false;
 					await window.tb.fs.promises.writeFile(`/home/${user}/settings.json`, JSON.stringify(usrSettings, null, 4));
 				}
 			}

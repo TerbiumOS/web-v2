@@ -572,7 +572,7 @@ export default async function Api() {
 						};
 					}
 					await window.tb.fs.promises.writeFile(`${userDir}/user.json`, JSON.stringify(userJson));
-					const userSettings = {
+					const userSettings: UserSettings = {
 						wallpaper: "/assets/wallpapers/1.png",
 						wallpaperMode: "cover",
 						animations: true,
@@ -586,6 +586,8 @@ export default async function Api() {
 							internet: false,
 							showSeconds: false,
 						},
+						showFPS: false,
+						windowOptimizations: false,
 						window: {
 							winAccent: "#ffffff",
 							blurlevel: 18,
@@ -918,6 +920,7 @@ export default async function Api() {
 					console.log(data.settings[0]);
 					await window.tb.fs.promises.writeFile(`/home/${info.username}/settings.json`, JSON.stringify(data.settings[0].settings, null, 2), "utf8");
 					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/files/davs.json`, JSON.stringify(data.settings[0].davs, null, 2), "utf8");
+					window.dispatchEvent(new Event("updWallpaper"));
 				},
 				upload: async () => {
 					const info = await window.tb.tauth.getInfo();
