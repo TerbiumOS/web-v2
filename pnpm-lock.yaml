@@ -27,7 +27,7 @@ importers:
         specifier: ^2.1.28
         version: 2.1.28
       '@mercuryworkshop/libcurl-transport':
-        specifier: ^1
+        specifier: ^1.5.2
         version: 1.5.2
       '@mercuryworkshop/scramjet':
         specifier: https://cdn.terbiumon.top/scramjet-v2.0-alpha.tgz
