@@ -324,6 +324,8 @@ export interface UserSettings {
 	wispServer: websocketUrl | string | any;
 	"battery-percent": boolean;
 	accent: string;
+	windowOptimizations?: boolean;
+	showFPS?: boolean;
 	times: {
 		format: "12h" | "24h";
 		internet: boolean;

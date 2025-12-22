@@ -60,8 +60,8 @@ export default function Power() {
 			<div
 				ref={menu}
 				className={`
-                absolute top-[calc(48px+6px)] right-1.5 z-[-1] bg-[#2020208c] bg-[url(/assets/img/grain.png)] shadow-tb-border-shadow
-                ${showMenu ? "duration-150" : "opacity-0 -translate-y-6 pointer-events-none duration-200"} rounded-lg backdrop-blur-[8px] overflow-hidden
+                absolute top-13.5 right-1.5 z-[-1] bg-[#2020208c] bg-[url(/assets/img/grain.png)] shadow-tb-border-shadow
+                ${showMenu ? "duration-150" : "opacity-0 -translate-y-6 pointer-events-none duration-200"} rounded-xl backdrop-blur-sm overflow-hidden
             `}
 			>
 				<div
@@ -70,17 +70,17 @@ export default function Power() {
                     ${showMenu ? "" : "opacity-0 -translate-y-2"}
                 `}
 				>
-					<div
+					<button
 						className={`
-                        first:rounded-t-lg last:rounded-b-lg hover:bg-[#ffffff28] flex gap-8 justify-between items-center px-3 py-1.5 duration-150
+                        first:rounded-t-lg last:rounded-b-lg hover:bg-[#ffffff28] flex gap-8 justify-between items-center px-3 py-2 duration-150
                     `}
 					>
 						<span className="select-none font-semibold">Sleep</span>
 						<MoonIcon className="size-5" />
-					</div>
-					<div
+					</button>
+					<button
 						className={`
-                        first:rounded-t-lg last:rounded-b-lg hover:bg-[#ffffff28] flex gap-8 justify-between items-center px-3 py-1.5 duration-150
+                        first:rounded-t-lg last:rounded-b-lg hover:bg-[#ffffff28] flex gap-8 justify-between items-center px-3 py-2 duration-150
                     `}
 						onClick={() => {
 							sessionStorage.setItem("logged-in", "false");
@@ -89,10 +89,10 @@ export default function Power() {
 					>
 						<span className="select-none font-semibold">Lock</span>
 						<LockClosedIcon className="size-5" />
-					</div>
-					<div
+					</button>
+					<button
 						className={`
-                        first:rounded-t-lg last:rounded-b-lg hover:bg-[#ffffff28] flex gap-8 justify-between items-center px-3 py-1.5 duration-150
+                        first:rounded-t-lg last:rounded-b-lg hover:bg-[#ffffff28] flex gap-8 justify-between items-center px-3 py-2 duration-150
                     `}
 						onClick={() => {
 							sessionStorage.setItem("logged-in", "false");
@@ -101,11 +101,11 @@ export default function Power() {
 					>
 						<span className="select-none font-semibold">Restart</span>
 						<ArrowPathIcon className="size-5 stroke-[1.3px] stroke-current" />
-					</div>
+					</button>
 					{showHardRestart && (
-						<div
+						<button
 							className={`
-                            first:rounded-t-lg last:rounded-b-lg hover:bg-[#ffffff28] flex gap-8 justify-between items-center px-3 py-1.5 duration-150
+                            first:rounded-t-lg last:rounded-b-lg hover:bg-[#ffffff28] flex gap-8 justify-between items-center px-3 py-2 duration-150
                         `}
 							onClick={() => {
 								sessionStorage.clear();
@@ -114,11 +114,11 @@ export default function Power() {
 						>
 							<span className="select-none font-semibold">Hard Restart</span>
 							<ArrowPathIcon className="size-5 stroke-[1.3px] stroke-current" />
-						</div>
+						</button>
 					)}
-					<div
+					<button
 						className={`
-                        first:rounded-t-lg last:rounded-b-lg hover:bg-[#ff6060ce] flex gap-8 justify-between items-center px-3 py-1.5 duration-150
+                        first:rounded-t-lg last:rounded-b-lg hover:bg-[#ff6060ce] flex gap-8 justify-between items-center px-3 py-2 duration-150
                     `}
 						onClick={() => {
 							sessionStorage.setItem("logged-in", "false");
@@ -127,7 +127,7 @@ export default function Power() {
 					>
 						<span className="select-none font-semibold">Shutdown</span>
 						<PowerIcon className="size-5 stroke-[1.3px] stroke-current" />
-					</div>
+					</button>
 				</div>
 			</div>
 		</>

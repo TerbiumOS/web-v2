@@ -748,7 +748,7 @@ export default function Setup() {
 								<input
 									ref={passwordRef}
 									type="password"
-									className="password cursor-[var(--cursor-text)] rounded-[6px] px-[10px] py-[8px] text-[#ffffff] caret-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border-[1px] transition duration-150 ring-[transparent] ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:text-[#ffffff] focus:placeholder-[#ffffff48] focus:outline-hidden focus:ring-2"
+									className="password cursor-(--cursor-text) rounded-md px-2.5 py-2 w-full text-[#ffffff] caret-[#ffffff] placeholder-[#ffffff38] bg-[#ffffff0a] border-[#ffffff22] border transition duration-150 ring-transparent ring-0 focus:bg-[#ffffff1f] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:text-[#ffffff] focus:placeholder-[#ffffff48] focus:outline-hidden focus:ring-2"
 									placeholder="Password"
 									onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
 										if (e.target.value.length > 0) {

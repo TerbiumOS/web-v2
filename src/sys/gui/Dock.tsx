@@ -223,15 +223,15 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 	};
 
 	return (
-		<div className="flex flex-col relative justify-center items-center pb-[6px] z-9999999">
-			<SearchMenu className={`absolute ${searchMenuStore.open ? "bottom-[calc(12px+48px)] duration-150" : "opacity-0 pointer-events-none bottom-[40px] duration-200"}`} />
+		<div className="flex flex-col relative justify-center items-center pb-1.5 z-9999999">
+			<SearchMenu className={`absolute ${searchMenuStore.open ? "bottom-15 duration-150" : "opacity-0 pointer-events-none bottom-10 duration-200"}`} />
 			<div
 				ref={startRef}
 				className={`
-                absolute flex flex-col
-                bg-[#2020208c] shadow-tb-border-shadow backdrop-blur-sm rounded-xl overflow-hidden
-                w-max min-w-[440px] h-max min-h-[200px] ease-in
-                ${isStartOpen ? "bottom-[calc(12px+48px)] duration-150" : "opacity-0 pointer-events-none bottom-[40px] duration-200"}
+                absolute flex flex-col rounded-2xl
+                bg-[#2020208c] shadow-tb-border-shadow backdrop-blur-sm overflow-hidden
+                w-max min-w-110 h-max min-h-50 ease-in
+                ${isStartOpen ? "bottom-15 duration-150" : "opacity-0 pointer-events-none bottom-10 duration-200"}
                 ${searchHasText ? "scale-110" : ""}
             `}
 				style={{ backgroundImage: "url(/assets/img/grain.png)" }}
@@ -325,7 +325,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 					</div>
 				</div>
 				<div
-					className={`relative flex min-h-[104px] overflow-y-auto max-h-[196px] w-full gap-2 p-2 pt-0
+					className={`relative flex min-h-26 overflow-y-auto max-h-49 w-full gap-2 p-2 pt-0
                     ${isStartOpen ? "" : "translate-y-4 opacity-0"} duration-1000
                     ${searchMatch ? "justify-center" : "justify-between"}
                 `}
@@ -333,7 +333,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 					<div
 						ref={systemAppsRef}
 						className={`
-                        grid ${pins.length > 0 ? "max-h-[188px] grid-cols-2" : "w-full grid-cols-3"} gap-1 overflow-y-auto
+                        grid ${pins.length > 0 ? "max-h-47 grid-cols-2" : "w-full grid-cols-3"} gap-1 overflow-y-auto
                     `}
 					>
 						{filteredSysApps.map((item, index) => (
@@ -367,7 +367,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 							<div
 								ref={pinnedAppsRef}
 								className={`
-                                    flex flex-col bg-[#ffffff10] max-h-[200px] overflow-y-auto w-max rounded-lg last:rounded-b-lgration-1000
+                                    flex flex-col bg-[#ffffff10] max-h-50 overflow-y-auto w-max rounded-2xl last:rounded-b-2xl
                                 `}
 							>
 								{pins.length > 0
@@ -410,7 +410,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 				</div>
 				<div ref={userOptsRef} className="flex items-center gap-2 p-2 bg-[#00000048] rounded-b-lg last:rounded-b-lg">
 					<div
-						className="flex items-center gap-2 p-1.5 rounded-md hover:bg-[#ffffff19] hover:scale-95 duration-150 cursor-pointer"
+						className="flex items-center gap-2 p-1.5 pr-2 rounded-lg hover:bg-[#ffffff19] hover:scale-95 duration-150 cursor-pointer"
 						onClick={() => {
 							window.tb.contextmenu.create({
 								x: userOptsRef.current?.getBoundingClientRect().x ?? 0,
@@ -491,7 +491,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 				</div>
 			</div>
 			<div className="flex items-center gap-2">
-				<div className="flex items-center gap-1.5 shadow-tb-border-shadow backdrop-blur-[8px] bg-[#2020208c] p-2 rounded-[8px]">
+				<div className="flex items-center gap-1.5 shadow-tb-border-shadow backdrop-blur-sm bg-[#2020208c] p-2 rounded-xl">
 					<svg ref={startButtonRef} viewBox="0 0 24 24" fill="currentColor" className="cursor-pointer w-7 h-7" onClick={() => openStart(false)}>
 						<path
 							className="pointer-events-none"
@@ -510,9 +510,9 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 				<div
 					ref={openAppsRef}
 					className={`
-                    shadow-tb-border-shadow backdrop-blur-[8px] bg-[#2020208c]
+                    shadow-tb-border-shadow backdrop-blur-sm bg-[#2020208c]
                     flex items-center
-                    gap-2 py-1.5 px-2 rounded-[8px]
+                    gap-2 py-1.5 px-2 rounded-xl
                     duration-150 ease-in
                         ${pinned != null ? ((pinned.length > 0 && windowStore.windows.length > 0) || pinned.length > 0 || windowStore.windows.length > 0 ? "translate-x-0 opacity-100" : "translate-y-3 opacity-0 pointer-events-none") : null}
                 `}

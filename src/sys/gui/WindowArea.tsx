@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { fileExists, UserSettings, WindowConfig } from "../types";
 import { clearInfo, updateInfo } from "./AppIsland";
 import { useWindowStore } from "../Store";
@@ -26,6 +26,7 @@ interface DesktopItem {
 
 const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, onSnapPreview }) => {
 	const windowStore = useWindowStore();
+	const [optimizationsEnabled, setOptimizationsEnabled] = useState(true);
 
 	const windowRef = useRef<HTMLDivElement>(null);
 	const regionRef = useRef<HTMLDivElement>(null);
@@ -66,6 +67,24 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		}
 	};
 	mobileCheck();
+	
+	useEffect(() => {
+		const loadOptimizationSettings = async () => {
+			try {
+				const settings: UserSettings = JSON.parse(
+					await window.tb.fs.promises.readFile(
+						`/home/${sessionStorage.getItem("currAcc")}/settings.json`,
+						"utf8"
+					)
+				);
+				setOptimizationsEnabled(settings.windowOptimizations ?? true);
+			} catch (err) {
+				console.error("Failed to load optimization settings:", err);
+				setOptimizationsEnabled(true); // Default to enabled
+			}
+		};
+		loadOptimizationSettings();
+	}, []);
 	useEffect(() => {
 		updateInfo({ appname: typeof config.title === "string" ? config.title : config.title?.text });
 	}, [config]);
@@ -375,6 +394,21 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		}
 	}, [isDragging, isSnapped]);
 
+	// Disable pointer events on all iframes when dragging
+	useEffect(() => {
+		if (isDragging || isResizing) {
+			const iframes = document.querySelectorAll('iframe');
+			iframes.forEach(iframe => {
+				iframe.style.pointerEvents = 'none';
+			});
+		} else {
+			const iframes = document.querySelectorAll('iframe');
+			iframes.forEach(iframe => {
+				iframe.style.pointerEvents = 'auto';
+			});
+		}
+	}, [isDragging, isResizing]);
+
 	useEffect(() => {
 		const snap = () => {
 			setIsMouseDown(false);
@@ -423,60 +457,121 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			}
 			setSnapRegion(null);
 			onSnapDone?.();
-			if (srcRef.current) {
-				srcRef.current.style.pointerEvents = "auto";
-			}
 		};
 		window.addEventListener("mouseup", snap);
 		return () => window.removeEventListener("mouseup", snap);
 	}, [snapRegion, isDragging, maximized, isResizing]);
 
 	const handleMouseDown = (direction: "top" | "left" | "right" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right") => {
-		const onMove = (e: MouseEvent) => {
-			setIsResizing(true);
-			setMaximized(false);
-			windowRef.current!.style.transform = "";
+		let animationFrameId: number | null = null;
+		let lastMouseEvent: MouseEvent | null = null;
 
-			if (direction.includes("top")) {
-				const offsetY = e.clientY - 65;
-				const newY = Math.max(offsetY, 0);
-				const newHeight = height + (typeof y === "number" ? y - newY : 0);
-				if (newHeight >= (config.size?.minHeight ?? 224)) {
-					setHeight(newHeight);
-					setY(newY);
+		const onMove = (e: MouseEvent) => {
+			if (!optimizationsEnabled) {
+				// Without optimizations: update immediately
+				setIsResizing(true);
+				setMaximized(false);
+				windowRef.current!.style.transform = "";
+
+				if (direction.includes("top")) {
+					const offsetY = e.clientY - 65;
+					const newY = Math.max(offsetY, 0);
+					const newHeight = height + (typeof y === "number" ? y - newY : 0);
+					if (newHeight >= (config.size?.minHeight ?? 224)) {
+						setHeight(newHeight);
+						setY(newY);
+					}
 				}
+				if (direction.includes("left")) {
+					const offsetX = e.clientX - 10;
+					const newX = Math.max(offsetX, 0);
+					const newWidth = width + (typeof x === "number" ? x - newX : 0);
+					if (newWidth >= (config.size?.minWidth ?? 224)) {
+						setWidth(newWidth);
+						setX(newX);
+					}
+				}
+				if (direction.includes("right")) {
+					const offsetX = e.clientX - 5;
+					const newX = typeof x === "number" ? x : 0;
+					const newWidth = offsetX - newX;
+					if (newWidth >= (config.size?.minWidth ?? 224)) {
+						setWidth(newWidth);
+						setX(newX);
+					}
+				}
+				if (direction.includes("bottom")) {
+					const offsetY = e.clientY - 55;
+					const newY = typeof y === "number" ? y : 0;
+					const newHeight = offsetY - newY;
+					if (newHeight >= (config.size?.minHeight ?? 224)) {
+						setHeight(newHeight);
+						setY(newY);
+					}
+				}
+				return;
 			}
-			if (direction.includes("left")) {
-				const offsetX = e.clientX - 10;
-				const newX = Math.max(offsetX, 0);
-				const newWidth = width + (typeof x === "number" ? x - newX : 0);
-				if (newWidth >= (config.size?.minWidth ?? 224)) {
-					setWidth(newWidth);
-					setX(newX);
-				}
-			}
-			if (direction.includes("right")) {
-				const offsetX = e.clientX - 5;
-				const newX = typeof x === "number" ? x : 0;
-				const newWidth = offsetX - newX;
-				if (newWidth >= (config.size?.minWidth ?? 224)) {
-					setWidth(newWidth);
-					setX(newX);
-				}
-			}
-			if (direction.includes("bottom")) {
-				const offsetY = e.clientY - 55;
-				const newY = typeof y === "number" ? y : 0;
-				const newHeight = offsetY - newY;
-				if (newHeight >= (config.size?.minHeight ?? 224)) {
-					setHeight(newHeight);
-					setY(newY);
-				}
+			
+			// With optimizations: use requestAnimationFrame
+			lastMouseEvent = e;
+			
+			if (!animationFrameId) {
+				animationFrameId = requestAnimationFrame(() => {
+					if (!lastMouseEvent) return;
+					const e = lastMouseEvent;
+					
+					setIsResizing(true);
+					setMaximized(false);
+					windowRef.current!.style.transform = "";
+
+					if (direction.includes("top")) {
+						const offsetY = e.clientY - 65;
+						const newY = Math.max(offsetY, 0);
+						const newHeight = height + (typeof y === "number" ? y - newY : 0);
+						if (newHeight >= (config.size?.minHeight ?? 224)) {
+							setHeight(newHeight);
+							setY(newY);
+						}
+					}
+					if (direction.includes("left")) {
+						const offsetX = e.clientX - 10;
+						const newX = Math.max(offsetX, 0);
+						const newWidth = width + (typeof x === "number" ? x - newX : 0);
+						if (newWidth >= (config.size?.minWidth ?? 224)) {
+							setWidth(newWidth);
+							setX(newX);
+						}
+					}
+					if (direction.includes("right")) {
+						const offsetX = e.clientX - 5;
+						const newX = typeof x === "number" ? x : 0;
+						const newWidth = offsetX - newX;
+						if (newWidth >= (config.size?.minWidth ?? 224)) {
+							setWidth(newWidth);
+							setX(newX);
+						}
+					}
+					if (direction.includes("bottom")) {
+						const offsetY = e.clientY - 55;
+						const newY = typeof y === "number" ? y : 0;
+						const newHeight = offsetY - newY;
+						if (newHeight >= (config.size?.minHeight ?? 224)) {
+							setHeight(newHeight);
+							setY(newY);
+						}
+					}
+					
+					animationFrameId = null;
+				});
 			}
 			originalSize.current = { width, height };
 		};
 
 		const onUp = () => {
+			if (animationFrameId) {
+				cancelAnimationFrame(animationFrameId);
+				animationFrameId = null;
+			}
 			window.removeEventListener("mousemove", onMove);
 			window.removeEventListener("mouseup", onUp);
 			window.removeEventListener("blur", onUp);
@@ -518,6 +613,10 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				height: maximized ? undefined : height,
 				width: maximized ? undefined : width,
 				zIndex: minimized ? 2 : zIndex,
+				...(optimizationsEnabled && {
+					contain: "layout style paint",
+					willChange: isDragging || isResizing ? "transform, left, top" : "auto",
+				}),
 				backgroundColor: accent,
 			}}
 			onMouseDown={() => {
@@ -551,14 +650,14 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					}}
 				></div>
 			)}
-			<div className="absolute left-0 right-0 h-[6px] cursor-n-resize" data-resizer="top" onMouseDown={() => handleMouseDown("top")} />
-			<div className="absolute left-0 top-[6px] bottom-[6px] w-[6px] cursor-w-resize" data-resizer="left" onMouseDown={() => handleMouseDown("left")} />
-			<div className="absolute right-0 top-[6px] bottom-[6px] w-[6px] cursor-e-resize" data-resizer="right" onMouseDown={() => handleMouseDown("right")} />
-			<div className="absolute bottom-0 left-0 right-0 h-[6px] cursor-s-resize" data-resizer="bottom" onMouseDown={() => handleMouseDown("bottom")} />
-			<div className="absolute top-0 left-0 size-2.5 cursor-nw-resize" onMouseDown={() => handleMouseDown("top-left")} />
-			<div className="absolute top-0 right-0 size-2.5 cursor-ne-resize" onMouseDown={() => handleMouseDown("top-right")} />
-			<div className="absolute bottom-0 left-0 size-2.5 cursor-sw-resize" onMouseDown={() => handleMouseDown("bottom-left")} />
-			<div className="absolute bottom-0 right-0 size-2.5 cursor-se-resize" onMouseDown={() => handleMouseDown("bottom-right")} />
+			<div className="absolute left-0 right-0 h-[6px] cursor-n-resize z-10" data-resizer="top" onMouseDown={() => handleMouseDown("top")} />
+			<div className="absolute left-0 top-[6px] bottom-[6px] w-[6px] cursor-w-resize z-10" data-resizer="left" onMouseDown={() => handleMouseDown("left")} />
+			<div className="absolute right-0 top-[6px] bottom-[6px] w-[6px] cursor-e-resize z-10" data-resizer="right" onMouseDown={() => handleMouseDown("right")} />
+			<div className="absolute bottom-0 left-0 right-0 h-[6px] cursor-s-resize z-10" data-resizer="bottom" onMouseDown={() => handleMouseDown("bottom")} />
+			<div className="absolute top-0 left-0 size-4 cursor-nw-resize z-20" data-resizer="top-left" onMouseDown={() => handleMouseDown("top-left")} />
+			<div className="absolute top-0 right-0 size-4 cursor-ne-resize z-20" data-resizer="top-right" onMouseDown={() => handleMouseDown("top-right")} />
+			<div className="absolute bottom-0 left-0 size-4 cursor-sw-resize z-20" data-resizer="bottom-left" onMouseDown={() => handleMouseDown("bottom-left")} />
+			<div className="absolute bottom-0 right-0 size-4 cursor-se-resize z-20" data-resizer="bottom-right" onMouseDown={() => handleMouseDown("bottom-right")} />
 			<div
 				ref={regionRef}
 				className="region flex justify-between items-center bg-[#ffffff10] p-2 min-w-[224px] select-none"
@@ -570,19 +669,50 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					const offsetX = e.clientX - windowRef.current!.offsetLeft;
 					const offsetY = e.clientY - windowRef.current!.offsetTop;
 
+					let animationFrameId: number | null = null;
+					let lastMouseEvent: MouseEvent | null = null;
+
 					const onMove = (e: MouseEvent) => {
-						if (windowRef.current) windowRef.current.style.transform = "";
-						setIsDragging(true);
-						setMaximized(false);
-						const newX = e.clientX - offsetX;
-						const newY = e.clientY - offsetY;
-						handleSnap(newX, newY);
-						if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
-						if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
-						if (srcRef.current) srcRef.current.style.pointerEvents = "none";
+						if (!optimizationsEnabled) {
+							// Without optimizations: update immediately
+							if (windowRef.current) windowRef.current.style.transform = "";
+							setIsDragging(true);
+							setMaximized(false);
+							const newX = e.clientX - offsetX;
+							const newY = e.clientY - offsetY;
+							handleSnap(newX, newY);
+							if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
+							if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
+							return;
+						}
+						
+						// With optimizations: use requestAnimationFrame
+						lastMouseEvent = e;
+						
+						if (!animationFrameId) {
+							animationFrameId = requestAnimationFrame(() => {
+								if (!lastMouseEvent) return;
+								const e = lastMouseEvent;
+								
+								if (windowRef.current) windowRef.current.style.transform = "";
+								setIsDragging(true);
+								setMaximized(false);
+								const newX = e.clientX - offsetX;
+								const newY = e.clientY - offsetY;
+								handleSnap(newX, newY);
+								if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
+								if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
+								
+								animationFrameId = null;
+							});
+						}
 					};
 
 					const onUp = () => {
+						if (animationFrameId) {
+							cancelAnimationFrame(animationFrameId);
+							animationFrameId = null;
+						}
 						window.removeEventListener("mousemove", onMove);
 						window.removeEventListener("mouseup", onUp);
 						window.removeEventListener("blur", onUp);
@@ -879,11 +1009,12 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					</div>
 				)}
 			</div>
-			<div ref={contentRef} className="w-full h-full">
+			<div ref={contentRef} className="w-full h-full" style={optimizationsEnabled ? { contain: "strict" } : {}}>
 				<iframe
 					key={config.src}
 					ref={srcRef}
 					src={src}
+					loading={optimizationsEnabled && minimized ? "lazy" : "eager"}
 					onLoad={() => {
 						if (config.message) {
 							srcRef.current?.contentWindow!.postMessage(config.message, "*");
@@ -896,12 +1027,31 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 						srcRef.current?.contentDocument?.head.appendChild(sr2);
 					}}
 					referrerPolicy="no-referrer"
-					style={{ border: "none", all: "initial", width: "100%", height: "calc(100% - 40px)", pointerEvents: isMouseDown ? "none" : "auto", userSelect: "none" }}
+					style={{ 
+						border: "none", 
+						all: "initial", 
+						width: "100%", 
+						height: "calc(100% - 40px)", 
+						pointerEvents: isMouseDown ? "none" : "auto", 
+						userSelect: "none",
+						...(optimizationsEnabled && { contain: "strict" }),
+					}}
 				></iframe>
 			</div>
 		</div>
 	);
 };
+
+// Memoize WindowElement to prevent unnecessary re-renders
+const MemoizedWindowElement = memo(WindowElement, (prevProps, nextProps) => {
+	// Only re-render if config changes in meaningful ways
+	return (
+		prevProps.config.wid === nextProps.config.wid &&
+		prevProps.config.zIndex === nextProps.config.zIndex &&
+		prevProps.config.focused === nextProps.config.focused &&
+		prevProps.className === nextProps.className
+	);
+});
 
 const DesktopItems = () => {
 	const [items, setItems] = useState<any[]>([]);
@@ -1787,7 +1937,7 @@ const WindowArea: React.FC<WindowAreaProps> = ({ className }) => {
 		>
 			<DesktopItems />
 			{windowStore.windows.map((window: any) => {
-				return <WindowElement key={window.wid} config={window} onSnapPreview={snapPrev} onSnapDone={FinishSnap} />;
+				return <MemoizedWindowElement key={window.wid} config={window} onSnapPreview={snapPrev} onSnapDone={FinishSnap} />;
 			})}
 			<div
 				className={
