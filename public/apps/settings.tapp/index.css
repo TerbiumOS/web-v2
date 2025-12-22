@@ -136,6 +136,7 @@ h6 {
 	transition-property: color, background-color;
 	transition-duration: 150ms;
 	transition-timing-function: ease-in-out;
+	pointer-events: none;
 }
 
 .cat-option .icon svg {

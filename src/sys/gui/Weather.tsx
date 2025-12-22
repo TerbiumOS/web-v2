@@ -65,7 +65,7 @@ export default function Weather() {
 		return () => window.removeEventListener("updWeather", getWeather);
 	}, []);
 	return loaded && !error ? (
-		<div className="flex flex-row gap-1">
+		<div className="flex flex-row items-center gap-1.5">
 			<img src={weatherData?.icn} className="w-6 h-6" />
 			<div className="weather_temp">
 				{weatherData?.temp}

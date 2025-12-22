@@ -118,9 +118,9 @@ const NotificationMenu = ({ isOpen }: INotificationProps) => {
 		<div
 			ref={notificationCenterRef}
 			className={`
-            absolute top-[60px] right-1.5
+            absolute top-15 right-1.5
             flex flex-col
-            w-[400px] h-max max-h-[calc(100%-calc(60px+1.5rem))] rounded-lg p-2.5 gap-2.5
+            w-100 h-max max-h-[calc(100%-calc(60px+1.5rem))] rounded-xl p-2.5 gap-2.5
             bg-[#2020208c] shadow-tb-border-shadow backdrop-blur-[100px] text-white z-999 overflow-y-auto
             ${isOpen ? "duration-200" : "opacity-0 pointer-events-none -translate-y-6 duration-300"}
         `}

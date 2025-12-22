@@ -12,7 +12,7 @@
     </head>
     <body>
         <div class="flex flex-col sm:flex-row size-full p-3 gap-3">
-            <div class="sidebar flex sm:w-[200px] sm:h-min sm:flex-col sm:items-start sm:gap-[6px] sm:p-2 sm:px-3.5 w-min h-max flex-row items-center gap-[4px] p-2 bg-[#ffffff10] shadow-[0px_0px_6px_0px_#00000052,_inset_0_0_0_0.5px_#ffffff38]">
+            <div class="sidebar flex sm:w-50 sm:h-min sm:flex-col sm:items-start sm:gap-1.5 sm:p-2 sm:px-3.5 w-min h-max flex-row items-center gap-1 p-2 bg-[#ffffff10] shadow-[0px_0px_6px_0px_#00000052,inset_0_0_0_0.5px_#ffffff38]">
                 <!-- <input type="text" class="category-search" placeholder="Search" /> -->
                 <div class="cat-option selected sm:pr-3.5" data-category="appearance">
                     <div class="icon">
@@ -64,7 +64,7 @@
                 <div class="settings-category absolute flex flex-col gap-3 overflow-y-auto overflow-x-hidden rounded-md size-full duration-75 ease-in" category="appearance" data-visible="true">
                     <div class="flex flex-col gap-1.5">
                         <h2 class="text-2xl font-bold">Wallpaper</h2>
-                        <div class="wallpapers sm:max-w-[612px]">
+                        <div class="wallpapers sm:max-w-153">
                             <img src="/assets/wallpapers/1.png" class="wallpaper-option"></img>
                             <img src="/assets/wallpapers/2.png" class="wallpaper-option"></img>
                             <img src="/assets/wallpapers/3.png" class="wallpaper-option"></img>
@@ -161,8 +161,33 @@
                     </div>
                 </div>
                 <div class="settings-category absolute flex flex-col gap-3 overflow-y-auto overflow-x-hidden rounded-md size-full opacity-0 pointer-events-none scale-[1.01] duration-75 ease-in" category="window" data-visible="false">
-                    <h2 class="text-2xl font-bold">Window</h2>
-                    <h3>Coming Soon!</h3>
+                    <div class="window-optimizations-check flex items-center gap-2 group cursor-pointer">
+                        <div class="flex flex-col">
+                            <h3 class="text-xl font-bold pointer-events-none select-none">Enable Window Optimizations</h3>
+                            <p class="text-sm text-[#ffffffaa] pointer-events-none select-none">Improves rendering performance for smoother window interactions (drag, resize). Uses GPU acceleration and frame throttling.</p>
+                        </div>
+                        <div class="relative flex size-max rounded-md bg-[#ffffff18] p-1.5 text-white duration-150 group-hover:bg-[#ffffff28] pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="checkIcon size-2.5 stroke-current stroke-[4px] select-none duration-150">
+                                <path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd" />
+                            </svg>
+                            <input type="checkbox" class="hidden pointer-events-none" />
+                        </div>
+                    </div>
+                    <div class="fps-counter-check flex items-center gap-2 group cursor-pointer">
+                        <div class="flex flex-col">
+                            <h3 class="text-xl font-bold pointer-events-none select-none">Show FPS Counter</h3>
+                            <p class="text-sm text-[#ffffffaa] pointer-events-none select-none">Display real-time frames per second in the information island.</p>
+                        </div>
+                        <div class="relative flex size-max rounded-md bg-[#ffffff18] p-1.5 text-white duration-150 group-hover:bg-[#ffffff28] pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="checkIcon size-2.5 stroke-current stroke-[4px] select-none duration-150 opacity-0 scale-85">
+                                <path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd" />
+                            </svg>
+                            <input type="checkbox" class="hidden pointer-events-none" />
+                        </div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-[#4acd6018] border border-[#4acd6038]">
+                        <p class="text-sm text-[#ffffffcc]">💡 <strong>Tip:</strong> If you notice Terbium lagging with this feature enabled, try disabling it to improve performance on older or potato devices.</p>
+                    </div>
                 </div>
                 <div class="settings-category absolute flex flex-col gap-3 overflow-y-auto overflow-x-hidden rounded-md size-full opacity-0 pointer-events-none scale-[1.01] duration-75 ease-in" category="networking" data-visible="false">
                     <div class="flex flex-col gap-1.5">

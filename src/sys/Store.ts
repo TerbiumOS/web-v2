@@ -180,22 +180,28 @@ const useWindowStore = create<WindowState>()(set => ({
 		set((state: WindowState) => {
 			const window = state.windows.find(w => w.wid === wid);
 			if (!window) return state;
+			
+			const indexes = state.windows.map(w => w.zIndex ?? 0);
+			const maxIndex = Math.max(...indexes);
+			
+			// Optimization: Check if window is already at highest z-index
+			// This can be disabled if window optimization setting is off
+			if (window.focused && window.zIndex === maxIndex) {
+				return state; // No update needed
+			}
+			
 			set({ currentPID: window.pid });
 
-			const indexes = state.windows.map(w => w.zIndex ?? 0);
-			window.zIndex = Math.max(...indexes) + 1;
+			window.zIndex = maxIndex + 1;
 			window.focused = true;
 			state.windows.forEach(w => {
 				if (w.wid !== wid) {
 					w.focused = false;
-					if (w.zIndex !== undefined) {
-						Math.max(0, w.zIndex - 1);
-					}
 				}
 			});
 
 			return {
-				windows: state.windows,
+				windows: [...state.windows], // Create new array reference for React to detect change
 			};
 		}),
 	minimize: (wid: string) =>

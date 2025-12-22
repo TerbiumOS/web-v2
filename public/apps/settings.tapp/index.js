@@ -814,15 +814,77 @@ const eruda = () => {
 };
 eruda();
 
-/*
-const animationCheckbox = document.querySelector(".animations-check");
-animationCheckbox.addEventListener("mousedown", async (e) => {
-    const realCheckbox = animationCheckbox.querySelector("input[type='checkbox']");
-    realCheckbox.checked = !realCheckbox.checked;
-    const checkIcon = animationCheckbox.querySelector(".checkIcon");
-    if(realCheckbox.checked) {
-        checkIcon.classList.remove("opacity-0", "scale-85");
-    } else {
-        checkIcon.classList.add("opacity-0", "scale-85");
-    }
-})*/
+const windowOptimizationsCheckbox = document.querySelector(".window-optimizations-check");
+const setupWindowOptimizations = async () => {
+	const realCheckbox = windowOptimizationsCheckbox.querySelector("input[type='checkbox']");
+	const checkIcon = windowOptimizationsCheckbox.querySelector(".checkIcon");
+
+	const setState = async (enabled) => {
+		realCheckbox.checked = enabled;
+		if (enabled) {
+			checkIcon.classList.remove("opacity-0", "scale-85");
+		} else {
+			checkIcon.classList.add("opacity-0", "scale-85");
+		}
+
+		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+		settings.windowOptimizations = enabled;
+		await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
+	};
+
+	try {
+		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+		setState(settings.windowOptimizations ?? true);
+	} catch (err) {
+		console.error("Failed to load window optimization settings:", err);
+		setState(true);
+	}
+
+	windowOptimizationsCheckbox.addEventListener("mousedown", async () => {
+		await setState(!realCheckbox.checked);
+	});
+};
+setupWindowOptimizations();
+
+const fpsCounterCheckbox = document.querySelector(".fps-counter-check");
+const setupFPSCounter = async () => {
+	const realCheckbox = fpsCounterCheckbox.querySelector("input[type='checkbox']");
+	const checkIcon = fpsCounterCheckbox.querySelector(".checkIcon");
+
+	const setState = async (enabled) => {
+		realCheckbox.checked = enabled;
+		if (enabled) {
+			checkIcon.classList.remove("opacity-0", "scale-85");
+		} else {
+			checkIcon.classList.add("opacity-0", "scale-85");
+		}
+
+		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+		settings.showFPS = enabled;
+		await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
+
+		window.parent.dispatchEvent(new CustomEvent('settings-changed', { detail: { showFPS: enabled } }));
+	};
+
+	try {
+		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+		setState(settings.showFPS ?? false);
+	} catch (err) {
+		console.error("Failed to load FPS counter settings:", err);
+		setState(false);
+	}
+
+	fpsCounterCheckbox.addEventListener("mousedown", async () => {
+		await setState(!realCheckbox.checked);
+	});
+};
+setupFPSCounter();
+
+const realCheckbox = animationCheckbox.querySelector("input[type='checkbox']");
+realCheckbox.checked = !realCheckbox.checked;
+const checkIcon = animationCheckbox.querySelector(".checkIcon");
+if(realCheckbox.checked) {
+	checkIcon.classList.remove("opacity-0", "scale-85");
+} else {
+	checkIcon.classList.add("opacity-0", "scale-85");
+}
