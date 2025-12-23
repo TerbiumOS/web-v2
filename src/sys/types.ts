@@ -479,6 +479,7 @@ export interface COM {
 		sync: {
 			retreive: () => {};
 			upload: () => {};
+			isSyncing: boolean;
 		};
 		getInfo(username?: string): Promise<any>;
 	};

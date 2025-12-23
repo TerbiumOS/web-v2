@@ -20,7 +20,14 @@ export const auth = createAuthClient({
 			});
 			session.import_cookies();
 			try {
-				const response = await session.fetch(input.toString(), init);
+				const headers = new Headers(init?.headers);
+				if (!headers.has("origin") && !headers.has("referer")) {
+					headers.set("origin", window.location.origin);
+				}
+				const response = await session.fetch(input.toString(), {
+					...init,
+					headers,
+				});
 				return response;
 			} finally {
 				setTimeout(() => {
@@ -34,7 +41,7 @@ export const auth = createAuthClient({
 	},
 });
 
-export async function getinfo(user?: string, pass?: string, setting?: string): Promise<TAuthReturnType> {
+export async function getinfo(user?: string | null, pass?: string | null, setting?: string): Promise<TAuthReturnType> {
 	if (user && pass) {
 		console.log("[TAUTH] Signing in with provided credentials...");
 		await auth.signIn.email({
@@ -70,7 +77,7 @@ export async function getinfo(user?: string, pass?: string, setting?: string): P
 	};
 }
 
-export async function setinfo(user?: string, pass?: string, setting?: string, toset?: any) {
+export async function setinfo(user?: string | null, pass?: string | null, setting?: string, toset?: any) {
 	if (user && pass) {
 		console.log("[TAUTH] Signing in with provided credentials...");
 		await auth.signIn.email({

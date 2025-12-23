@@ -879,52 +879,68 @@ export default async function Api() {
 				if (existing.username && updated.username && existing.username !== updated.username && sessionStorage.getItem("currAcc") === existing.username) {
 					sessionStorage.setItem("currAcc", updated.username);
 				}
-				return new Promise((resolve, reject) => {
-					window.tb.dialog.WebAuth({
-						title: "Verify Identity to Update Account",
-						message: "Please sign in to your Terbium Cloud Account to verify it's you.",
-						onOk: async (username: string, password: string) => {
-							await window.tb.tauth.client.signIn.email({
-								email: username,
-								password: password,
-								fetchOptions: {
-									onSuccess: async response => {
-										console.log(response);
-										const obj = {
-											name: updated.username,
-											email: updated.email,
-											image: updated.pfp,
-										};
-										const t = await window.tb.tauth.client.updateUser(obj, { headers: { "Content-Type": "application/json" }, method: "POST" });
-										console.log(t);
-										resolve(updated);
+				const run = async () => {
+					const updobj = {
+						name: updated.username,
+						image: updated.pfp,
+						...(updated.email ? { email: updated.email } : {}),
+						...(updated.password ? { password: updated.password } : {}),
+					};
+					if (updated.email) {
+						console.log("[TAUTH] Updating email is not currently supported");
+						delete updobj.email;
+					}
+					await window.tb.tauth.client.updateUser(updobj);
+					console.log("[TAUTH] Updated TACC info successfully");
+				};
+				try {
+					await run();
+				} catch (error) {
+					// @ts-expect-error
+					if (error.error.message.toLowerCase() === "unauthorized") {
+						window.tb.dialog.WebAuth({
+							title: "Verify Identity to Update Account",
+							message: "Please sign in to your Terbium Cloud Account to verify it's you.",
+							onOk: async (username: string, password: string) => {
+								await window.tb.tauth.client.signIn.email({
+									email: username,
+									password: password,
+									fetchOptions: {
+										onSuccess: async () => {
+											await run();
+										},
+										onError: error => {
+											throw new Error(error.error.message);
+										},
 									},
-									onError: error => {
-										reject(new Error(error.error.message));
-									},
-								},
-							});
-						},
-						onCancel: () => {
-							reject(new Error("User cancelled the sign-in process"));
-						},
-					});
-				});
+								});
+							},
+							onCancel: () => {
+								return new Error("User cancelled the sign-in process");
+							},
+						});
+					}
+				}
 			},
 			sync: {
 				retreive: async () => {
 					const info = await window.tb.tauth.getInfo();
 					if (!info) throw new Error("No TACC info found");
+					window.tb.tauth.sync.isSyncing = true;
 					const data = await getinfo(info.email, info.password, "tbs");
 					console.log("[TAUTH] Retrieved synced data from cloud");
 					console.log(data.settings[0]);
 					await window.tb.fs.promises.writeFile(`/home/${info.username}/settings.json`, JSON.stringify(data.settings[0].settings, null, 2), "utf8");
 					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/files/davs.json`, JSON.stringify(data.settings[0].davs, null, 2), "utf8");
 					window.dispatchEvent(new Event("updWallpaper"));
+					window.dispatchEvent(new CustomEvent("proxy-change"));
+					window.dispatchEvent(new Event("upd-accent"));
+					window.tb.tauth.sync.isSyncing = false;
 				},
 				upload: async () => {
 					const info = await window.tb.tauth.getInfo();
 					if (!info) throw new Error("No TACC info found");
+					window.tb.tauth.sync.isSyncing = true;
 					const settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
 					const davs = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/files/davs.json`, "utf8"));
 					const toupload = [
@@ -936,7 +952,9 @@ export default async function Api() {
 					];
 					setinfo(info.email, info.password, "tbs", toupload);
 					console.log("[TAUTH] Uploaded synced data to cloud");
+					window.tb.tauth.sync.isSyncing = false;
 				},
+				isSyncing: false,
 			},
 			getInfo: async (username?: string) => {
 				const conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
@@ -1362,18 +1380,18 @@ export default async function Api() {
 		getchangelog();
 		sessionStorage.removeItem("justUpdated");
 	}
-	window.tb.node.webContainer = await initializeWebContainer();
 	if (await window.tb.tauth.isTACC()) {
-		window.tb.fs.watch(`/home/${await window.tb.user.username()}/settings.json`, { recursive: true }, (e: string) => {
-			if (e === "change") {
+		window.tb.fs.watch(`/home/${await window.tb.user.username()}/settings.json`, { recursive: true }, (e: string, _f: string) => {
+			if (e === "change" && window.tb.tauth.sync.isSyncing !== true) {
 				window.tb.tauth.sync.upload();
 			}
 		});
-		window.tb.fs.watch(`/apps/user/${await window.tb.user.username()}/files/davs.json`, { recursive: true }, (e: string) => {
-			if (e === "change") {
+		window.tb.fs.watch(`/apps/user/${await window.tb.user.username()}/files/davs.json`, { recursive: true }, (e: string, _f: string) => {
+			if (e === "change" && window.tb.tauth.sync.isSyncing !== true) {
 				window.tb.tauth.sync.upload();
 			}
 		});
 	}
+	window.tb.node.webContainer = await initializeWebContainer();
 	document.addEventListener("libcurl_load", wsld);
 }

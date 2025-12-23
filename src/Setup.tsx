@@ -345,7 +345,7 @@ export default function Setup() {
 				rememberMe: true,
 				fetchOptions: {
 					onSuccess: async data => {
-						const p = await getinfo(usernameRef.current?.value || "", password, "tbs");
+						const p = await getinfo(null, null, "tbs");
 						if (p.settings === null || p.settings === undefined) {
 							sessionStorage.setItem("tacc-settings", "null");
 						} else {
@@ -364,12 +364,7 @@ export default function Setup() {
 						Next(2.5);
 					},
 					onError: error => {
-						if (error.error.message.toLocaleLowerCase() === "missing or null origin") {
-							localStorage.removeItem("libcurl_cookies");
-							nextButtonClick();
-						} else {
-							setError(error.error.message || "An unknown error occurred during registration.");
-						}
+						setError(error.error.message || "An unknown error occurred during registration.");
 					},
 				},
 			});
@@ -899,10 +894,10 @@ export default function Setup() {
 					<div className="flex justify-between items-center mb-2">
 						<div className="font-[700] text-lg">{cat}</div>
 						<div className="flex items-center gap-2">
-							<button className="px-2 py-1 text-sm" onMouseDown={() => setAll(cat, true)}>
+							<button className="px-2 py-1 text-sm cursor-pointer" onMouseDown={() => setAll(cat, true)}>
 								Select all
 							</button>
-							<button className="px-2 py-1 text-sm" onMouseDown={() => setAll(cat, false)}>
+							<button className="px-2 py-1 text-sm cursor-pointer" onMouseDown={() => setAll(cat, false)}>
 								Clear
 							</button>
 						</div>
