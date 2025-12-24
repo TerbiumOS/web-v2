@@ -1382,12 +1382,12 @@ export default async function Api() {
 	}
 	if (await window.tb.tauth.isTACC()) {
 		window.tb.fs.watch(`/home/${await window.tb.user.username()}/settings.json`, { recursive: true }, (e: string, _f: string) => {
-			if (e === "change" && window.tb.tauth.sync.isSyncing !== true) {
+			if (e === "change" && window.tb.tauth.sync.isSyncing === false) {
 				window.tb.tauth.sync.upload();
 			}
 		});
 		window.tb.fs.watch(`/apps/user/${await window.tb.user.username()}/files/davs.json`, { recursive: true }, (e: string, _f: string) => {
-			if (e === "change" && window.tb.tauth.sync.isSyncing !== true) {
+			if (e === "change" && window.tb.tauth.sync.isSyncing === false) {
 				window.tb.tauth.sync.upload();
 			}
 		});

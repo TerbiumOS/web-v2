@@ -1,4 +1,8 @@
 declare module "libcurl.js" {
+	import libcurl from "libcurl.js/bundled";
+	export { libcurl };
+}
+declare module "libcurl.js/bundled" {
 	export type WebsocketUrl = `wss://${string}` | `ws://${string}`;
 	export type ProxyUrl = `socks5h://${string}` | `socks4a://${string}` | `http://${string}`;
 	export interface LibcurlVersion {
