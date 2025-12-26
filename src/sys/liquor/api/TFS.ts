@@ -17,8 +17,6 @@ export class TFSProvider extends AFSProvider<any> {
 	constructor(fs: FSType) {
 		super();
 		this.fs = fs;
-		// For backwards compatibility
-		this.fs.shell = window.tfs.sh;
 	}
 
 	rename(oldPath: string, newPath: string, callback?: (err: Error | null) => void) {

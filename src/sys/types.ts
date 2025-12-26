@@ -460,6 +460,7 @@ export interface COM {
 			add(user: User): Promise<boolean>;
 			remove(id: string): Promise<boolean>;
 			update(user: User): Promise<void>;
+			renameUser(olduser: string, newuser: string): Promise<void>;
 		};
 		bootmenu: {
 			addEntry(name: string, file: string): void;

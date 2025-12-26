@@ -766,6 +766,38 @@ export default async function Api() {
 						}),
 					);
 				},
+				async renameUser(olduser: string, newuser: string) {
+					const userData = JSON.parse(await window.tb.fs.promises.readFile(`/home/${olduser}/user.json`, "utf8"));
+					userData["username"] = newuser;
+					await window.tb.fs.promises.writeFile(`/home/${olduser}/user.json`, JSON.stringify(userData));
+					let linkpaths = [];
+					for (const item of await window.tb.fs.promises.readdir(`/home/${olduser}/desktop/`)) {
+						const stat = await window.tb.fs.promises.stat(`/home/${olduser}/desktop/${item}`);
+						if (stat && stat.type === "SYMLINK") {
+							linkpaths.push(await window.tb.fs.promises.readlink(`/home/${olduser}/desktop/${item}`));
+						}
+					}
+					await window.tb.fs.promises.rename(`/home/${olduser}`, `/home/${newuser}`);
+					sessionStorage.setItem("currAcc", newuser);
+					for (const link of linkpaths) {
+						await window.tb.fs.promises.symlink(link, `/home/${newuser}/desktop/${link.match(/([^/]+\.tapp)(?=\/|$)/)?.[1] || link.split("/").pop()}`);
+					}
+					await window.tb.fs.promises.rename(`/apps/user/${olduser}`, `/apps/user/${newuser}`);
+					const sysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
+					sysSettings["defaultUser"] = newuser;
+					await window.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(sysSettings));
+					const fcfg = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${newuser}/files/config.json`, "utf8"));
+					fcfg.drives["File System"] = `/home/${newuser}/`;
+					await window.tb.fs.promises.writeFile(`/apps/user/${newuser}/files/config.json`, JSON.stringify(fcfg));
+					const qcfg = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${newuser}/files/quick-center.json`, "utf8"));
+					for (const key in qcfg.paths) {
+						if (Object.prototype.hasOwnProperty.call(qcfg.paths, key)) {
+							qcfg.paths[key] = qcfg.paths[key].replace(olduser, newuser);
+						}
+					}
+					await window.tb.fs.promises.writeFile(`/apps/user/${newuser}/files/quick-center.json`, JSON.stringify(qcfg));
+					window.location.reload();
+				},
 			},
 			bootmenu: {
 				async addEntry(name: string, file: string) {
@@ -1296,6 +1328,9 @@ export default async function Api() {
 		},
 	});
 	window.anura = anura;
+	// For backwards compatibility
+	// @ts-expect-error
+	window.anura.fs.Shell = window.tfs.sh;
 	window.AliceWM = AliceWM;
 	window.LocalFS = LocalFS;
 	window.ExternalApp = ExternalApp;

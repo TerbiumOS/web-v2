@@ -547,37 +547,7 @@ const usernameEl = document.querySelector(".username");
 usernameEl.addEventListener("input", async e => {
 	usernameEl.addEventListener("blur", async () => {
 		if (usernameEl.value !== JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"))["username"]) {
-			window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8", async (err, data) => {
-				if (err) return console.log(err);
-				data = JSON.parse(data);
-				data["username"] = usernameEl.value;
-				await window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, JSON.stringify(data));
-				let desktopDat = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/desktop/.desktop.json`, "utf8"));
-				desktopDat = desktopDat.map(entry => {
-					entry.item = entry.item.replace(`/home/${sessionStorage.getItem("currAcc")}/`, `/home/${usernameEl.value}/`);
-					return entry;
-				});
-				await window.parent.tb.fs.promises.rename(`/home/${sessionStorage.getItem("currAcc")}`, `/home/${usernameEl.value}`);
-				await window.parent.tb.fs.promises.writeFile(`/home/${usernameEl.value}/desktop/.desktop.json`, JSON.stringify(desktopDat));
-				await window.parent.tb.fs.promises.rename(`/apps/user/${sessionStorage.getItem("currAcc")}`, `/apps/user/${usernameEl.value}`);
-				window.parent.tb.fs.readFile("/system/etc/terbium/settings.json", "utf8", async (err, data) => {
-					if (err) return console.log(err);
-					data = JSON.parse(data);
-					data["defaultUser"] = usernameEl.value;
-					await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(data));
-				});
-				const fcfg = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${usernameEl.value}/files/config.json`, "utf8"));
-				fcfg.drives["File System"] = `/home/${usernameEl.value}/`;
-				await window.parent.tb.fs.promises.writeFile(`/apps/user/${usernameEl.value}/files/config.json`, JSON.stringify(fcfg));
-				const qcfg = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${usernameEl.value}/files/quick-center.json`, "utf8"));
-				for (const key in qcfg.paths) {
-					if (Object.prototype.hasOwnProperty.call(qcfg.paths, key)) {
-						qcfg.paths[key] = qcfg.paths[key].replace(sessionStorage.getItem("currAcc"), usernameEl.value);
-					}
-				}
-				await window.parent.tb.fs.promises.writeFile(`/apps/user/${usernameEl.value}/files/quick-center.json`, JSON.stringify(qcfg));
-				sessionStorage.setItem("currAcc", usernameEl.value);
-			});
+			await window.parent.tb.system.users.renameUser(sessionStorage.getItem("currAcc"), usernameEl.value);
 		}
 	});
 });
@@ -675,37 +645,7 @@ actype.addEventListener("click", async () => {
 				case "cloud":
 					const res = await window.parent.tb.tauth.signIn();
 					actype.innerHTML = "Terbium Cloud\u2122 Account";
-					window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8", async (err, data) => {
-						if (err) return console.log(err);
-						data = JSON.parse(data);
-						data["username"] = res.data.user.name;
-						await window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, JSON.stringify(data));
-						let desktopDat = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/desktop/.desktop.json`, "utf8"));
-						desktopDat = desktopDat.map(entry => {
-							entry.item = entry.item.replace(`/home/${sessionStorage.getItem("currAcc")}/`, `/home/${res.data.user.name}/`);
-							return entry;
-						});
-						await window.parent.tb.fs.promises.rename(`/home/${sessionStorage.getItem("currAcc")}`, `/home/${res.data.user.name}`);
-						await window.parent.tb.fs.promises.writeFile(`/home/${res.data.user.name}/desktop/.desktop.json`, JSON.stringify(desktopDat));
-						await window.parent.tb.fs.promises.rename(`/apps/user/${sessionStorage.getItem("currAcc")}`, `/apps/user/${res.data.user.name}`);
-						window.parent.tb.fs.readFile("/system/etc/terbium/settings.json", "utf8", async (err, data) => {
-							if (err) return console.log(err);
-							data = JSON.parse(data);
-							data["defaultUser"] = res.data.user.name;
-							await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(data));
-						});
-						const fcfg = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${res.data.user.name}/files/config.json`, "utf8"));
-						fcfg.drives["File System"] = `/home/${res.data.user.name}/`;
-						await window.parent.tb.fs.promises.writeFile(`/apps/user/${res.data.user.name}/files/config.json`, JSON.stringify(fcfg));
-						const qcfg = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${res.data.user.name}/files/quick-center.json`, "utf8"));
-						for (const key in qcfg.paths) {
-							if (Object.prototype.hasOwnProperty.call(qcfg.paths, key)) {
-								qcfg.paths[key] = qcfg.paths[key].replace(sessionStorage.getItem("currAcc"), res.data.user.name);
-							}
-						}
-						await window.parent.tb.fs.promises.writeFile(`/apps/user/${res.data.user.name}/files/quick-center.json`, JSON.stringify(qcfg));
-						sessionStorage.setItem("currAcc", res.data.user.name);
-					});
+					await window.parent.tb.system.users.renameUser(sessionStorage.getItem("currAcc"), res.data.user.name);
 					window.parent.tb.system.users.update({
 						username: res.data.user.name,
 						pfp: res.data.user.image,
