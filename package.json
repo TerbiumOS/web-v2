@@ -1,7 +1,7 @@
 {
 	"name": "tb-v2",
 	"private": true,
-	"version": "2.2.0-rc",
+	"version": "2.2.0",
 	"type": "module",
 	"scripts": {
 		"start": "npm run build && tsx bootstrap.ts",
@@ -31,14 +31,14 @@
 		"@terbiumos/tfs": "1.0.19",
 		"@titaniumnetwork-dev/ultraviolet": "^3.2.10",
 		"@webcontainer/api": "^1.6.1",
-		"better-auth": "^1.4.7",
+		"better-auth": "^1.4.9",
 		"compressorjs": "^1.2.1",
 		"consola": "^3.4.2",
 		"cropperjs": "1.6.2",
 		"crypto-js": "^4.2.0",
 		"dotenv": "^17.2.3",
 		"fflate": "^0.8.2",
-		"hono": "^4.11.1",
+		"hono": "^4.11.3",
 		"libcurl.js": "^0.7.4",
 		"open": "^11.0.0",
 		"path-browserify": "^1.0.1",
@@ -65,7 +65,7 @@
 		"htmlparser2": "^10.0.0",
 		"tailwindcss": "^4.1.18",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.50.0",
+		"typescript-eslint": "^8.50.1",
 		"vite": "^7.3.0"
 	},
 	"pnpm": {
