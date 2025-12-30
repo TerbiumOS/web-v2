@@ -375,7 +375,7 @@ export default async function Api() {
 					}
 				};
 				const { ScramjetController } = $scramjetLoadController();
-				window.scramjet = new ScramjetController(scramjetTb);
+				window.scramjet = new ScramjetController(window.scramjetTb);
 				scramjet.init();
 				navigator.serviceWorker
 					.register("anura-sw.js", {

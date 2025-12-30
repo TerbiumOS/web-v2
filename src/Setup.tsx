@@ -174,8 +174,14 @@ export default function Setup() {
 		uploader.click();
 	};
 	const saveData = async () => {
+		window.onbeforeunload = e => {
+			e.preventDefault();
+			e.returnValue = "Terbium is still updating";
+		};
+		window.dispatchEvent(new CustomEvent("oobe-setupstage", { detail: "Initializing File System..." }));
 		const int = await init();
 		console.log(`Init State: ${int}`);
+		window.dispatchEvent(new CustomEvent("oobe-setupstage", { detail: "Setting up user..." }));
 		let data: User = JSON.parse(sessionStorage.getItem("new-user") as string);
 		sessionStorage.setItem("new-user", JSON.stringify(data));
 		const usr = data["username"];
@@ -213,12 +219,14 @@ export default function Setup() {
 			};
 			await setinfo(email as string, data["password"] as string, "tbs", tosave);
 		}
+		window.dispatchEvent(new CustomEvent("oobe-setupstage", { detail: "Finalizing setup..." }));
 		await window.tb.fs.promises.writeFile(`/home/${usr}/user.json`, JSON.stringify(userInf), "utf8");
 		await window.tb.fs.promises.writeFile("/system/etc/terbium/sudousers.json", JSON.stringify([usr]), "utf8");
 		await window.tb.fs.promises.mkdir(`/home/${usr}/documents/`);
 		await window.tb.fs.promises.mkdir(`/home/${usr}/images/`);
 		await window.tb.fs.promises.mkdir(`/home/${usr}/videos/`);
 		await window.tb.fs.promises.mkdir(`/home/${usr}/music/`);
+		window.dispatchEvent(new CustomEvent("oobe-setupstage", { detail: "Finalizing settings..." }));
 		let settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${usr}/settings.json`, "utf8"));
 		let syssettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
 		if (!syssettings["setup"] || syssettings["setup"] === false) {
@@ -237,6 +245,7 @@ export default function Setup() {
 		settings["wispServer"] = wsrv;
 		await window.tb.fs.promises.writeFile(`/home/${usr}/settings.json`, JSON.stringify(settings), "utf8");
 		await window.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(syssettings), "utf8");
+		window.dispatchEvent(new CustomEvent("oobe-setupstage", { detail: "Finalizing setup..." }));
 		const wispExist = await fileExists("//apps/system/settings.tapp/wisp-servers.json");
 		if (!wispExist) {
 			const stockDat = [
@@ -245,7 +254,9 @@ export default function Setup() {
 			];
 			await window.tb.fs.promises.writeFile("//apps/system/settings.tapp/wisp-servers.json", JSON.stringify(stockDat));
 		}
+		window.dispatchEvent(new CustomEvent("oobe-setupstage", { detail: "Restarting Terbium..." }));
 		localStorage.setItem("setup", "true");
+		window.onbeforeunload = null;
 		if (sessionStorage!.getItem("logged-in") === null || sessionStorage!.getItem("logged-in") === undefined || sessionStorage!.getItem("logged-in") === "false") {
 			window.location.reload();
 			sessionStorage.setItem("firstRun", "true");
@@ -1042,6 +1053,7 @@ export default function Setup() {
 	};
 	const Step5 = () => {
 		const ranRef = useRef(false);
+		const actionRef = useRef<HTMLParagraphElement | null>(null);
 		setTimeout(() => {
 			currentViewRef.current?.classList.remove("-translate-x-6");
 			currentViewRef.current?.classList.remove("opacity-0");
@@ -1049,19 +1061,31 @@ export default function Setup() {
 		useEffect(() => {
 			if (ranRef.current) return;
 			ranRef.current = true;
+			const updateActionText = (e: CustomEvent) => {
+				console.log("Setup Stage:", e.detail);
+				if (actionRef.current) {
+					actionRef.current.innerHTML = e.detail;
+				}
+			}
+			window.addEventListener("oobe-setupstage", updateActionText as EventListener);
 			(async () => {
 				await saveData();
 			})();
 		}, []);
 		return (
-			<p
-				ref={el => {
-					currentViewRef.current = el;
-				}}
-				className="font-[700] text-[28px] duration-150 -translate-x-6 opacity-0"
-			>
-				Welcome to Terbium.
-			</p>
+			<div>
+				<p
+					ref={el => {
+						currentViewRef.current = el;
+					}}
+					className="font-[700] text-[28px] duration-150 -translate-x-6 opacity-0"
+				>
+					Welcome to Terbium.
+				</p>
+				<p ref={actionRef} className="font-bold text-lg text-[#ffffff66] mt-2">
+					Starting Services...
+				</p>
+			</div>
 		);
 	};
 
