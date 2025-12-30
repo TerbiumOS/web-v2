@@ -1066,7 +1066,7 @@ export default function Setup() {
 				if (actionRef.current) {
 					actionRef.current.innerHTML = e.detail;
 				}
-			}
+			};
 			window.addEventListener("oobe-setupstage", updateActionText as EventListener);
 			(async () => {
 				await saveData();
