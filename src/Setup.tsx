@@ -917,13 +917,15 @@ export default function Setup() {
 						<div className="text-sm text-[#ffffff88]">There are no options at this time.</div>
 					) : (
 						<div className="flex flex-col gap-2">
-							{options.filter(opt => opt.id !== 'apps.installed').map(opt => (
-								<label key={opt.id} className="flex items-center gap-2 text-sm">
-									<input type="checkbox" checked={sel.includes(opt.id)} onChange={() => toggleOption(cat, opt.id)} />
-									<span className="text-[#ffffffb3]">{opt.label}</span>
-									{typeof opt.raw !== "object" && opt.raw !== null ? <span className="ml-auto text-[#ffffff44] text-xs">{String(opt.raw)}</span> : null}
-								</label>
-							))}
+							{options
+								.filter(opt => opt.id !== "apps.installed")
+								.map(opt => (
+									<label key={opt.id} className="flex items-center gap-2 text-sm">
+										<input type="checkbox" checked={sel.includes(opt.id)} onChange={() => toggleOption(cat, opt.id)} />
+										<span className="text-[#ffffffb3]">{opt.label}</span>
+										{typeof opt.raw !== "object" && opt.raw !== null ? <span className="ml-auto text-[#ffffff44] text-xs">{String(opt.raw)}</span> : null}
+									</label>
+								))}
 							<div className="flex items-center gap-2 text-xs text-[#ffffff66] mt-1">
 								<span>{allSelected ? "All selected" : noneSelected ? "None selected" : `${sel.length} selected`}</span>
 							</div>
