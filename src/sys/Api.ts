@@ -517,29 +517,58 @@ export default async function Api() {
 					console.error(error);
 				}
 			},
-			exportfs: async () => {
-				const zip: { [key: string]: Uint8Array } = {};
-				// This is a very inefficient way of zipping the fs but it will be replaced soon
-				async function addzip(inp: string, aPath = "") {
-					const files = await window.tb.fs.promises.readdir(inp);
-					for (const file of files) {
-						const fullPath = `${inp}/${file}`;
-						const stats = await window.tb.fs.promises.stat(fullPath);
-						const zipPath = `${aPath}${file}`;
-						if (stats && stats.isDirectory()) {
-							await addzip(fullPath, `${zipPath}/`);
+			exportfs: async (startPath = "/", filename = "tbfs.backup.zip") => {
+				const files: Record<string, Uint8Array> = {};
+				const normalizeZipPath = (p: string) => p.replace(/^\/+/, "");
+				const toUint8 = (raw: any): Uint8Array => {
+					if (raw instanceof Uint8Array) return raw;
+					if (raw instanceof ArrayBuffer) return new Uint8Array(raw);
+					if (typeof raw === "string") return new TextEncoder().encode(raw);
+					if (raw?.buffer instanceof ArrayBuffer) return new Uint8Array(raw.buffer);
+					return new Uint8Array(raw);
+				};
+				const walk = async (fsPath: string, zipPrefix: string) => {
+					try {
+						const stat = await window.tb.fs.promises.stat(fsPath);
+						if (stat!.type === "DIRECTORY") {
+							const entries = await window.tb.fs.promises.readdir(fsPath);
+							const dirName = normalizeZipPath(zipPrefix);
+							if (entries.length === 0 && dirName) {
+								files[dirName.endsWith("/") ? dirName : dirName + "/"] = new Uint8Array(0);
+							}
+							await Promise.all(
+								entries.map(async entry => {
+									const childFsPath = `${fsPath.endsWith("/") ? fsPath : fsPath + "/"}${entry}`;
+									const childZipPath = zipPrefix ? `${zipPrefix}/${entry}` : entry;
+									await walk(childFsPath, childZipPath);
+								}),
+							);
 						} else {
-							const fileData = await window.tb.fs.promises.readFile(fullPath);
-							zip[zipPath] = new Uint8Array(fileData);
+							const raw = await window.tb.fs.promises.readFile(fsPath, "arraybuffer");
+							const name = normalizeZipPath(zipPrefix || fsPath.split("/").pop() || "file");
+							files[name] = toUint8(raw);
 						}
+					} catch (err) {
+						console.warn("exportfs: skipping path", fsPath, err);
 					}
+				};
+				try {
+					const normalizedStart = normalizeZipPath(startPath);
+					await walk(startPath, normalizedStart === "" || normalizedStart === "." ? "" : normalizedStart);
+					const zipped = fflate.zipSync(files, { level: 1 });
+					// @ts-expect-error blobs work fine
+					const blob = new Blob([zipped], { type: "application/zip" });
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement("a");
+					a.href = url;
+					a.download = filename;
+					a.click();
+					setTimeout(() => URL.revokeObjectURL(url), 100);
+					return url;
+				} catch (err) {
+					console.error("exportfs failed", err);
+					throw err;
 				}
-				await addzip("//");
-				const link = document.createElement("a");
-				const zipBlob = new Blob([window.tb.fflate.zipSync(zip)], { type: "application/zip" });
-				link.href = URL.createObjectURL(zipBlob);
-				link.download = "tbfs.backup.zip";
-				link.click();
 			},
 			users: {
 				async list() {

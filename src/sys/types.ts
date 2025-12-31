@@ -10,6 +10,7 @@ import { ExternalApp } from "./liquor/coreapps/ExternalApp";
 import { WindowInformation } from "./liquor/AliceWM";
 import { createAuthClient } from "better-auth/client";
 import type { HTTPSession, libcurl } from "libcurl.js";
+import * as fflate from "fflate";
 
 declare global {
 	namespace React.JSX {
@@ -468,7 +469,7 @@ export interface COM {
 		};
 	};
 	libcurl: typeof libcurl;
-	fflate: any;
+	fflate: typeof fflate;
 	fs: FSType;
 	vfs: vFS;
 	tauth: {
