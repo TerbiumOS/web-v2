@@ -349,7 +349,7 @@
                     </div>
                     <h2 class="text-2xl font-bold">Invalidate Cache</h2>
                     <div class="flex gap-1.5">
-                        <button class="w-max py-2 px-4 rounded-md font-semibold bg-[#ffffff10] shadow-[0px_0px_6px_0px_#00000052,_inset_0_0_0_0.5px_#ffffff38] hover:bg-[#ffffff20] duration-150" onmousedown="await window.tb.fs.promises.writeFile('/system/etc/terbium/hash.cache', 'invalid'); window.parent.location.reload();">Export</button>
+                        <button class="w-max py-2 px-4 rounded-md font-semibold bg-[#ffffff10] shadow-[0px_0px_6px_0px_#00000052,_inset_0_0_0_0.5px_#ffffff38] hover:bg-[#ffffff20] duration-150" onmousedown="(async () => {await window.tb.fs.promises.writeFile('/system/etc/terbium/hash.cache', 'invalid'); window.parent.location.reload();})()">Invalidate</button>
                     </div>
                     <h2 class="text-2xl font-bold">Export FileSystem (tab may freeze momentarily)</h2>
                     <div class="flex gap-1.5">
