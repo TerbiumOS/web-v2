@@ -645,7 +645,10 @@ actype.addEventListener("click", async () => {
 				case "cloud":
 					const res = await window.parent.tb.tauth.signIn();
 					actype.innerHTML = "Terbium Cloud\u2122 Account";
-					await window.parent.tb.tauth.sync.retrieve();
+					const currAcc = sessionStorage.getItem("currAcc");
+					sessionStorage.setItem("currAcc", res.data.user.name);
+					await window.parent.tb.tauth.sync.retreive();
+					sessionStorage.setItem("currAcc", currAcc);
 					const userinfo = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"));
 					userinfo["password"] = await window.parent.tb.crypto(res.data.user.password);
 					userinfo["perm"] = "admin";

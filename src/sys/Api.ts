@@ -803,13 +803,38 @@ export default async function Api() {
 						const stat = await window.tb.fs.promises.stat(`/home/${olduser}/desktop/${item}`);
 						if (stat && stat.type === "SYMLINK") {
 							linkpaths.push(await window.tb.fs.promises.readlink(`/home/${olduser}/desktop/${item}`));
+							try {
+								await window.tb.fs.promises.unlink(`/home/${olduser}/desktop/${item}`);
+							} catch (e) {
+								console.log(e);
+							}
 						}
 					}
 					await window.tb.fs.promises.rename(`/home/${olduser}`, `/home/${newuser}`);
 					sessionStorage.setItem("currAcc", newuser);
 					for (const link of linkpaths) {
-						await window.tb.fs.promises.symlink(link, `/home/${newuser}/desktop/${link.match(/([^/]+\.tapp)(?=\/|$)/)?.[1] || link.split("/").pop()}`);
+						const tappMatch = link.match(/([^/]+)(?=\.tapp(?:\/|$))/);
+						const parts = link.split("/").filter(Boolean);
+						let linkName = "";
+						if (tappMatch) {
+							linkName = tappMatch[1];
+						} else if (parts.length > 1) {
+							const last = parts[parts.length - 1];
+							linkName = last.includes(".") ? parts[parts.length - 2] : last;
+						} else {
+							linkName = parts[0] || "";
+						}
+						linkName = linkName.replace(/\.tapp$/, "");
+						await window.tb.fs.promises.symlink(link, `/home/${newuser}/desktop/${linkName}.lnk`);
 					}
+					const desktopItems = JSON.parse(await window.tb.fs.promises.readFile(`/home/${newuser}/desktop/.desktop.json`, "utf8"));
+					for (const item of desktopItems) {
+						if (item.position && item.name) {
+							const name = item.name.toLowerCase();
+							item.item = `/home/${newuser}/desktop/${name}.lnk`;
+						}
+					}
+					await window.tb.fs.promises.writeFile(`/home/${newuser}/desktop/.desktop.json`, JSON.stringify(desktopItems), "utf8");
 					await window.tb.fs.promises.rename(`/apps/user/${olduser}`, `/apps/user/${newuser}`);
 					const sysSettings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
 					if (sysSettings["defaultUser"] === olduser) {
@@ -873,15 +898,27 @@ export default async function Api() {
 											await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify([], null, 2), "utf8");
 										}
 										const conf = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/taccs.json", "utf8"));
-										conf.push({
-											username: response.data.user.name,
-											perm: "admin",
-											pfp: response.data.user.image,
-											email: response.data.user.email,
-											id: response.data.user.id,
-										});
+										const existingIndex = conf.findIndex((acc: any) => acc && (acc.id === response.data.user.id || acc.email === response.data.user.email));
+										if (existingIndex !== -1) {
+											conf[existingIndex] = {
+												username: response.data.user.name,
+												perm: "admin",
+												pfp: response.data.user.image,
+												email: response.data.user.email,
+												id: response.data.user.id,
+											};
+											console.log("[TAUTH] Updated existing Account Info in FS");
+										} else {
+											conf.push({
+												username: response.data.user.name,
+												perm: "admin",
+												pfp: response.data.user.image,
+												email: response.data.user.email,
+												id: response.data.user.id,
+											});
+											console.log("[TAUTH] Saved Account Info to FS");
+										}
 										await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify(conf, null, 2), "utf8");
-										console.log("[TAUTH] Saved Account Info to FS");
 										const info = response;
 										info.data.user.password = password;
 										resolve(info);
@@ -1433,7 +1470,6 @@ export default async function Api() {
 	document.addEventListener("keyup", up);
 	wsld();
 	await window.tb.proxy.updateSWs();
-	await window.tb.tauth.sync.retreive();
 	const getchangelog = async () => {
 		const reCache: Record<string, { hash: string; changeFile: string }> = await (await window.tb.libcurl.fetch("https://cdn.terbiumon.top/changelogs/versions.json")).json();
 		const vInf = reCache[system.version("string") as string];
@@ -1455,6 +1491,7 @@ export default async function Api() {
 		sessionStorage.removeItem("justUpdated");
 	}
 	if (await window.tb.tauth.isTACC()) {
+		await window.tb.tauth.sync.retreive();
 		window.tb.fs.watch(`/home/${await window.tb.user.username()}/settings.json`, { recursive: true }, (e: string, _f: string) => {
 			if (e === "change" && window.tb.tauth.sync.isSyncing === false) {
 				window.tb.tauth.sync.upload();
