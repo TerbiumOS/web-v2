@@ -1,6 +1,8 @@
 name: Build UPK for Anura
 on:
   push:
+      branches:
+          - main
       paths:
           - 'package.json'
 
@@ -38,56 +40,20 @@ jobs:
               run: pnpm run build-static
             - name: "Run UPK Builder"
               run: python3 upk.py
-            - name: Upload UPK to GitHub Release
+            - name: Upload to latest release
               uses: actions/github-script@v8
               with:
                 github-token: ${{ secrets.GITHUB_TOKEN }}
                 script: |
                   const fs = require('fs');
-                  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-                  const version = pkg.version;
-                  const assetPath = 'terbium-upk.app.zip';
-                  if (!fs.existsSync(assetPath)) {
-                  throw new Error(`${assetPath} not found`);
-                  }
-                  const normalize = s => (s || '').replace(/^v/, '').trim();
-                  let latestRelease = null;
-                  try {
-                    latestRelease = await github.rest.repos.getLatestRelease({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo
-                    });
-                  } catch (err) {
-                    console.log('No latest release found or could not fetch it:', err.message);
-                  }
-                  if (latestRelease && normalize(latestRelease.data.tag_name) === normalize(version)) {
-                    await github.rest.repos.uploadReleaseAsset({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      release_id: latestRelease.data.id,
-                      name: assetPath,
-                      data: fs.readFileSync(assetPath)
-                    });
-                    console.log(`Uploaded ${assetPath} to existing release ${latestRelease.data.tag_name}`);
-                    } else {
-                      const date = new Date().toISOString().split('T')[0];
-                      const tag = `UPK Build - ${version}-${date}`;
-                      const releaseName = `UPK Build ${version} (${date})`;
-                      const newRelease = await github.rest.repos.createRelease({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        tag_name: tag,
-                        name: releaseName,
-                        body: `Automatic UPK build for version ${version} on ${date}`,
-                        draft: false,
-                        prerelease: false
-                    });
-                    await github.rest.repos.uploadReleaseAsset({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      release_id: newRelease.data.id,
-                      name: assetPath,
-                      data: fs.readFileSync(assetPath)
-                    });
-                    console.log(`Created release ${tag} and uploaded ${assetPath}`);
-                  }
+                  const latestRelease = await github.rest.repos.getLatestRelease({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo
+                  });
+                  await github.rest.repos.uploadReleaseAsset({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    release_id: latestRelease.data.id,
+                    name: 'terbium-upk.app.zip',
+                    data: fs.readFileSync('terbium-upk.app.zip')
+                  });
