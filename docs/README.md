@@ -10,5 +10,6 @@ Welcome to Terbium v2's Documentation. Here is a simple table of contents to hel
 - [Electron Compatability & API Support](./lemonade-compat.md)
 - [Terbium API Documentation](./apis/readme.md)
 - [Static Hosting](./static-hosting.md)
+- [UPK Builds](./upk-build.md)
 
-If you cannot find what your looking for feel free to ask in the TN Discord
+If you cannot find what your looking for feel free to ask in the Terbium Discord or in the TN Discord

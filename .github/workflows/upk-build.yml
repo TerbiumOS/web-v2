@@ -32,16 +32,62 @@ jobs:
               run: unzip -o upk-tools.zip
             - name: replace BCC Client v2 with v1
               run: mv bx1bcc.ts src/sys/liquor/bcc.ts
-            - name: Add BareMux Script
-              run: npx replace-in-file "<head>" "<head>    <script src=\"libs/bare-mux/bare.cjs\"></script>" index.html
             - name: Replace BareMux in codebase
               run: bash replace.sh
             - name: Build TB React
               run: pnpm run build-static
             - name: "Run UPK Builder"
               run: python3 upk.py
-            - name: Upload UPK
-              uses: actions/upload-artifact@v4
+            - name: Upload UPK to GitHub Release
+              uses: actions/github-script@v8
               with:
-                name: UPK
-                path: terbium-upk.app.zip
+                github-token: ${{ secrets.GITHUB_TOKEN }}
+                script: |
+                  const fs = require('fs');
+                  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+                  const version = pkg.version;
+                  const assetPath = 'terbium-upk.app.zip';
+                  if (!fs.existsSync(assetPath)) {
+                  throw new Error(`${assetPath} not found`);
+                  }
+                  const normalize = s => (s || '').replace(/^v/, '').trim();
+                  let latestRelease = null;
+                  try {
+                    latestRelease = await github.rest.repos.getLatestRelease({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo
+                    });
+                  } catch (err) {
+                    console.log('No latest release found or could not fetch it:', err.message);
+                  }
+                  if (latestRelease && normalize(latestRelease.data.tag_name) === normalize(version)) {
+                    await github.rest.repos.uploadReleaseAsset({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      release_id: latestRelease.data.id,
+                      name: assetPath,
+                      data: fs.readFileSync(assetPath)
+                    });
+                    console.log(`Uploaded ${assetPath} to existing release ${latestRelease.data.tag_name}`);
+                    } else {
+                      const date = new Date().toISOString().split('T')[0];
+                      const tag = `UPK Build - ${version}-${date}`;
+                      const releaseName = `UPK Build ${version} (${date})`;
+                      const newRelease = await github.rest.repos.createRelease({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        tag_name: tag,
+                        name: releaseName,
+                        body: `Automatic UPK build for version ${version} on ${date}`,
+                        draft: false,
+                        prerelease: false
+                    });
+                    await github.rest.repos.uploadReleaseAsset({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      release_id: newRelease.data.id,
+                      name: assetPath,
+                      data: fs.readFileSync(assetPath)
+                    });
+                    console.log(`Created release ${tag} and uploaded ${assetPath}`);
+                  }
