@@ -479,8 +479,8 @@ export interface COM {
 		isTACC(username?: string): Promise<boolean>;
 		updateInfo(data: any): Promise<void>;
 		sync: {
-			retreive: () => {};
-			upload: () => {};
+			retreive: () => Promise<void>;
+			upload: () => Promise<void>;
 			isSyncing: boolean;
 		};
 		getInfo(username?: string): Promise<any>;
@@ -557,7 +557,10 @@ export interface TAuthReturnType {
 	settings: [
 		{
 			settings: UserSettings;
-			apps: any[];
+			apps: {
+				repos: string[];
+				installed: string[];
+			};
 			davs: ServerInfo[];
 		},
 	];
@@ -566,7 +569,10 @@ export interface TAuthReturnType {
 export interface TAuthSSData {
 	settings: {
 		settings: UserSettings;
-		apps: any[];
+		apps: {
+			repos: string[];
+			installed: string[];
+		};
 		davs: ServerInfo[];
 	}[];
 }

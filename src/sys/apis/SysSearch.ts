@@ -4,7 +4,7 @@ import { fileStat, isFilePathString } from "./utils/file";
 type TSearchTerm = string | object | File | ArrayBuffer | Blob | null;
 
 export const searchFiles = async (searchTerm: TSearchTerm): Promise<boolean | any[]> => {
-	const sh = new window.tb.fs.Shell();
+	const sh = window.tb.sh;
 	const searchResults: any[] = [];
 	const searchTermString = typeof searchTerm === "string" ? searchTerm : JSON.stringify(searchTerm);
 	const files = await sh.promises.find("/", { name: `*${searchTermString}` });

@@ -575,9 +575,8 @@ export default async function Api() {
 					const usersDir = await window.tb.fs.promises.readdir("/home/");
 					const users: string[] = [];
 					for (const user of usersDir) {
-						const userJsonPath = `/home/${user}/user.json`;
-						if (await fileExists(userJsonPath)) {
-							const userData: User = JSON.parse(await window.tb.fs.promises.readFile(userJsonPath, "utf8"));
+						if (await fileExists(`/home/${user}/user.json`)) {
+							const userData: User = JSON.parse(await window.tb.fs.promises.readFile(`/home/${user}/user.json`, "utf8"));
 							users.push(userData.username);
 						}
 					}
@@ -812,8 +811,16 @@ export default async function Api() {
 						await window.tb.fs.promises.symlink(link, `/home/${newuser}/desktop/${link.match(/([^/]+\.tapp)(?=\/|$)/)?.[1] || link.split("/").pop()}`);
 					}
 					await window.tb.fs.promises.rename(`/apps/user/${olduser}`, `/apps/user/${newuser}`);
-					const sysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
-					sysSettings["defaultUser"] = newuser;
+					const sysSettings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
+					if (sysSettings["defaultUser"] === olduser) {
+						sysSettings["defaultUser"] = newuser;
+					}
+					const sudousers = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/sudousers.json", "utf8"));
+					const idx = sudousers.indexOf(olduser);
+					if (idx !== -1) {
+						sudousers[idx] = newuser;
+						await window.tb.fs.promises.writeFile("/system/etc/terbium/sudousers.json", JSON.stringify(sudousers), "utf8");
+					}
 					await window.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(sysSettings));
 					const fcfg = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${newuser}/files/config.json`, "utf8"));
 					fcfg.drives["File System"] = `/home/${newuser}/`;
@@ -988,11 +995,11 @@ export default async function Api() {
 					const info = await window.tb.tauth.getInfo();
 					if (!info) throw new Error("No TACC info found");
 					window.tb.tauth.sync.isSyncing = true;
-					const data = await getinfo(info.email, info.password, "tbs");
+					const data = await getinfo(null, null, "tbs");
 					console.log("[TAUTH] Retrieved synced data from cloud");
-					console.log(data.settings[0]);
 					await window.tb.fs.promises.writeFile(`/home/${info.username}/settings.json`, JSON.stringify(data.settings[0].settings, null, 2), "utf8");
 					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/files/davs.json`, JSON.stringify(data.settings[0].davs, null, 2), "utf8");
+					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/app store/repos.json`, JSON.stringify(data.settings[0].apps.repos || [], null, 2), "utf8");
 					window.dispatchEvent(new Event("updWallpaper"));
 					window.dispatchEvent(new CustomEvent("proxy-change"));
 					window.dispatchEvent(new Event("upd-accent"));
@@ -1007,11 +1014,14 @@ export default async function Api() {
 					const toupload = [
 						{
 							settings: settings,
-							apps: [],
+							apps: {
+								repos: JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/app store/repos.json`, "utf8")),
+								installed: [],
+							},
 							davs: davs,
 						},
 					];
-					setinfo(info.email, info.password, "tbs", toupload);
+					setinfo(null, null, "tbs", toupload);
 					console.log("[TAUTH] Uploaded synced data to cloud");
 					window.tb.tauth.sync.isSyncing = false;
 				},
@@ -1131,11 +1141,11 @@ export default async function Api() {
 					// @ts-expect-error
 					reader.readAsArrayBuffer(dataURI);
 				});
-				await tb.dialog.SaveFile({
+				tb.dialog.SaveFile({
 					title: "Save screenshot",
 					filename: "screenshot.png",
 					onOk: async (filePath: string) => {
-						await window.tb.fs.promises.writeFile(filePath, Filer.Buffer.from(obj));
+						await window.tb.fs.promises.writeFile(filePath, window.tb.buffer.from(obj));
 					},
 				});
 			},
@@ -1357,8 +1367,7 @@ export default async function Api() {
 		},
 	});
 	window.anura = anura;
-	// For backwards compatibility
-	// @ts-expect-error
+	// @ts-expect-error For backwards compatibility
 	window.anura.fs.Shell = window.tfs.sh;
 	window.AliceWM = AliceWM;
 	window.LocalFS = LocalFS;
@@ -1424,6 +1433,7 @@ export default async function Api() {
 	document.addEventListener("keyup", up);
 	wsld();
 	await window.tb.proxy.updateSWs();
+	await window.tb.tauth.sync.retreive();
 	const getchangelog = async () => {
 		const reCache: Record<string, { hash: string; changeFile: string }> = await (await window.tb.libcurl.fetch("https://cdn.terbiumon.top/changelogs/versions.json")).json();
 		const vInf = reCache[system.version("string") as string];
@@ -1455,7 +1465,12 @@ export default async function Api() {
 				window.tb.tauth.sync.upload();
 			}
 		});
+		window.tb.fs.watch(`/apps/user/${await window.tb.user.username()}/app store/repos.json`, { recursive: true }, (e: string, _f: string) => {
+			if (e === "change" && window.tb.tauth.sync.isSyncing === false) {
+				window.tb.tauth.sync.upload();
+			}
+		});
 	}
-	window.tb.node.webContainer = await initializeWebContainer();
 	document.addEventListener("libcurl_load", wsld);
+	window.tb.node.webContainer = await initializeWebContainer();
 }

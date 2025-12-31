@@ -645,13 +645,34 @@ actype.addEventListener("click", async () => {
 				case "cloud":
 					const res = await window.parent.tb.tauth.signIn();
 					actype.innerHTML = "Terbium Cloud\u2122 Account";
+					await window.parent.tb.tauth.sync.retrieve();
+					const userinfo = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"));
+					userinfo["password"] = await window.parent.tb.crypto(res.data.user.password);
+					userinfo["perm"] = "admin";
+					await window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, JSON.stringify(userinfo));
 					await window.parent.tb.system.users.renameUser(sessionStorage.getItem("currAcc"), res.data.user.name);
-					window.parent.tb.system.users.update({
-						username: res.data.user.name,
-						pfp: res.data.user.image,
-					});
 					break;
 				case "local":
+					window.parent.tb.dialog.Select({
+						title: "Save current settings to cloud before converting to local?",
+						options: [
+							{
+								text: "Yes",
+								value: "yes",
+							},
+							{
+								text: "No",
+								value: "no",
+							},
+						],
+						onOk: async val => {
+							if (val === "yes") {
+								await window.parent.tb.tauth.sync.upload();
+							} else {
+								return;
+							}
+						},
+					});
 					await window.parent.tb.tauth.signOut();
 					actype.innerHTML = "Local Account";
 					break;

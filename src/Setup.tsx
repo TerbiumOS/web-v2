@@ -917,7 +917,7 @@ export default function Setup() {
 						<div className="text-sm text-[#ffffff88]">There are no options at this time.</div>
 					) : (
 						<div className="flex flex-col gap-2">
-							{options.map(opt => (
+							{options.filter(opt => opt.id !== 'apps.installed').map(opt => (
 								<label key={opt.id} className="flex items-center gap-2 text-sm">
 									<input type="checkbox" checked={sel.includes(opt.id)} onChange={() => toggleOption(cat, opt.id)} />
 									<span className="text-[#ffffffb3]">{opt.label}</span>

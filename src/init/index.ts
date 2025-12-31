@@ -302,24 +302,28 @@ export async function init() {
 		);
 		await window.tb.fs.promises.writeFile(`/apps/user/${user}/terminal/info.json`, JSON.stringify({}));
 		await window.tb.fs.promises.mkdir(`/apps/user/${user}/app store/`);
-		await window.tb.fs.promises.writeFile(
-			`/apps/user/${user}/app store/repos.json`,
-			JSON.stringify([
-				{
-					name: "TB App Repo",
-					url: "https://raw.githubusercontent.com/TerbiumOS/tb-repo/refs/heads/main/manifest.json",
-				},
-				{
-					name: "XSTARS XTRAS",
-					url: "https://raw.githubusercontent.com/Notplayingallday383/app-repo/refs/heads/main/manifest.json",
-				},
-				{
-					name: "Anura App Repo",
-					url: "https://raw.githubusercontent.com/MercuryWorkshop/anura-repo/refs/heads/master/manifest.json",
-					icon: "https://anura.pro/icon.png",
-				},
-			]),
-		);
+		if (tcaccSettings && Array.isArray(tcaccSettings) && tcaccSettings[0].apps) {
+			await window.tb.fs.promises.writeFile(`/apps/user/${user}/app store/repos.json`, JSON.stringify(tcaccSettings[0].apps.repos), "utf8");
+		} else {
+			await window.tb.fs.promises.writeFile(
+				`/apps/user/${user}/app store/repos.json`,
+				JSON.stringify([
+					{
+						name: "TB App Repo",
+						url: "https://raw.githubusercontent.com/TerbiumOS/tb-repo/refs/heads/main/manifest.json",
+					},
+					{
+						name: "XSTARS XTRAS",
+						url: "https://raw.githubusercontent.com/Notplayingallday383/app-repo/refs/heads/main/manifest.json",
+					},
+					{
+						name: "Anura App Repo",
+						url: "https://raw.githubusercontent.com/MercuryWorkshop/anura-repo/refs/heads/master/manifest.json",
+						icon: "https://anura.pro/icon.png",
+					},
+				]),
+			);
+		}
 	}
 	return true;
 }
