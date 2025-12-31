@@ -281,6 +281,9 @@ export default function Updater() {
 					await window.tb.fs.promises.writeFile(`/home/${user}/settings.json`, JSON.stringify(usrSettings, null, 4));
 				}
 			}
+			if (!(await dirExists("/system/etc/terbium/taccs.json"))) {
+				await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify({}));
+			}
 			setProgress(80);
 			statusref.current!.innerText = "Cleaning up...";
 			setProgress(95);
