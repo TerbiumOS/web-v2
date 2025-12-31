@@ -82,6 +82,8 @@ window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/setting
 	document.querySelector(`[action-for="transports"]`).querySelector(".select-title .text").innerText = data["transport"];
 	document.querySelector(`[action-for="show-seconds"]`).querySelector(".select-title .text").innerText = showSeconds ? "Yes" : "No";
 	document.querySelector(`[action-for="24h-12h"]`).querySelector(".select-title .text").innerText = twentyFourHour === "24h" ? "Yes" : "No";
+	document.querySelector(`[action-for="wmx"]`).querySelector(".select-title .text").innerText = data["window"]["alwaysMaximized"] ? "Yes" : "No";
+	document.querySelector(`[action-for="wfs"]`).querySelector(".select-title .text").innerText = data["window"]["alwaysFullscreen"] ? "Yes" : "No";
 });
 
 window.parent.tb.fs.readFile("/system/etc/terbium/settings.json", "utf8", (err, data) => {
@@ -137,7 +139,7 @@ const customWallpaper = () => {
 							delete_button.src = "/fs/apps/system/settings.tapp/delete.svg";
 							delete_button.classList.add("delete-wallpaper");
 							delete_button.addEventListener("click", async e => {
-								let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+								let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 								if (data["wallpaper"] === path) {
 									tb_wallpaper.set("/assets/wallpapers/1.png");
 								}
@@ -147,7 +149,7 @@ const customWallpaper = () => {
 							wimg.addEventListener("click", async e => {
 								tb_wallpaper.set(path);
 							});
-							await window.parent.tb.fs.promises.writeFile(path, Filer.Buffer.from(buffer));
+							await window.parent.tb.fs.promises.writeFile(path, window.parent.tb.buffer.from(buffer), "arraybuffer");
 							tb_wallpaper.set(path);
 							img_container.append(wimg);
 							img_container.append(delete_button);
@@ -160,10 +162,11 @@ const customWallpaper = () => {
 				case "fs":
 					tb.dialog.FileBrowser({
 						title: "Select a wallpaper from the file system",
+						local: true,
 						onOk: async filePath => {
-							const imgdata = await window.parent.tb.fs.promises.readFile(filePath, "base64");
+							const imgdata = await window.parent.tb.fs.promises.readFile(filePath, "arraybuffer");
+							await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/wallpapers/" + filePath.split("/").pop(), imgdata, "arraybuffer");
 							tb.desktop.wallpaper.set("/system/etc/terbium/wallpapers/" + filePath.split("/").pop());
-							await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/wallpapers/" + filePath.split("/").pop(), imgdata);
 							document.querySelector(".wallpapers").innerHTML = `
 								<img src="/assets/wallpapers/1.png" class="wallpaper-option"></img>
 								<img src="/assets/wallpapers/2.png" class="wallpaper-option"></img>
@@ -386,9 +389,9 @@ async function getWispSrvs() {
 getWispSrvs();
 
 async function updateTransport(transport) {
-	const st = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+	const st = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 	st["transport"] = transport;
-	await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(st), "utf8");
+	await window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(st), "utf8");
 }
 
 const accentPreview = document.querySelector(".accent-preview");
@@ -396,14 +399,14 @@ const accentMousedown = async () => {
 	const defaultAccent = "#32ae62";
 	accentPreview.classList.remove("group", "cursor-pointer");
 	accentPreview.style.setProperty("--accent", defaultAccent);
-	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 	settings["accent"] = defaultAccent;
-	window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings));
+	window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
 	accentPreview.removeEventListener("mousedown", accentMousedown);
 };
 
 const getAccent = async () => {
-	const settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+	const settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 	var accentColor = settings["accent"];
 	const defaultAccent = "#32ae62";
 	if (accentColor !== defaultAccent) {
@@ -431,17 +434,18 @@ custom_accent.addEventListener("click", e => {
 			const g = rgb[1];
 			const b = rgb[2];
 			color = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 			settings["accent"] = color;
-			window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings));
+			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
 		} else {
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 			settings["accent"] = color;
-			window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings));
+			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
 		}
 		accentPreview.style.setProperty("--accent", color);
 		accentPreview.classList.add("group", "cursor-pointer");
 		accentPreview.addEventListener("mousedown", accentMousedown);
+		window.parent.window.dispatchEvent(new Event("upd-accent"));
 	});
 });
 
@@ -489,7 +493,7 @@ window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.js
 	pfpEl.src = data["pfp"];
 });
 
-pfpEl.addEventListener("click", e => {
+pfpEl.addEventListener("click", async e => {
 	const uploader = document.createElement("input");
 	uploader.type = "file";
 	uploader.accept = "img/*";
@@ -502,6 +506,30 @@ pfpEl.addEventListener("click", e => {
 				title: "Resize your Profile picture",
 				img: reader.result,
 				onOk: async img => {
+					if (await window.parent.tb.tauth.isTACC()) {
+						tb.dialog.Select({
+							title: "Do you want to upload this profile picture to your Terbium Account?",
+							options: [
+								{
+									text: "Yes",
+									value: "yes",
+								},
+								{
+									text: "No",
+									value: "no",
+								},
+							],
+							onOk: async choice => {
+								if (choice === "yes") {
+									await window.parent.tb.tauth.updateInfo({
+										pfp: img,
+									});
+								} else {
+									return;
+								}
+							},
+						});
+					}
 					const uSettings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"));
 					uSettings["pfp"] = img;
 					pfpEl.src = img;
@@ -519,37 +547,7 @@ const usernameEl = document.querySelector(".username");
 usernameEl.addEventListener("input", async e => {
 	usernameEl.addEventListener("blur", async () => {
 		if (usernameEl.value !== JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"))["username"]) {
-			window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8", async (err, data) => {
-				if (err) return console.log(err);
-				data = JSON.parse(data);
-				data["username"] = usernameEl.value;
-				await window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, JSON.stringify(data));
-				let desktopDat = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/desktop/.desktop.json`, "utf8"));
-				desktopDat = desktopDat.map(entry => {
-					entry.item = entry.item.replace(`/home/${sessionStorage.getItem("currAcc")}/`, `/home/${usernameEl.value}/`);
-					return entry;
-				});
-				await window.parent.tb.fs.promises.rename(`/home/${sessionStorage.getItem("currAcc")}`, `/home/${usernameEl.value}`);
-				await window.parent.tb.fs.promises.writeFile(`/home/${usernameEl.value}/desktop/.desktop.json`, JSON.stringify(desktopDat));
-				await window.parent.tb.fs.promises.rename(`/apps/user/${sessionStorage.getItem("currAcc")}`, `/apps/user/${usernameEl.value}`);
-				window.parent.tb.fs.readFile("/system/etc/terbium/settings.json", "utf8", async (err, data) => {
-					if (err) return console.log(err);
-					data = JSON.parse(data);
-					data["defaultUser"] = usernameEl.value;
-					await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(data));
-				});
-				const fcfg = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${usernameEl.value}/files/config.json`, "utf8"));
-				fcfg.drives["File System"] = `/home/${usernameEl.value}/`;
-				await window.parent.tb.fs.promises.writeFile(`/apps/user/${usernameEl.value}/files/config.json`, JSON.stringify(fcfg));
-				const qcfg = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${usernameEl.value}/files/quick-center.json`, "utf8"));
-				for (const key in qcfg.paths) {
-					if (Object.prototype.hasOwnProperty.call(qcfg.paths, key)) {
-						qcfg.paths[key] = qcfg.paths[key].replace(sessionStorage.getItem("currAcc"), usernameEl.value);
-					}
-				}
-				await window.parent.tb.fs.promises.writeFile(`/apps/user/${usernameEl.value}/files/quick-center.json`, JSON.stringify(qcfg));
-				sessionStorage.setItem("currAcc", usernameEl.value);
-			});
+			await window.parent.tb.system.users.renameUser(sessionStorage.getItem("currAcc"), usernameEl.value);
 		}
 	});
 });
@@ -590,7 +588,7 @@ permEl.addEventListener("click", async () => {
 			sudo: true,
 			title: "Authenticate to change your permissions",
 			defaultUsername: sessionStorage.getItem("currAcc"),
-			onOk: async (username, password) => {
+			onOk: async (_username, password) => {
 				const pass = await tb.crypto(password);
 				if (pass === data["password"]) {
 					await tb.dialog.Select({
@@ -625,6 +623,81 @@ permEl.addEventListener("click", async () => {
 				}
 			},
 		});
+	}
+});
+
+const actype = document.querySelector(".actype");
+actype.addEventListener("click", async () => {
+	await tb.dialog.Select({
+		title: "Select Option",
+		options: [
+			{
+				text: "Link Terbium Cloud™ Account",
+				value: "cloud",
+			},
+			{
+				text: "Convert to Local Account",
+				value: "local",
+			},
+		],
+		onOk: async choice => {
+			switch (choice) {
+				case "cloud":
+					const res = await window.parent.tb.tauth.signIn();
+					actype.innerHTML = "Terbium Cloud\u2122 Account";
+					const currAcc = sessionStorage.getItem("currAcc");
+					sessionStorage.setItem("currAcc", res.data.user.name);
+					await window.parent.tb.tauth.sync.retreive();
+					sessionStorage.setItem("currAcc", currAcc);
+					const userinfo = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"));
+					userinfo["password"] = await window.parent.tb.crypto(res.data.user.password);
+					userinfo["perm"] = "admin";
+					await window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, JSON.stringify(userinfo));
+					await window.parent.tb.system.users.renameUser(sessionStorage.getItem("currAcc"), res.data.user.name);
+					break;
+				case "local":
+					window.parent.tb.dialog.Select({
+						title: "Save current settings to cloud before converting to local?",
+						options: [
+							{
+								text: "Yes",
+								value: "yes",
+							},
+							{
+								text: "No",
+								value: "no",
+							},
+						],
+						onOk: async val => {
+							if (val === "yes") {
+								await window.parent.tb.tauth.sync.upload();
+							} else {
+								return;
+							}
+						},
+					});
+					await window.parent.tb.tauth.signOut();
+					actype.innerHTML = "Local Account";
+					break;
+			}
+		},
+	});
+});
+
+window.parent.tb.fs.readFile(`/system/etc/terbium/taccs.json`, "utf8", (err, data) => {
+	if (err) actype.innerHTML = "Local Account";
+	const entries = JSON.parse(data);
+	const act = sessionStorage.getItem("currAcc");
+	try {
+		let isCloud = false;
+		if (Array.isArray(entries)) {
+			isCloud = entries.some(e => e && e.username === act);
+		} else if (entries && typeof entries === "object") {
+			isCloud = Object.values(entries).some(e => e && e.username === act);
+		}
+		actype.innerHTML = isCloud ? "Terbium Cloud\u2122 Account" : "Local Account";
+	} catch (e) {
+		actype.innerHTML = "Local Account";
 	}
 });
 
@@ -701,7 +774,7 @@ accountsButton.addEventListener("mousedown", e => {
 
 const batteryPercentage = document.querySelector(".battery-percentage");
 (async () => {
-	let showBatteryPercentage = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"))["battery-percent"];
+	let showBatteryPercentage = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"))["battery-percent"];
 	const realCheckbox = batteryPercentage.querySelector("input[type='checkbox']");
 	if (showBatteryPercentage) {
 		realCheckbox.checked = true;
@@ -715,7 +788,7 @@ const batteryPercentage = document.querySelector(".battery-percentage");
 })();
 
 batteryPercentage.addEventListener("mousedown", async e => {
-	let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+	let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 	const realCheckbox = batteryPercentage.querySelector("input[type='checkbox']");
 	realCheckbox.checked = !realCheckbox.checked;
 	const checkIcon = batteryPercentage.querySelector(".checkIcon");
@@ -727,11 +800,11 @@ batteryPercentage.addEventListener("mousedown", async e => {
 		tb.battery.hidePercentage();
 	}
 	data["battery-percent"] = realCheckbox.checked;
-	window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(data));
+	window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(data));
 });
 
 const getBat = async () => {
-	const battery = await window.tb.battery.canUse();
+	const battery = await window.parent.tb.battery.canUse();
 	if (!battery) {
 		document.querySelector(".battery").remove();
 	}
@@ -751,7 +824,7 @@ showCords.addEventListener("mousedown", async e => {
 });
 
 async function exportSettings() {
-	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 	let data = JSON.stringify(settings);
 	let blob = new Blob([data], { type: "application/json" });
 	let url = URL.createObjectURL(blob);
@@ -760,6 +833,68 @@ async function exportSettings() {
 	a.download = "settings.json";
 	a.click();
 }
+
+const range = document.getElementById("blurRange");
+const pct = document.getElementById("blurPercent");
+async function render(initial) {
+	const settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
+	const v = initial ? settings.window.blurlevel : Number(range.value);
+	if (initial) range.value = v;
+	const mapped = Math.round((v / 50) * 100);
+	pct.textContent = mapped + "%";
+	const fill = (v / 50) * 100;
+	range.style.background = `linear-gradient(90deg,#60a5fa ${fill}%, rgba(255,255,255,0.12) ${fill}%)`;
+	range.dataset.mappedPercent = mapped;
+	if (initial) return;
+	settings.window.blurlevel = v;
+	window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, JSON.stringify(settings, null, 4), "utf8");
+	window.parent.dispatchEvent(new Event("upd-accent"));
+}
+
+render(true);
+range.addEventListener("input", () => render(false));
+
+const winAccent = document.querySelector(".winaccent-preview");
+const winAccentPrev = async () => {
+	const defaultAccent = "#ffffff";
+	accentPreview.classList.remove("group", "cursor-pointer");
+	accentPreview.style.setProperty("--accent", defaultAccent);
+	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
+	settings.window.winAccent = defaultAccent;
+	window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
+	winAccent.removeEventListener("mousedown", winAccentPrev);
+	window.parent.dispatchEvent(new Event("upd-accent"));
+};
+winAccentPrev();
+
+const custom_waccent = document.querySelector(".custom-waccent");
+custom_waccent.addEventListener("click", e => {
+	const color_picker = document.createElement("input");
+	color_picker.type = "color";
+	color_picker.click();
+	color_picker.addEventListener("change", async e => {
+		let color = color_picker.value;
+		if (color.charAt(0) !== "#") {
+			const rgb = color.match(/\d+/g);
+			const r = rgb[0];
+			const g = rgb[1];
+			const b = rgb[2];
+			color = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
+			settings["window"]["winAccent"] = color;
+			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
+			window.parent.dispatchEvent(new Event("upd-accent"));
+		} else {
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
+			settings["window"]["winAccent"] = color;
+			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
+			window.parent.dispatchEvent(new Event("upd-accent"));
+		}
+		winAccent.style.setProperty("--accent", color);
+		winAccent.classList.add("group", "cursor-pointer");
+		winAccent.addEventListener("mousedown", winAccentPrev);
+	});
+});
 
 async function convertTBSIF() {
 	const input = document.createElement("input");
@@ -770,8 +905,8 @@ async function convertTBSIF() {
 		let reader = new FileReader();
 		reader.onload = async () => {
 			let tbs_config = reader.result;
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-			let syssettings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
+			let syssettings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
 			if (tbs_config.theme && tbs_config.theme !== "default") {
 				syssettings.theme = tbs_config.theme;
 			}
@@ -784,7 +919,7 @@ async function convertTBSIF() {
 			if (tbs_config.shadow === "yes") {
 				settings["system-blur"] = true;
 			}
-			await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
+			await window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
 			await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(syssettings, null, 2), "utf8");
 			parent.window.location.reload();
 		};
@@ -819,7 +954,7 @@ const setupWindowOptimizations = async () => {
 	const realCheckbox = windowOptimizationsCheckbox.querySelector("input[type='checkbox']");
 	const checkIcon = windowOptimizationsCheckbox.querySelector(".checkIcon");
 
-	const setState = async (enabled) => {
+	const setState = async enabled => {
 		realCheckbox.checked = enabled;
 		if (enabled) {
 			checkIcon.classList.remove("opacity-0", "scale-85");
@@ -851,7 +986,7 @@ const setupFPSCounter = async () => {
 	const realCheckbox = fpsCounterCheckbox.querySelector("input[type='checkbox']");
 	const checkIcon = fpsCounterCheckbox.querySelector(".checkIcon");
 
-	const setState = async (enabled) => {
+	const setState = async enabled => {
 		realCheckbox.checked = enabled;
 		if (enabled) {
 			checkIcon.classList.remove("opacity-0", "scale-85");
@@ -863,7 +998,7 @@ const setupFPSCounter = async () => {
 		settings.showFPS = enabled;
 		await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
 
-		window.parent.dispatchEvent(new CustomEvent('settings-changed', { detail: { showFPS: enabled } }));
+		window.parent.dispatchEvent(new CustomEvent("settings-changed", { detail: { showFPS: enabled } }));
 	};
 
 	try {
@@ -883,7 +1018,7 @@ setupFPSCounter();
 const realCheckbox = animationCheckbox.querySelector("input[type='checkbox']");
 realCheckbox.checked = !realCheckbox.checked;
 const checkIcon = animationCheckbox.querySelector(".checkIcon");
-if(realCheckbox.checked) {
+if (realCheckbox.checked) {
 	checkIcon.classList.remove("opacity-0", "scale-85");
 } else {
 	checkIcon.classList.add("opacity-0", "scale-85");

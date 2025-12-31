@@ -15,18 +15,18 @@ import Updater from "./Updater.tsx";
 
 const Root = () => {
 	const [currPag, setPag] = useState(<Loader />);
-	// @ts-expect-error expected, api is limited to fs until boot
-	if (typeof window.tb === "undefined") window.tb = {};
-	if (typeof window.tb.fs === "undefined" && typeof Filer !== "undefined" && Filer.fs) {
-		console.log("[FS] File System Ready");
-		window.tb.fs = Filer.fs;
-		window.tb.sh = new Filer.fs.Shell();
-	}
 	const params = new URLSearchParams(window.location.search);
 	useEffect(() => {
 		const tempTransport = async () => {
 			const connection = new BareMuxConnection("/baremux/worker.js");
-			await connection.setTransport("/epoxy/index.mjs", [{ wisp: "wss://wisp.terbiumon.top/wisp/" }]);
+			await connection.setTransport("/epoxy/index.mjs", [{ wisp: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/` }]);
+			const tbOn = async () => {
+				while (!window.tb.system?.version) {
+					await new Promise(res => setTimeout(res, 50));
+				}
+				window.dispatchEvent(new Event("tfsready"));
+			};
+			tbOn();
 			const { ScramjetController } = $scramjetLoadController();
 			window.scramjetTb = {
 				prefix: "/service/",
@@ -77,7 +77,7 @@ const Root = () => {
 					sha = hash;
 				}
 				if (localStorage.getItem("setup")) {
-					if (localStorage.getItem("setup") && (sha !== hash || sessionStorage.getItem("skipUpd"))) {
+					if (localStorage.getItem("setup") && (sha !== hash || sessionStorage.getItem("migrateFs"))) {
 						setPag(<Updater />);
 					} else {
 						if (sessionStorage.getItem("logged-in") && sessionStorage.getItem("logged-in") === "true") {

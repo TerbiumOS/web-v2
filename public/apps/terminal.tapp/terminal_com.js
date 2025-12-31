@@ -10,6 +10,6 @@ tb_island.addControl({
 	id: "terminal-help",
 	click: async () => {
 		term.write("help");
-		await handleCommand("help");
+		await window.handleCommand("help");
 	},
 });

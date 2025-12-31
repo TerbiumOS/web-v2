@@ -11,6 +11,28 @@
     <meta name="theme-color" content="#D16FFF" />
     <meta property="og:image" content="/tb.svg" />
     <meta name="google-adsense-account" content="ca-pub-2875368391887289" />
+    <script src="/tfs/tfs.js"></script>
+    <script>
+      (async () => {
+        const handle = await navigator.storage.getDirectory();
+        window.tfs = new window.tfs(handle)
+        if (typeof window.tb === "undefined") window.tb = {};
+	      if (typeof window.tb.fs === "undefined" && typeof window.tb !== "undefined") {
+		      console.log("[FS] File System Ready");
+		      window.tb.fs = window.tfs.fs;
+		      window.tb.buffer = window.tfs.buffer;
+		      window.tb.sh = window.tfs.shell;
+	      }
+        if (localStorage.getItem("eruda")) {
+          const erudaScript = document.createElement("script");
+          erudaScript.src = "https://cdn.jsdelivr.net/npm/eruda";
+          erudaScript.onload = () => {
+            window.eruda.init();
+          };
+          document.head.appendChild(erudaScript);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root" class="flex flex-col h-full bg-[#0e0e0e] overflow-hidden"></div>
@@ -18,8 +40,6 @@
     <script type="module" src="/src/main.tsx"></script>
     <script type="module" src="/src/init/index.ts"></script>
     <script src="assets/libs/filer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/eruda" onload="if (localStorage.getItem('eruda'))  window.eruda.init()"></script>
-
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-1RW33JJQS2"></script>
     <script>

@@ -1,4 +1,3 @@
-import * as webdav from "./webdav.js";
 const Filer = window.Filer;
 
 const user = sessionStorage.getItem("currAcc");
@@ -353,15 +352,11 @@ const createStorageDeviceCard = (type, davInfo) => {
 			title.textContent = davInfo.name || "Dav Drive";
 			const displayText = davInfo.url || "http://localhost:3001/dav/";
 			size.textContent = displayText.length > 18 ? displayText.slice(0, 18) + "..." : displayText;
+			item.id = `f-${davInfo.name.toLocaleLowerCase()}`;
 			percent.style.width = "100%";
 			const test = async () => {
-				try {
-					const client = webdav.createClient(davInfo.url, {
-						username: davInfo.user,
-						password: davInfo.pass,
-						authType: webdav.AuthType.Password,
-					});
-					await client.getDirectoryContents("/");
+				const servers = window.parent.tb.vfs.servers;
+				if (servers.has(davInfo.name) && servers.get(davInfo.name).connected === true) {
 					const icn = `
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                             <path d="M4.07982 5.227C4.25015 4.58826 4.6267 4.02366 5.15094 3.62094C5.67518 3.21822 6.31775 2.99993 6.97882 3H17.0198C17.6811 2.99971 18.3239 3.2179 18.8483 3.62063C19.3728 4.02337 19.7494 4.58809 19.9198 5.227L22.0328 13.153C21.1022 12.4051 19.9437 11.9982 18.7498 12H5.24982C4.05559 11.998 2.89667 12.4049 1.96582 13.153L4.07982 5.227Z"/>
@@ -375,8 +370,7 @@ const createStorageDeviceCard = (type, davInfo) => {
                     `;
 					icon.innerHTML = icn;
 					percent.style.backgroundColor = "#5DD881";
-				} catch (error) {
-					console.error(error);
+				} else {
 					const icn = `
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                             <path d="M4.07982 5.227C4.25015 4.58826 4.6267 4.02366 5.15094 3.62094C5.67518 3.21822 6.31775 2.99993 6.97882 3H17.0198C17.6811 2.99971 18.3239 3.2179 18.8483 3.62063C19.3728 4.02337 19.7494 4.58809 19.9198 5.227L22.0328 13.153C21.1022 12.4051 19.9437 11.9982 18.7498 12H5.24982C4.05559 11.998 2.89667 12.4049 1.96582 13.153L4.07982 5.227Z"/>
@@ -463,15 +457,7 @@ const showLS = async () => {
 };
 
 const useDavClient = async path => {
-	const davInstances = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${sessionStorage.getItem("currAcc")}/files/davs.json`, "utf8"));
-	const davUrl = path.split("/dav/")[0] + "/dav/";
-	const dav = davInstances.find(d => d.url.toLowerCase().includes(davUrl));
-	if (!dav) throw new Error("No matching dav instance found");
-	const client = webdav.createClient(dav.url, {
-		username: dav.username,
-		password: dav.password,
-		authType: webdav.AuthType.Password,
-	});
+	const client = window.parent.tb.vfs.currentServer.connection.client;
 	let filePath;
 	if (path.startsWith("http")) {
 		const match = path.match(/^https?:\/\/[^\/]+\/dav\/([^\/]+\/)?(.+)$/);
@@ -479,16 +465,22 @@ const useDavClient = async path => {
 	} else {
 		filePath = path.replace(davUrl, "/");
 	}
-	return { client, filePath };
+	let mntPath;
+	if (path.startsWith("/mnt/")) {
+		mntPath = path;
+	} else {
+		mntPath = window.parent.tb.fs.normalizePath(`/mnt/${window.parent.tb.vfs.currentServer.name}/${filePath}`);
+	}
+	return { client, filePath, mntPath };
 };
 
 const getItemDetails = async path => {
 	if (path.includes("http")) {
-		const { client, filePath } = await useDavClient(path);
+		const { client, filePath, mntPath } = await useDavClient(path);
 		const stats = await client.stat(filePath, { depth: 1 });
 		let message = JSON.stringify({
 			type: "item-details",
-			path: path,
+			path: mntPath,
 			details: {
 				name: stats.basename,
 				type: stats.mime,
@@ -507,8 +499,8 @@ const getItemDetails = async path => {
 			icon: "/fs/apps/system/files.tapp/icon.svg",
 			src: "/fs/apps/system/files.tapp/properties/index.html",
 			size: {
-				width: 280,
-				height: 252,
+				width: 350,
+				height: 275,
 			},
 			controls: ["minimize", "close"],
 			message: message,
@@ -547,8 +539,8 @@ const getItemDetails = async path => {
 				icon: "/fs/apps/system/files.tapp/icon.svg",
 				src: "/fs/apps/system/files.tapp/properties/index.html",
 				size: {
-					width: 280,
-					height: 252,
+					width: 350,
+					height: 275,
 				},
 				controls: ["minimize", "close"],
 				message: message,
@@ -1026,10 +1018,10 @@ const cm = async e => {
 									const path = document.querySelector(".exp").getAttribute("path");
 									const createUniqueFolder = async (path, folderName, number = null) => {
 										const folderPath = `${path}/${folderName}${number !== null ? ` (${number})` : ""}`;
-										try {
-											await window.parent.tb.fs.promises.access(folderPath);
-											return createUniqueFolder(path, folderName, number + 1);
-										} catch (error) {
+										const exists = await window.parent.tb.fs.promises.exists(folderPath);
+										if (exists) {
+											return createUniqueFolder(path, folderName, number !== null ? number + 1 : 2);
+										} else {
 											await window.parent.tb.fs.promises.mkdir(folderPath);
 										}
 									};
@@ -1321,10 +1313,10 @@ const cm = async e => {
 									} else {
 										const createUniqueFolder = async (path, folderName, number = null) => {
 											const folderPath = `${path}/${folderName}${number !== null ? ` (${number})` : ""}`;
-											try {
-												await window.parent.tb.fs.promises.access(folderPath);
-												return createUniqueFolder(path, folderName, number + 1);
-											} catch (error) {
+											const exists = await window.parent.tb.fs.promises.exists(folderPath);
+											if (exists) {
+												return createUniqueFolder(path, folderName, number !== null ? number + 1 : 2);
+											} else {
 												await window.parent.tb.fs.promises.mkdir(folderPath);
 											}
 										};
@@ -1372,31 +1364,31 @@ const cm = async e => {
 												defaultValue: file.name,
 												onOk: async newFileName => {
 													if (newFileName !== null && newFileName !== "") {
-														client.putFileContents(`${filePath}/${newFileName}`, Filer.Buffer.from(content));
+														client.putFileContents(`${filePath}/${newFileName}`, window.parent.tb.buffer.from(content));
 													}
 												},
 											});
 										} else {
-											client.putFileContents(`${filePath}/${file.name}`, Filer.Buffer.from(content));
+											client.putFileContents(`${filePath}/${file.name}`, window.parent.tb.buffer.from(content));
 										}
 									}
 								} else {
 									for (const file of e.target.files) {
 										const content = await file.arrayBuffer();
 										const filePath = `${path}/${file.name}`;
-										try {
-											await window.parent.tb.fs.promises.access(filePath);
+										const exists = await window.parent.tb.fs.promises.exists(filePath);
+										if (exists) {
 											await tb.dialog.Message({
 												title: `File "${file.name}" already exists`,
 												defaultValue: file.name,
 												onOk: async newFileName => {
 													if (newFileName !== null && newFileName !== "") {
-														await window.parent.tb.fs.promises.writeFile(`${path}/${newFileName}`, Filer.Buffer.from(content));
+														await window.parent.tb.fs.promises.writeFile(`${path}/${newFileName}`, window.parent.tb.buffer.from(content), "arraybuffer");
 													}
 												},
 											});
-										} catch (error) {
-											await window.parent.tb.fs.promises.writeFile(filePath, Filer.Buffer.from(content));
+										} else {
+											await window.parent.tb.fs.promises.writeFile(filePath, window.parent.tb.buffer.from(content), "arraybuffer");
 										}
 									}
 								}
@@ -1704,8 +1696,48 @@ const createPath = async (title, path, type) => {
 	} else if (type === "folder") {
 		if (title.toLocaleLowerCase().endsWith(".tapp")) {
 			try {
-				const data = await window.parent.tb.fs.promises.readFile(`${path}/icon.svg`, "utf8");
-				icon.innerHTML = data;
+				if (await window.parent.tb.vfs.whatFS(path).promises.exists(`${path}/.tbconfig`)) {
+					const appData = JSON.parse(await window.parent.tb.vfs.whatFS(path).promises.readFile(`${path}/.tbconfig`, "utf8"));
+					const iconPath = appData.icon.includes("http") ? appData.icon : `${path}/${appData.icon}`;
+					if (iconPath.startsWith("http")) {
+						icon.innerHTML = `<img src="${iconPath}" alt="${appData.title || ""}" />`;
+					} else if (iconPath.toLowerCase().endsWith(".svg")) {
+						const imgData = await window.parent.tb.vfs.whatFS(path).promises.readFile(iconPath, "utf8");
+						icon.innerHTML = imgData;
+					} else {
+						const bin = await window.parent.tb.vfs.whatFS(path).promises.readFile(iconPath);
+						const b64 = window.parent.tb.buffer.from(bin).toString("base64");
+						let mime = "application/octet-stream";
+						if (iconPath.toLowerCase().endsWith(".png")) mime = "image/png";
+						else if (iconPath.toLowerCase().endsWith(".jpg") || iconPath.toLowerCase().endsWith(".jpeg")) mime = "image/jpeg";
+						else if (iconPath.toLowerCase().endsWith(".webp")) mime = "image/webp";
+						icon.innerHTML = `<img src="data:${mime};base64,${b64}" alt="${appData.title || ""}" />`;
+					}
+				} else if (await window.parent.tb.vfs.whatFS(path).promises.exists(`${path}/index.json`)) {
+					const appData = JSON.parse(await window.parent.tb.vfs.whatFS(path).promises.readFile(`${path}/index.json`, "utf8"));
+					const iconPath = appData.config.icon.includes("http") ? appData.config.icon : `${appData.config.icon.replace("/fs/", "/")}`;
+					const imgData = await window.parent.tb.vfs.whatFS(path).promises.readFile(iconPath, "utf8");
+					icon.innerHTML = imgData;
+				} else {
+					const data = await window.parent.tb.vfs.whatFS(path).promises.readFile(`${path}/icon.svg`, "utf8");
+					icon.innerHTML = data;
+				}
+			} catch {
+				icon.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+                        <path fill-rule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0016.5 9h-1.875a1.875 1.875 0 01-1.875-1.875V5.25A3.75 3.75 0 009 1.5H5.625zM7.5 15a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 017.5 15zm.75 2.25a.75.75 0 000 1.5H12a.75.75 0 000-1.5H8.25z" clip-rule="evenodd" />
+                        <path d="M12.971 1.816A5.23 5.23 0 0114.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 013.434 1.279 9.768 9.768 0 00-6.963-6.963z" />
+                    </svg>
+                `;
+			}
+		} else if (title.toLocaleLowerCase().endsWith(".app")) {
+			try {
+				if (await window.parent.tb.vfs.whatFS(path).promises.exists(`${path}/manifest.json`)) {
+					const appData = JSON.parse(await window.parent.tb.vfs.whatFS(path).promises.readFile(`${path}/manifest.json`, "utf8"));
+					const iconPath = appData.icon.includes("http") ? appData.icon : `${path}/${appData.icon}`;
+					const imgData = await window.parent.tb.vfs.whatFS(path).promises.readFile(iconPath, "utf8");
+					icon.innerHTML = imgData;
+				}
 			} catch {
 				icon.innerHTML = `
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
@@ -1804,7 +1836,7 @@ const createPath = async (title, path, type) => {
 	document.querySelector(".exp").appendChild(item);
 };
 
-const openPath = async path => {
+const openPath = async (path, override = false) => {
 	if (path === "/system/trash") {
 		if (parent.document.querySelector(`[control-id="files-et"]`)) {
 			parent.document.querySelector(`[control-id="files-et"]`).classList.remove("hidden");
@@ -1851,17 +1883,9 @@ const openPath = async path => {
 		return;
 	}
 	if (path.includes("mnt")) {
-		let davInstances = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${sessionStorage.getItem("currAcc")}/files/davs.json`, "utf8"));
-		const toFind = path.split("/")[2] || "";
-		let davConfig = davInstances.find(dav => dav.name === toFind);
+		window.parent.tb.vfs.setServer(path.split("/")[2]);
+		let davConfig = window.parent.tb.vfs.currentServer;
 		console.log("Loading webdav: " + davConfig.url + path.split("/")[2]);
-		if (!davConfig) {
-			window.parent.tb.dialog.Alert({
-				title: "WebDAV Error",
-				message: "No matching WebDAV configuration found for this path.",
-			});
-			return;
-		}
 		let relPath = path.replace(`/mnt/${davConfig.name}/`, "/");
 		console.log(relPath);
 		const exp = document.querySelector(".exp");
@@ -1872,11 +1896,7 @@ const openPath = async path => {
 		exp.innerHTML = `<div style="padding:1em;">Loading WebDAV...</div>`;
 		const modal = document.querySelector(".drive-modal");
 		try {
-			const client = webdav.createClient(davConfig.url, {
-				username: davConfig.username,
-				password: davConfig.password,
-				authType: webdav.AuthType.Password,
-			});
+			const client = window.parent.tb.vfs.currentServer.connection.client;
 			const contents = await client.getDirectoryContents(relPath);
 			exp.innerHTML = "";
 			document.getElementById(`f-${davConfig.name.toLocaleLowerCase()}`).innerHTML = `
@@ -2044,18 +2064,38 @@ const openPath = async path => {
 	const exp = document.querySelector(".exp");
 	exp.innerHTML = "";
 	exp.setAttribute("path", path);
-	if (path.toLowerCase().includes(".app")) {
-		try {
-			const anura = window.parent.anura;
-			const appPath = `/fs${path}`.replace("//", "/");
-			await anura.registerExternalApp(appPath);
-		} catch (e) {
-			window.parent.tb.dialog.Alert({
-				title: "Unexpected Error",
-				message: `❌ An Unexpected error occurred when trying to sideload the anura app: ${path} Error: ${e}`,
-			});
-		}
-		openPath(`/home/${user}`);
+	if (path.toLowerCase().endsWith(".app") && override !== true) {
+		tb.dialog.Select({
+			title: `Sideload App`,
+			message: `Do you want to sideload the anura app found at ${path}?`,
+			options: [
+				{ text: "Yes", value: "yes" },
+				{ text: "View Source", value: "source" },
+				{ text: "No", value: "no" },
+			],
+			onOk: async val => {
+				if (val === "yes") {
+					sideloadApp(path);
+				} else if (val === "source") {
+					openPath(path, true);
+				} else {
+					openPath("/home/" + user);
+				}
+			},
+		});
+		const sideloadApp = async path => {
+			try {
+				const anura = window.parent.anura;
+				const appPath = `/fs${path}`.replace("//", "/");
+				await anura.registerExternalApp(appPath);
+			} catch (e) {
+				window.parent.tb.dialog.Alert({
+					title: "Unexpected Error",
+					message: `❌ An Unexpected error occurred when trying to sideload the anura app: ${path} Error: ${e}`,
+				});
+			}
+			openPath(document.getElementById(".nav-input"));
+		};
 	} else {
 		window.parent.tb.fs.readdir(path, async (err, files) => {
 			if (err) return console.error(err);
@@ -2102,7 +2142,7 @@ async function unzip(path, target, app) {
 			if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
 				try {
 					console.log(`touch ${currentPath.slice(0, -1)}`);
-					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), Filer.Buffer.from(content));
+					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.parent.tb.buffer.from(content), "arraybuffer");
 				} catch {
 					console.log(`Cant make ${currentPath.slice(0, -1)}`);
 				}

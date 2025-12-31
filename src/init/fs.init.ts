@@ -1,16 +1,20 @@
 import paths from "../installer.json";
 
 export async function copyfs() {
-	paths.forEach(async item => {
-		if (item.toString().includes("browser.tapp")) return;
-		if (item.toString().endsWith("/")) {
-			await window.tb.fs.promises.mkdir(`/apps/system/${item.toString()}`);
+	for (const item of paths) {
+		const p = item.toString();
+		if (p.includes("browser.tapp")) continue;
+		if (p.endsWith("/")) {
+			await window.tb.fs.promises.mkdir(`/apps/system/${p}`);
 		} else {
-			await fetch(`/apps/${item.toString()}`).then(async res => {
-				const data = await res.text();
-				await window.tb.fs.promises.writeFile(`/apps/system/${item.toString()}`, data);
-			});
+			const res = await fetch(`/apps/${p}`);
+			if (!res.ok) {
+				console.error(`Failed to fetch /apps/${p}: ${res.status} ${res.statusText}`);
+				continue;
+			}
+			const data = await res.text();
+			await window.tb.fs.promises.writeFile(`/apps/system/${p}`, data);
 		}
-	});
+	}
 	return "Success";
 }

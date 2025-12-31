@@ -9,15 +9,8 @@ async function mkdir(args) {
 		try {
 			const match = path.match(/\/mnt\/([^\/]+)\//);
 			const davName = match ? match[1].toLowerCase() : "";
-			const davInstances = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${sessionStorage.getItem("currAcc")}/files/davs.json`, "utf8"));
-			const dav = davInstances.find(d => d.name.toLowerCase() === davName);
-			const client = window.webdav.createClient(dav.url, {
-				username: dav.username,
-				password: dav.password,
-				authType: window.webdav.AuthType.Password,
-			});
 			const np = path.replace(`/mnt/${davName.toLowerCase()}/`, "");
-			await client.createDirectory(`${np}/${args._raw}`);
+			await tb.vfs.servers.get(davName).connection.promises.mkdir(`${np}/${args._raw}`);
 			createNewCommandInput();
 		} catch (e) {
 			displayError(`TNSM mkdir: ${e.message}`);

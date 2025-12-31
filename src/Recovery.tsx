@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { version } from "../package.json";
 import { unzipSync } from "fflate";
-import { libcurl } from "libcurl.js/bundled";
+import { libcurl } from "libcurl.js";
 import { dirExists } from "./sys/types";
 import { hash } from "./hash.json";
 import apps from "./apps.json";
@@ -28,7 +28,7 @@ export default function Recovery() {
 		const totalFiles = files.length;
 		for (const [index, file] of files.entries()) {
 			const stats = await window.tb.fs.promises.stat(`${inp}/${file}`);
-			if (stats.isDirectory()) {
+			if (stats && stats.isDirectory()) {
 				await window.tb.fs.promises.mkdir(`${dest}/${file}`);
 				await copyDir(`${inp}/${file}`, `${dest}/${file}`, true);
 			} else {
@@ -46,6 +46,38 @@ export default function Recovery() {
 	};
 	getTmp();
 
+	const boot = () => {
+		sessionStorage.setItem("boot", "true");
+		window.location.reload();
+	};
+
+	const cloak = () => {
+		const newWindow = window.open("about:blank", "_blank");
+		const newDocument = newWindow!.document.open();
+		sessionStorage.setItem("boot", "true");
+		newDocument.write(`
+			<!DOCTYPE html>
+			<html>
+				<head>
+					<style type="text/css">
+						body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+					</style>
+				</head>
+				<body>
+					<iframe style="border: none; width: 100%; height: 100vh;" src="${window.location.href}?boot=true"></iframe>
+				</body>
+			</html>
+		`);
+		newDocument.close();
+		window.location.href = "https://google.com";
+		console.log("Cloak Opened!");
+	};
+
+	const recovery = () => {
+		sessionStorage.setItem("recovery", "true");
+		window.location.reload();
+	};
+
 	const prodins = async () => {
 		setShowCursor(false);
 		msgbox.current!.classList.remove("flex");
@@ -53,9 +85,15 @@ export default function Recovery() {
 		progresscheck.current!.classList.remove("hidden");
 		progresscheck.current!.classList.add("flex");
 		if (localStorage.getItem("setup")) {
-			await window.tb.sh.promises.rm("/system/", { recursive: true });
-			await window.tb.sh.promises.rm("/apps/", { recursive: true });
-			await window.tb.sh.promises.rm("/home/", { recursive: true });
+			await window.tb.sh.format();
+			await window.tb.fs.promises.writeFile(
+				"/bootentries.json",
+				JSON.stringify([
+					{ name: "TB React", action: boot.toString() },
+					{ name: "TB React (Cloaked)", action: cloak.toString() },
+					{ name: "TB System Recovery", action: recovery.toString() },
+				]),
+			);
 		}
 		await download("https://cdn.terbiumon.top/recovery/latest.zip", "/uploaded.zip");
 		setShowCursor(false);
@@ -134,12 +172,18 @@ export default function Recovery() {
 				const content = await file.arrayBuffer();
 				setProgress(10);
 				if (localStorage.getItem("setup")) {
-					await window.tb.sh.promises.rm("/system/", { recursive: true });
-					await window.tb.sh.promises.rm("/apps/", { recursive: true });
-					await window.tb.sh.promises.rm("/home/", { recursive: true });
+					await window.tb.sh.format();
+					await window.tb.fs.promises.writeFile(
+						"/bootentries.json",
+						JSON.stringify([
+							{ name: "TB React", action: boot.toString() },
+							{ name: "TB React (Cloaked)", action: cloak.toString() },
+							{ name: "TB System Recovery", action: recovery.toString() },
+						]),
+					);
 				}
 				setProgress(25);
-				await window.tb.fs.promises.writeFile("//uploaded.zip", Filer.Buffer.from(content));
+				await window.tb.fs.promises.writeFile("//uploaded.zip", window.tb.buffer.from(content), "arraybuffer");
 				setProgress(35);
 				setShowCursor(false);
 				main.current!.classList.remove("flex");
@@ -230,7 +274,7 @@ export default function Recovery() {
 			for (let i = 0; i < pathParts.length; i++) {
 				currentPath += pathParts[i] + "/";
 				if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
-					await window.tb.fs.promises.writeFile(currentPath.slice(0, -1), Filer.Buffer.from(content));
+					await window.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.tb.buffer.from(content), "arraybuffer");
 				} else if (!(await dirExists(currentPath))) {
 					await window.tb.fs.promises.mkdir(currentPath);
 				}
@@ -243,32 +287,95 @@ export default function Recovery() {
 	}
 
 	async function download(url: string, location: string) {
-		// @ts-expect-error
+		if (!window.loadLock) {
+			window.loadLock = true;
+			await libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm");
+		}
+		// @ts-expect-error types
 		libcurl.set_websocket(`${window.location.protocol.replace("http", "ws")}//${window.location.hostname}:${window.location.port}/wisp/`);
 		const response = await libcurl.fetch(url);
 		if (!response.ok) {
 			throw new Error(`Failed to download the file. Status: ${response.status}`);
 		}
 		const content = await response.arrayBuffer();
-		await window.tb.fs.promises.writeFile(location, Filer.Buffer.from(content));
+		await window.tb.fs.promises.writeFile(location, window.tb.buffer.from(content), "arraybuffer");
 		console.log(`File saved successfully at: ${location}`);
 	}
+
+	const migrateFs = async () => {
+		setShowCursor(false);
+		main.current!.classList.remove("flex");
+		main.current!.classList.add("hidden");
+		progresscheck.current!.classList.remove("hidden");
+		progresscheck.current!.classList.add("flex");
+		async function copyRecursive(src: string, dest: string) {
+			const entries = await Filer.fs.promises.readdir(src);
+			for (const entry of entries) {
+				const srcPath = src.endsWith("/") ? src + entry : src + "/" + entry;
+				const destPath = dest.endsWith("/") ? dest + entry : dest + "/" + entry;
+				const stat = await Filer.fs.promises.stat(srcPath);
+				if (stat.isDirectory()) {
+					if (!(await dirExists(destPath))) {
+						await window.tb.fs.promises.mkdir(destPath);
+					}
+					await copyRecursive(srcPath, destPath);
+				} else {
+					const fileBuffer = await Filer.fs.promises.readFile(srcPath);
+					await window.tb.fs.promises.writeFile(destPath, fileBuffer);
+				}
+				statusref.current!.innerText = `Copying: ${srcPath}`;
+			}
+		}
+		await copyRecursive("/", "/");
+		setProgress(85);
+		statusref.current!.innerText = "Recreating Desktop Shortcuts...";
+		for (const user of await window.tb.fs.promises.readdir("/home/")) {
+			const items = JSON.parse(await window.tb.fs.promises.readFile(`/home/${user}/desktop/.desktop.json`, "utf8"));
+			for (const item of items) {
+				const target = await Filer.fs.promises.readlink(item.item);
+				await window.tb.fs.promises.symlink(target, item.item);
+				statusref.current!.innerText = `Creating shortcut: ${item.name}.lnk...`;
+			}
+		}
+		setProgress(93);
+		statusref.current!.innerText = "Formatting Filer...";
+		const fsh = new Filer.fs.Shell();
+		for (const loc of await Filer.fs.promises.readdir("//")) {
+			await fsh.promises.rm(`/${loc}`, { recursive: true });
+		}
+		setProgress(100);
+		statusref.current!.innerText = "Migration complete!";
+		sessionStorage.clear();
+		sessionStorage.setItem("boot", "true");
+		localStorage.setItem("setup", "true");
+		sessionStorage.removeItem("migrateFs");
+		window.location.reload();
+	};
+
+	// @ts-expect-error types
+	window.migrateFs = migrateFs;
 
 	useEffect(() => {
 		const handleKeyDown = async (e: KeyboardEvent) => {
 			if (e.key === "ArrowUp") {
-				setSelected(prevSelected => (prevSelected === 0 ? (updCache ? 4 : 3) : prevSelected - 1));
+				setSelected(prevSelected => (prevSelected === 0 ? (updCache ? 5 : 4) : prevSelected - 1));
 			} else if (e.key === "ArrowDown") {
-				setSelected(prevSelected => (prevSelected === (updCache ? 4 : 3) ? 0 : prevSelected + 1));
+				setSelected(prevSelected => (prevSelected === (updCache ? 5 : 4) ? 0 : prevSelected + 1));
 			} else if (e.key === "Enter") {
 				if (selected === 0) {
 					localStorage.clear();
 					sessionStorage.clear();
 					sessionStorage.setItem("boot", "true");
 					if (localStorage.getItem("setup")) {
-						await window.tb.sh.promises.rm("/system/", { recursive: true });
-						await window.tb.sh.promises.rm("/apps/", { recursive: true });
-						await window.tb.sh.promises.rm("/home/", { recursive: true });
+						await window.tb.sh.format();
+						await window.tb.fs.promises.writeFile(
+							"/bootentries.json",
+							JSON.stringify([
+								{ name: "TB React", action: boot.toString() },
+								{ name: "TB React (Cloaked)", action: cloak.toString() },
+								{ name: "TB System Recovery", action: recovery.toString() },
+							]),
+						);
 					}
 					window.location.reload();
 				} else if (selected === 1) {
@@ -280,8 +387,10 @@ export default function Recovery() {
 					setMsg("BE AWARE if your static hosting this download will NOT work. Proceed?");
 					setAction("prodins()");
 				} else if (selected === 2) {
+					migrateFs();
+				} else if (selected === 3) {
 					zipins();
-				} else if (selected === 3 && updCache) {
+				} else if (selected === 4 && updCache) {
 					setShowCursor(false);
 					msgbox.current!.classList.remove("flex");
 					msgbox.current!.classList.add("hidden");
@@ -291,7 +400,7 @@ export default function Recovery() {
 					await window.tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", hash);
 					await window.tb.sh.promises.rm("/system/tmp/terb-upd/", { recursive: true });
 					window.location.reload();
-				} else if (selected === (updCache ? 4 : 3)) {
+				} else if (selected === (updCache ? 5 : 4)) {
 					sessionStorage.clear();
 					window.location.reload();
 				}
@@ -390,9 +499,15 @@ export default function Recovery() {
 							sessionStorage.clear();
 							sessionStorage.setItem("boot", "true");
 							if (localStorage.getItem("setup")) {
-								await window.tb.sh.promises.rm("/system/", { recursive: true });
-								await window.tb.sh.promises.rm("/apps/", { recursive: true });
-								await window.tb.sh.promises.rm("/home/", { recursive: true });
+								await window.tb.sh.format();
+								await window.tb.fs.promises.writeFile(
+									"/bootentries.json",
+									JSON.stringify([
+										{ name: "TB React", action: boot.toString() },
+										{ name: "TB React (Cloaked)", action: cloak.toString() },
+										{ name: "TB System Recovery", action: recovery.toString() },
+									]),
+								);
 							}
 							window.location.reload();
 						}}
@@ -430,6 +545,21 @@ export default function Recovery() {
 						`
 						}
 						onClick={() => {
+							migrateFs();
+						}}
+					>
+						Migrate from Filer to OPFS
+					</span>
+					<span
+						className={
+							"p-2 px-2.5 text-sm font-extrabold lg:text-lg md:text-base border-[1px] rounded-md" +
+							" " +
+							`
+							${selected === 3 && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"}
+							${showCursor ? "hover:bg-[#ffffff18] hover:border-[#ffffff20]" : null}
+						`
+						}
+						onClick={() => {
 							zipins();
 						}}
 					>
@@ -441,7 +571,7 @@ export default function Recovery() {
 								"p-2 px-2.5 text-sm font-extrabold lg:text-lg md:text-base border-[1px] rounded-md" +
 								" " +
 								`
-								${selected === 3 && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"}
+								${selected === 4 && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"}
 								${showCursor ? "hover:bg-[#ffffff18] hover:border-[#ffffff20]" : null}
 							`
 							}
@@ -465,7 +595,7 @@ export default function Recovery() {
 							"p-2 px-2.5 text-sm font-extrabold lg:text-lg md:text-base border-[1px] rounded-md" +
 							" " +
 							`
-							${selected === (updCache ? 4 : 3) && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"}
+							${selected === (updCache ? 5 : 4) && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"}
 							${showCursor ? "hover:bg-[#ffffff18] hover:border-[#ffffff20]" : null}
 						`
 						}

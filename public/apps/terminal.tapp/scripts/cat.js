@@ -9,16 +9,7 @@ async function cat(args) {
 		try {
 			const match = path.match(/\/mnt\/([^\/]+)\//);
 			const davName = match ? match[1].toLowerCase() : "";
-			const davInstances = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/user/${sessionStorage.getItem("currAcc")}/files/davs.json`, "utf8"));
-			const dav = davInstances.find(d => d.name.toLowerCase() === davName);
-			const client = window.webdav.createClient(dav.url, {
-				username: dav.username,
-				password: dav.password,
-				authType: window.webdav.AuthType.Password,
-			});
-			const np = path.replace(`/mnt/${davName.toLowerCase()}/`, "");
-			const content = await client.getFileContents(`${np}/${args._raw}`);
-			const text = new TextDecoder().decode(content);
+			const text = await tb.vfs.servers.get(davName).connection.promises.readFile(`${path}/${args._raw}`, "utf8");
 			displayOutput(text);
 			createNewCommandInput();
 		} catch (e) {

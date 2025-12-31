@@ -3,7 +3,6 @@
 Welcome to Terbium v2's Documentation. Here is a simple table of contents to help you get where you need to get
 
 - [How to Contribute to Terbium v2](./contributions.md)
-- [Quick Guide to Filer](./quick-guide-to-filer.md)
 - [Creating Terminal Commands](./creating-terminal-commands.md)
 - [Creating Apps](./creating-apps.md)
 - [Backend Configuration Options](./backend-configuration.md)
@@ -11,5 +10,6 @@ Welcome to Terbium v2's Documentation. Here is a simple table of contents to hel
 - [Electron Compatability & API Support](./lemonade-compat.md)
 - [Terbium API Documentation](./apis/readme.md)
 - [Static Hosting](./static-hosting.md)
+- [UPK Builds](./upk-build.md)
 
-If you cannot find what your looking for feel free to ask in the TN Discord
+If you cannot find what your looking for feel free to ask in the Terbium Discord or in the TN Discord

@@ -1,4 +1,4 @@
-import { dirExists } from "../sys/types";
+import { dirExists, TAuthSSData, UserSettings } from "../sys/types";
 import apps from "../apps.json";
 import { copyfs } from "./fs.init";
 import { hash } from "../hash.json";
@@ -19,6 +19,7 @@ export async function init() {
 	if (!(await dirExists("/apps"))) {
 		await window.tb.fs.promises.mkdir("/apps");
 		await window.tb.fs.promises.mkdir("/apps/system");
+		await copyfs();
 		await window.tb.fs.promises.mkdir("/apps/user");
 		await window.tb.fs.promises.writeFile("/apps/web_apps.json", JSON.stringify({ apps: [] }));
 	} else {
@@ -119,14 +120,17 @@ export async function init() {
 		let recentApps: any[] = [];
 		await window.tb.fs.promises.writeFile("/system/var/terbium/recent.json", JSON.stringify(recentApps));
 	}
+
+	const tcaccSettings: TAuthSSData = sessionStorage.getItem("tacc-settings") ? JSON.parse(sessionStorage.getItem("tacc-settings")!) : null;
 	var items: any[] = [];
 
 	if (!(await dirExists(`/home/${user}`))) {
 		await window.tb.fs.promises.mkdir(`/home/${user}`);
-		let userSettings = {
+		let userSettings: UserSettings = {
 			wallpaper: "/assets/wallpapers/1.png",
 			wallpaperMode: "cover",
 			animations: true,
+			// @ts-ignore
 			proxy: sessionStorage.getItem("selectedProxy") || "Scramjet",
 			transport: "Default (Epoxy)",
 			wispServer: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`,
@@ -137,7 +141,21 @@ export async function init() {
 				internet: false,
 				showSeconds: false,
 			},
+			showFPS: false,
+			windowOptimizations: false,
+			window: {
+				winAccent: "#ffffff",
+				blurlevel: 18,
+				alwaysMaximized: false,
+				alwaysFullscreen: false,
+			},
 		};
+		if (tcaccSettings && Array.isArray(tcaccSettings) && tcaccSettings[0] && tcaccSettings[0].settings) {
+			userSettings = {
+				...userSettings,
+				...tcaccSettings[0].settings,
+			};
+		}
 		await window.tb.fs.promises.writeFile(`/home/${user}/settings.json`, JSON.stringify(userSettings));
 		await window.tb.fs.promises.mkdir(`/home/${user}/desktop`);
 		let r2 = [];
@@ -194,29 +212,57 @@ export async function init() {
 			});
 			await window.tb.fs.promises.symlink(`/apps/system/${name}.tapp/index.json`, `/home/${user}/desktop/${name}.lnk`);
 		}
-		await copyfs();
 		await window.tb.fs.promises.writeFile(`/home/${user}/desktop/.desktop.json`, JSON.stringify(items));
-		await window.tb.fs.promises.writeFile(
-			`/apps/user/${user}/files/config.json`,
-			JSON.stringify({
-				"quick-center": true,
-				"sidebar-width": 180,
-				drives: {
-					"File System": `/home/${user}/`,
-				},
-				storage: {
-					"File System": "storage-device",
-					localStorage: "storage-device",
-				},
-				"open-collapsibles": {
+		if (tcaccSettings && Array.isArray(tcaccSettings) && tcaccSettings[0]) {
+			await window.tb.fs.promises.writeFile(
+				`/apps/user/${user}/files/config.json`,
+				JSON.stringify({
 					"quick-center": true,
-					drives: true,
-				},
-				"show-hidden-files": false,
-			}),
-			"utf8",
-		);
-		await window.tb.fs.promises.writeFile(`/apps/user/${user}/files/davs.json`, JSON.stringify([]));
+					"sidebar-width": 180,
+					drives: {
+						"File System": `/home/${user}/`,
+						...tcaccSettings[0].davs.reduce((acc: any, d: any) => {
+							const driveName = d.name || d.driveName;
+							acc[driveName] = `/mnt/${driveName}/`;
+							return acc;
+						}, {}),
+					},
+					storage: {
+						"File System": "storage-device",
+						localStorage: "storage-device",
+					},
+					"open-collapsibles": {
+						"quick-center": true,
+						drives: true,
+					},
+					"show-hidden-files": false,
+				}),
+				"utf8",
+			);
+			await window.tb.fs.promises.writeFile(`/apps/user/${user}/files/davs.json`, JSON.stringify(tcaccSettings[0].davs, null, 2));
+		} else {
+			await window.tb.fs.promises.writeFile(
+				`/apps/user/${user}/files/config.json`,
+				JSON.stringify({
+					"quick-center": true,
+					"sidebar-width": 180,
+					drives: {
+						"File System": `/home/${user}/`,
+					},
+					storage: {
+						"File System": "storage-device",
+						localStorage: "storage-device",
+					},
+					"open-collapsibles": {
+						"quick-center": true,
+						drives: true,
+					},
+					"show-hidden-files": false,
+				}),
+				"utf8",
+			);
+			await window.tb.fs.promises.writeFile(`/apps/user/${user}/files/davs.json`, JSON.stringify([]));
+		}
 		await window.tb.fs.promises.mkdir(`/apps/user/${user}/browser`);
 		await window.tb.fs.promises.writeFile(`/apps/user/${user}/browser/favorites.json`, JSON.stringify([]));
 		await window.tb.fs.promises.writeFile(`/apps/user/${user}/browser/userscripts.json`, JSON.stringify([]));
@@ -224,15 +270,15 @@ export async function init() {
 		const response = await fetch("/apps/files.tapp/icons.json");
 		const dat = await response.json();
 		const iconNames = Object.keys(dat["name-to-path"]);
-		const icons = Object.values(dat["name-to-path"]);
 		var iconArrays: { [key: string]: string } = {};
 
 		await window.tb.fs.promises.mkdir(`/system/etc/terbium/file-icons`);
-		iconNames.forEach(async name => {
-			iconArrays[name] = `/system/etc/terbium/file-icons/${name}.svg`; // name, path
-			const icon = icons[iconNames.indexOf(name)];
-			await window.tb.fs.promises.writeFile(`/system/etc/terbium/file-icons/${name}.svg`, icon);
-		});
+		for (const name of iconNames) {
+			const path = `/system/etc/terbium/file-icons/${name}.svg`;
+			iconArrays[name] = path;
+			const icon = dat["name-to-path"][name];
+			await window.tb.fs.promises.writeFile(path, icon as any);
+		}
 		await window.tb.fs.promises.writeFile(
 			`/system/etc/terbium/file-icons.json`,
 			JSON.stringify({
@@ -256,24 +302,28 @@ export async function init() {
 		);
 		await window.tb.fs.promises.writeFile(`/apps/user/${user}/terminal/info.json`, JSON.stringify({}));
 		await window.tb.fs.promises.mkdir(`/apps/user/${user}/app store/`);
-		await window.tb.fs.promises.writeFile(
-			`/apps/user/${user}/app store/repos.json`,
-			JSON.stringify([
-				{
-					name: "TB App Repo",
-					url: "https://raw.githubusercontent.com/TerbiumOS/tb-repo/refs/heads/main/manifest.json",
-				},
-				{
-					name: "XSTARS XTRAS",
-					url: "https://raw.githubusercontent.com/Notplayingallday383/app-repo/refs/heads/main/manifest.json",
-				},
-				{
-					name: "Anura App Repo",
-					url: "https://raw.githubusercontent.com/MercuryWorkshop/anura-repo/refs/heads/master/manifest.json",
-					icon: "https://anura.pro/icon.png",
-				},
-			]),
-		);
+		if (tcaccSettings && Array.isArray(tcaccSettings) && tcaccSettings[0].apps) {
+			await window.tb.fs.promises.writeFile(`/apps/user/${user}/app store/repos.json`, JSON.stringify(tcaccSettings[0].apps.repos), "utf8");
+		} else {
+			await window.tb.fs.promises.writeFile(
+				`/apps/user/${user}/app store/repos.json`,
+				JSON.stringify([
+					{
+						name: "TB App Repo",
+						url: "https://raw.githubusercontent.com/TerbiumOS/tb-repo/refs/heads/main/manifest.json",
+					},
+					{
+						name: "XSTARS XTRAS",
+						url: "https://raw.githubusercontent.com/Notplayingallday383/app-repo/refs/heads/main/manifest.json",
+					},
+					{
+						name: "Anura App Repo",
+						url: "https://raw.githubusercontent.com/MercuryWorkshop/anura-repo/refs/heads/master/manifest.json",
+						icon: "https://anura.pro/icon.png",
+					},
+				]),
+			);
+		}
 	}
 	return true;
 }

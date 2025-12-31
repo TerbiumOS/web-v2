@@ -41,18 +41,38 @@ export default function Boot() {
 
 	useEffect(() => {
 		const getEntries = async () => {
+			let entries = [];
 			if (!(await fileExists("/bootentries.json"))) {
-				await window.tb.fs.promises.writeFile(
-					"/bootentries.json",
-					JSON.stringify([
-						{ name: "TB React", action: boot.toString() },
-						{ name: "TB React (Cloaked)", action: cloak.toString() },
-						{ name: "TB System Recovery", action: recovery.toString() },
-					]),
-				);
+				const ent = [
+					{ name: "TB React", action: boot.toString() },
+					{ name: "TB React (Cloaked)", action: cloak.toString() },
+					{ name: "TB System Recovery", action: recovery.toString() },
+				];
+				await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify(ent));
+				console.log("Added default bootentries");
+				entries = ent;
+			} else {
+				entries = JSON.parse(await window.tb.fs.promises.readFile("/bootentries.json", "utf8"));
 			}
 
-			const entries = JSON.parse(await window.tb.fs.promises.readFile("/bootentries.json", "utf8"));
+			const FilerDirExists = async (path: string): Promise<boolean> => {
+				return new Promise(resolve => {
+					Filer.fs.stat(path, (err: any, stats: any) => {
+						if (err) {
+							if (err.code === "ENOENT") {
+								resolve(false);
+							} else {
+								console.error(err);
+								resolve(false);
+							}
+						} else {
+							const exists = stats.type === "DIRECTORY";
+							resolve(exists);
+						}
+					});
+				});
+			};
+
 			// @ts-expect-error
 			const recreatedEntries = entries.map(entry => ({
 				...entry,
@@ -60,7 +80,13 @@ export default function Boot() {
 			}));
 			if (localStorage.getItem("setup") === "true" && (!(await dirExists("/system/etc/terbium/")) || !(await dirExists("/apps/system/")))) {
 				const bootent = recreatedEntries.filter((entry: any) => entry.name !== "TB React" && entry.name !== "TB React (Cloaked)");
-				setentries(bootent);
+				const fsxr = await FilerDirExists("/system/etc/terbium");
+				if (fsxr) {
+					sessionStorage.setItem("migrateFs", "true");
+					setentries(recreatedEntries);
+				} else {
+					setentries(bootent);
+				}
 			} else {
 				setentries(recreatedEntries);
 			}

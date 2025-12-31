@@ -1,8 +1,11 @@
 # <span style="color: #32ae62;">API Docs</span>
 
+**Last Updated**: v2.2.0 - 12/30/2025
+
 So you're looking to use Terbium APIs. Well, you're in the right place! Terbium has a decent amount of components which I will break down below. The pages will include a description of the functions and code examples.
 
 ## Table of Contents
+  - [Battery](#battery)
   - [Launcher](#launcher)
   - [Theme](#theme)
   - [Desktop](#desktop)
@@ -12,13 +15,46 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - [Proxy](#proxy)
   - [Notification](#notification)
   - [Dialog](#dialog)
+  - [Node](#node)
   - [Platform](#platform)
   - [Process](#process)
   - [Screen](#screen)
+  - [VFS](#vfs)
   - [System](#system)
-  - [Mediaisland](#mediaisland)
+  - [Terbium Cloud (tauth)](#terbium-cloud-tauth)
+  - [Mediaplayer](#mediaplayer)
   - [File](#file)
-  - [Additional Libraries](#aditional-libraries)
+  - [Additional Libraries](#additional-libraries)
+
+### Battery
+  - **showPercentage**
+    - Description: Shows the battery percentage in the system tray.
+    - Returns: `Promise<string>` - Returns "Success" if successful.
+    - Example:
+      ```javascript
+      await tb.battery.showPercentage();
+      console.log("Battery percentage is now visible");
+      ```
+
+  - **hidePercentage**
+    - Description: Hides the battery percentage in the system tray.
+    - Returns: `Promise<string>` - Returns "Success" if successful.
+    - Example:
+      ```javascript
+      await tb.battery.hidePercentage();
+      console.log("Battery percentage is now hidden");
+      ```
+
+  - **canUse**
+    - Description: Checks if the Battery Manager API is available on the current browser.
+    - Returns: `Promise<boolean>` - `true` if available, `false` otherwise.
+    - Example:
+      ```javascript
+      const canUseBattery = await tb.battery.canUse();
+      if (canUseBattery) {
+        console.log("Battery API is supported");
+      }
+      ```
 
 ### Launcher
   - **addApp**
@@ -274,9 +310,11 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
 
 ### ContextMenu
   - **create**
-    - Description: Creats a Context Menu at your desired location
+    - Description: Creates a Context Menu at your desired location
+    - Parameters:
+      - `props: { x: number, y: number, options: Array, titlebar?: boolean }` - Context menu properties.
     - Example:
-    ```javascript
+      ```javascript
       tb.contextmenu.create({
         x: 0,
         y: 0,
@@ -285,7 +323,14 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
           { text: "Option 2", click: () => console.log("Option 2 clicked") },
         ]
       });
-    ```
+      ```
+
+  - **close**
+    - Description: Closes the currently open context menu.
+    - Example:
+      ```javascript
+      tb.contextmenu.close();
+      ```
 
 ### User
   - **username**
@@ -358,21 +403,32 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
 
 ### Notification
   - **Message [🧪Experimental]**
-    - Description: The notification that has a input feild.
+    - Description: The notification that has an input field.
     - Parameters:
-      - `message, application, iconSrc, onOk (async), txt`
+      - `props: { message: string, application: string, iconSrc: string, onOk?: Function, txt?: string, time?: number }` - Notification properties.
     - Example:
-    ```javascript
-    tb.notification.Message({ message: "test", application: "System", iconSrc: "/assets/img/logo.png", txt: "fieldtext" })
-    ```
+      ```javascript
+      tb.notification.Message({ 
+        message: "test", 
+        application: "System", 
+        iconSrc: "/assets/img/logo.png", 
+        txt: "fieldtext" 
+      });
+      ```
+
   - **Toast**
     - Description: A simple notification
     - Parameters:
-      - `message, application, iconSrc, time`
+      - `props: { message: string, application: string, iconSrc: string, time?: number }` - Notification properties.
     - Example:
-    ```javascript
-    tb.notification.Toast({ message: "test", application: "System", iconSrc: "/assets/img/logo.png", time: "10000" })
-    ```
+      ```javascript
+      tb.notification.Toast({ 
+        message: "test", 
+        application: "System", 
+        iconSrc: "/assets/img/logo.png", 
+        time: 10000 
+      });
+      ```
 
 ### Dialog
   - **Alert**
@@ -387,7 +443,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **Message**
     - Description: Displays a message dialog with specified properties.
     - Parameters:
-      - `props: { title: string, defaultValue: string, onOk?: Function, onCancel?: Function }` - Message dialog properties.
+      - `props: { title: string, defaultValue?: string, onOk?: Function, onCancel?: Function }` - Message dialog properties.
     - Example:
       ```javascript
       await tb.dialog.Message({
@@ -398,14 +454,14 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       });
       ```
 
-    - **Select**
-      - Description: Lets you select a value from a dropdown
-      - Parameters:
-        - `props: { title: string, options: Array[{}] }`
-      - Example:
-      ```js
+  - **Select**
+    - Description: Lets you select a value from a dropdown
+    - Parameters:
+      - `props: { title: string, message?: string, options: Array<{text: string, value: any}>, onOk?: Function, onCancel?: Function }` - Select dialog properties.
+    - Example:
+      ```javascript
       await tb.dialog.Select({
-        title: "Enter the permission level you wish to set (Ex: Admin, User, Group, Public)",
+        title: "Enter the permission level you wish to set",
         options: [{
           text: "Admin",
           value: "admin"
@@ -420,15 +476,16 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
           value: "public"
         }],
         onOk: async (perm) => {
-          console.log(perm)
+          console.log(perm);
         }
-      })
+      });
       ```
 
   - **Auth**
     - Description: TB Permissions Authentication Dialog
     - Parameters:
-      - `props: { title: string, defaultUsername: string, onOk: Function, onCancel: Function }` - Auth dialog properties.
+      - `props: { title: string, defaultUsername?: string, onOk?: Function, onCancel?: Function }` - Auth dialog properties.
+      - `options?: { sudo: boolean }` - Additional options to indicate if this is for sudo authentication.
     - Example:
       ```javascript
       await tb.dialog.Auth({
@@ -436,19 +493,19 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
         defaultUsername: "Default value",
         onOk: (user, pass) => console.log("User and unhashed pass", user, pass),
         onCancel: () => console.log("Cancel clicked")
-      });
+      }, { sudo: false });
       ```
       
   - **Permissions**
     - Description: Yes or No Dialog
     - Parameters:
-      - `props: { title: string, message: string, onOk: Function, onCancel: Function }` - Permission dialog properties.
+      - `props: { title: string, message: string, onOk?: Function, onCancel?: Function }` - Permission dialog properties.
     - Example:
       ```javascript
       await tb.dialog.Permissions({
         title: "Example Message",
-        message: "Default value",
-        onOk: (value) => console.log("OK clicked with value:", value),
+        message: "Do you want to continue?",
+        onOk: () => console.log("OK clicked"),
         onCancel: () => console.log("Cancel clicked")
       });
       ```
@@ -456,24 +513,24 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **FileBrowser**
     - Description: Simple FileBrowser Dialog
     - Parameters:
-      - `props: { title: string, filter: string, onOk: Function }` - FileBrowser dialog properties.
+      - `props: { title: string, filter?: string, onOk?: Function, onCancel?: Function, local?: boolean }` - FileBrowser dialog properties.
     - Example:
       ```javascript
       await tb.dialog.FileBrowser({
-        title: "Example Message",
-        filter: ".<fileext>",
+        title: "Select a file",
+        filter: ".txt",
         onOk: (value) => console.log("File selected:", value),
       });
       ```
 
   - **DirectoryBrowser**
-    - Description: Simple FileBrowser Dialog
+    - Description: Simple Directory Browser Dialog
     - Parameters:
-      - `props: { title: string, filter: string, onOk: Function }` - FileBrowser dialog properties.
+      - `props: { title: string, defualtDir?: string, onOk?: Function, onCancel?: Function, local?: boolean }` - DirectoryBrowser dialog properties.
     - Example:
       ```javascript
       await tb.dialog.DirectoryBrowser({
-        title: "Example Message",
+        title: "Select a directory",
         defualtDir: "/home/",
         onOk: (value) => console.log("Selected Dir:", value),
       });
@@ -482,36 +539,36 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **SaveFile**
     - Description: Simple File Saving Dialog
     - Parameters:
-      - `props: { title: string, defualtDir: string, filename: string, onOk: Function }` - SaveFile dialog properties.
+      - `props: { title: string, defualtDir?: string, filename?: string, onOk?: Function, onCancel?: Function, local?: boolean }` - SaveFile dialog properties.
     - Example:
-    ```javascript
-    await tb.dialog.SaveFile({
-      title: "Example Title",
-      defualtDir: "/home/",
-      filename: "tbdocs.md",
-      onOk: (value) => console.log("Saved file to:", value)
-    })
-    ```
+      ```javascript
+      await tb.dialog.SaveFile({
+        title: "Example Title",
+        defualtDir: "/home/",
+        filename: "tbdocs.md",
+        onOk: (value) => console.log("Saved file to:", value)
+      });
+      ```
 
-  - **cropper**
+  - **Cropper**
     - Description: Image Cropper
     - Parameters:
-      - `props: { title: string, img: string, onOk: Function }` - Cropper dialog properties. **Image should be formated in Base64**
-    - Returns `Promise<string>` - Resolves image when the dialog is closed
+      - `props: { title: string, img: string, onOk?: Function }` - Cropper dialog properties. **Image should be formatted in Base64**
+    - Returns: `Promise<string>` - Resolves image when the dialog is closed
     - Example:
-    ```js
-    await tb.dialog.Cropper({
-      title: "Example Title",
-      img: "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",
-      onOk: (img) => console.log("new image", img)
-    })
-    ```
+      ```javascript
+      await tb.dialog.Cropper({
+        title: "Example Title",
+        img: "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==",
+        onOk: (img) => console.log("new image", img)
+      });
+      ```
 
   - **WebAuth**
     - Description: Simple Authentication Dialog (for use in Web Authentication)
     - Parameters:
-      - `props: { title: string, defaultUsername: string, onOk: Function, onCancel: Function }` - Auth dialog properties.
-    > <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> Because by default the password is not hashed, please encrypt the password if you plan to store the password using `tb.crypto`
+      - `props: { title: string, message?: string, defaultUsername?: string, onOk?: Function, onCancel?: Function }` - Auth dialog properties.
+    > <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> Because by default the password is not hashed, please encrypt the password if you plan to store it using `tb.crypto`
     - Example:
       ```javascript
       await tb.dialog.WebAuth({
@@ -523,65 +580,273 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       ```
 
 ### Node
-  - **WebContainer**
-    - Description: The current webContainer instance for the Node Subsystem, Refer to [here](https://webcontainers.io/api) for Documentation.
+  - **webContainer**
+    - Description: The current webContainer instance for the Node Subsystem. Refer to [WebContainers API](https://webcontainers.io/api) for documentation.
+    - Returns: `WebContainer` instance
   
   - **servers**
-    - Description: The Map of ports running on the Node Subsystem
+    - Description: A Map of ports running on the Node Subsystem
+    - Returns: `Map<number, string>` - Map of port numbers to server URLs
 
   - **isReady**
-    - Description: Returns weither or not the WebContainer is booted or not.
-    - Returns: boolean
+    - Description: Returns whether or not the WebContainer is booted.
+    - Returns: `boolean` - `true` if ready, `false` otherwise
 
   - **start**
     - Description: Boots the WebContainer
+    - Example:
+      ```javascript
+      tb.node.start();
+      console.log("WebContainer started");
+      ```
  
   - **stop**
     - Description: Stops the WebContainer
+    - Returns: `boolean` - `true` if stopped successfully
+    - Example:
+      ```javascript
+      try {
+        const stopped = tb.node.stop();
+        console.log("WebContainer stopped");
+      } catch (err) {
+        console.error("No WebContainer is running");
+      }
+      ```
 
 ### Platform
   - **getPlatform**
     - Description: Gets the current platform the user is using
-    - Returns: `Promise<string>` - Platform (mobile or desktop)
+    - Returns: `Promise<string>` - Platform ("mobile" or "desktop")
     - Example:
       ```javascript
-      const platform = await tb.platform.getPlatform()
-      console.log(`your on: ${platform}`)
+      const platform = await tb.platform.getPlatform();
+      console.log(`You're on: ${platform}`);
       ```
 
 ### Process
   - **kill**
     - Description: Kill a process with a PID
+    - Parameters:
+      - `config: string | number` - The PID of the process to kill
     - Example:
-    ```javascript
-    tb.process.kill('69420')
-    ```
+      ```javascript
+      tb.process.kill('69420');
+      ```
+
   - **list**
-    - Description: List all avalible processes
-    - Returns: `Array[Windows]`
+    - Description: List all available processes
+    - Returns: `Object` - Object containing all windows with their details (name, wid, icon, pid, src, size)
     - Example:
-    ```javascript
-    tb.process.list()
-    ```
+      ```javascript
+      const processes = tb.process.list();
+      console.log(processes);
+      ```
+
   - **create**
     - Description: Creates a new Process (Can also be used to generate a generic window)
     - Example:
-    ```javascript
-    tb.process.create()
-    ```
+      ```javascript
+      tb.process.create();
+      ```
+
   - **parse**
     - **build [🧪Experimental]**
       - Description: Building Process of Custom TML Formatted Apps
-      - Returns: `Promise<string>`
+      - Parameters:
+        - `src: string` - Source string to build
+      - Returns: `void`
+      - Example:
+        ```javascript
+        tb.process.parse.build("<tml>...</tml>");
+        ```
 
 ### Screen
-  - **capture**
-    - Description: Creates a screenshot of your screen
-    > <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> The screen capture API is used with the alt shift keybind. Be aware of that to prevent any conflictions with your application if you use a similar keybind.
+  - **captureScreen**
+    - Description: Creates a screenshot of your screen and saves it
+    - Returns: `Promise<void>`
+    > <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> The screen capture API is used with the alt+shift keybind. Be aware of that to prevent any conflictions with your application if you use a similar keybind.
     - Example: 
-    ```javascript
-    tb.screen.capture()
+      ```javascript
+      await tb.screen.captureScreen();
+      ```
+
+### VFS
+  - **servers**
+    - Description: A Map of the current users webdav servers
+    - Returns: `Object` - VFSOperations
+    - Example:
+    ```js
+    for (const instance of tb.vfs.servers) {
+      const davInfo = instance[1];
+      // Use dav instance info here including a already established connection if one is availible
+    }
     ```
+  - **currentServer**
+    - Description: The current WebDav server to use for operations
+    - Returns: `Object` - VFSOperations
+    - Example:
+    ```js
+    const client = tb.vfs.currentServer.connection.client;
+    // use webdav methods here or use VFS Operations as a drop in for working between TFS and VFS
+    ```
+
+  - **create**
+    - Description: (async) Returns a new instance of VFS, You will probably not use this function unless your directly modifying terbiums codebase
+    - Returns: `Promise<VFS>`
+    - Example:
+    ```js
+    const vfs = await vfs.create();
+    ```
+
+  - **mount**
+    - Description: Mounts the inputed server from vfs.servers
+    - Parameters:
+      - `serverName: string` - the name of the server to mount
+    - Example:
+    ```js
+    await tb.vfs.mount("servername");
+    ```
+
+  - **mountAll**
+    - Description: Mounts all servers avalible in vfs.servers
+    - Example:
+    ```js
+    await tb.vfs.mountAll()
+    ```
+
+  - **addServer**
+    - Description: Adds a server to the users WebDav server list
+    - Parameters:
+      - `Server: ServerInfo[]` - The server information to put in
+    - Example:
+    ```js
+    await tb.vfs.addServer({
+      name: "any name you want for the drive name";
+      url: "https://somedavendpoint.com/";
+      username: "IloveTerbiumDev";
+      password: "XSTARSwasHere";
+    })
+    ```
+
+  - **removeServer**
+    - Description: Removes a server from the users WebDav server list
+    - Parameters:
+      - `ServerName: string` - The name of the server to remove
+    - Example:
+    ```js
+    await tb.vfs.removeServer("webdav1")
+    ```
+
+  - **setServer**
+    - Description: Sets `currentServer` to the requested server
+    - Parameters:
+      - `ServerName: string` - The server name to set the server too **NOTE** Server MUST be mounted to perform this operation.
+    - Example:
+    ```js
+    await tb.vfs.setServer("webdav1");
+    // tb.vfs.currentServer is now the instance of VFSOperations that webdav1 uses
+    ```
+
+  - **whatFS**
+    - Description: Returns Either TFS or VFSOperations as the suitable File System for you to use for said drive
+    - Parameters:
+      - `Path: string` - The path to check
+    - Example:
+    ```js
+    const fs = await tb.vfs.whatFS("/mnt/dav");
+    // FS is VFSOperations
+    const fs = await tb.vfs.whatFS("/home/XSTARS/");
+    // FS is TFS.fs
+    ```
+
+  - **VFSOperations**
+    > **NOTE:** This is **NOT** an API. This is an instance representing File System actions, WebDav client information, etc., and is referenced by several APIs above.
+    #### Properties
+
+    - **client**: `WebDavClient`  
+      The WebDav Client Interface.
+
+    #### Methods
+
+    - **readdir(path, callback)**
+      - Reads the contents of a directory at the given path.
+      - **Parameters:**
+        - `path: string` — Directory path.
+        - `callback: (err: any, files?: any[]) => void` — Called with error or array of file names.
+
+    - **readFile(path, callback)**
+      - Reads the contents of a file as text.
+      - **Parameters:**
+        - `path: string` — File path.
+        - `callback: (err: any, data?: string) => void` — Called with error or file data.
+
+    - **writeFile(path, data, callback)**
+      - Writes data to a file, replacing its contents.
+      - **Parameters:**
+        - `path: string` — File path.
+        - `data: string | ArrayBuffer` — Data to write.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **delete(path, callback)**
+      - Deletes a file at the specified path.
+      - **Parameters:**
+        - `path: string` — File path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **rename(oldPath, newPath, callback)**
+      - Renames or moves a file from `oldPath` to `newPath`.
+      - **Parameters:**
+        - `oldPath: string` — Original file path.
+        - `newPath: string` — New file path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **createDirectory(path, callback)**
+      - Creates a new directory at the specified path.
+      - **Parameters:**
+        - `path: string` — Directory path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **exists(path, callback)**
+      - Checks if a file or directory exists at the given path.
+      - **Parameters:**
+        - `path: string` — Path to check.
+        - `callback: (err: any, exists?: boolean) => void` — Called with error or existence boolean.
+
+    - **stat(path, callback)**
+      - Retrieves metadata/statistics about a file or directory.
+      - **Parameters:**
+        - `path: string` — Path to check.
+        - `callback: (err: any, stat?: any) => void` — Called with error or stat object.
+
+    - **copy(source, destination, callback)**
+      - Copies a file from source to destination.
+      - **Parameters:**
+        - `source: string` — Source file path.
+        - `destination: string` — Destination file path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **unlink(path, callback)**
+      - Deletes a file at the specified path (alias for `delete`).
+      - **Parameters:**
+        - `path: string` — File path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **move(source, destination, callback)**
+      - Moves a file from source to destination (alias for `rename`).
+      - **Parameters:**
+        - `source: string` — Source file path.
+        - `destination: string` — Destination file path.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    - **appendFile(path, data, callback)**
+      - Appends data to the end of a file.
+      - **Parameters:**
+        - `path: string` — File path.
+        - `data: string | ArrayBuffer` — Data to append.
+        - `callback: (err: any) => void` — Called with error if any.
+
+    All of these functions also have a Promises variant that has the exact same syntax except it does not have a callback instead you use it asynchronously
+
 
 ### System
   - **version**
@@ -595,8 +860,8 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
 
   - **instance**
     - **repo**
-      - Description: Lists the version of Terbium
-      - Returns: `string` - Terbium version.
+      - Description: Lists the repository information
+      - Returns: `string` - Repository information.
       - Example:
         ```javascript
         const repo = tb.system.instance.repo;
@@ -604,120 +869,276 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
         ```
 
     - **hash**
-      - Description: Lists the version of Terbium
-      - Returns: `string` - Terbium version.
+      - Description: Lists the git commit hash
+      - Returns: `string` - Git hash.
       - Example:
         ```javascript
         const hash = tb.system.instance.hash;
-        console.log("The git hash is: " + hash)
+        console.log("The git hash is: " + hash);
         ```
 
   - **openApp**
-    - Description: Opens a Installed Application
+    - Description: Opens an installed application
     - Parameters:
       - `pkg: string` - Package ID of the app.
-      - `options: { rest?: string }` - Additional options for the app.
     - Example:
       ```javascript
-      await tb.system.openApp("com.tb.app", { rest: "args" });
+      await tb.system.openApp("browser");
       ```
+
   - **download**
     - Description: Download a file from the internet to the File System
+    - Parameters:
+      - `url: string` - URL of the file to download.
+      - `location: string` - Destination path in the file system.
+    - Returns: `Promise<void>`
     - Example: 
-    ```javascript
-    tb.system.download('https://example.com/example.txt', '/home/exampledownload.txt')
-    ```
+      ```javascript
+      await tb.system.download('https://example.com/example.txt', '/home/exampledownload.txt');
+      ```
+
   - **exportfs**
-    - Description: Exports the file system as a zip
+    - Description: Exports the file system as a zip file
+    - Parameters:
+      - `startPath?: string` - Starting path (default: "/")
+      - `filename?: string` - Output filename (default: "tbfs.backup.zip")
+    - Returns: `Promise<string>` - URL of the created zip file
     - Example:
       ```javascript
-      tb.system.exportfs();
+      await tb.system.exportfs("/home/", "backup.zip");
       ```
+
   - **users**
     - **list**
-    - Description: Lists all Users
-    - Example:
-      ```javascript
-      tb.system.users.list();
-      ```
-    - **add**
-    - Description: Adds a user to the system
-    - Example:
-      ```javascript
-      tb.system.users.add({ 'XSTARS', 'terbium1234', 'data:base64...', 'Admin' })
-      ```
-    - **remove**
-    - Description: Removes a user from the system
-    - Example:
-      ```javascript
-      tb.system.users.remove('XSTARS')
-      ```
-    - **update**
-    - Description: Updates the data on a user
-    - Example:
-      ```javascript
-      tb.system.users.add({ 'XSTARS', 'iloveterbium', 'data:base64...', 'Public' })
-      ```
-  - **bootmenu**
-    - **addEntry**
-    - Description: Adds a boot entry into the Terbium Boot Menu
-    - Parameters:
-      - `name: string`: The name to display in the boot menu
-      - `bootfile: string`: The File to boot from (FilePath)
-    - Example:
-      ```javascript
-      tb.system.bootmenu.addEntry({ 'Legacy TB', '/legacy-tb/index.html' });
-      ```
-    - **addEntry**
-      - Description: Removes a boot entry from the Terbium Boot Menu
+      - Description: Lists all users in the system
+      - Returns: `Promise<string[]>` - Array of usernames
       - Example:
         ```javascript
-        tb.system.bootmenu.removeEntry({ 'Legacy TB' });
+        const users = await tb.system.users.list();
+        console.log(users);
         ```
 
-### Mediaisland
-  > <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> Make sure that the endtime for the music and video island is formated in seconds and not milliseconds or minutes, that applies to the time parameter (start time) as well.
+    - **add**
+      - Description: Adds a user to the system
+      - Parameters:
+        - `user: { username: string, password: string, pfp: string, perm: string, securityQuestion?: { question: string, answer: string } }` - User information
+      - Returns: `Promise<boolean>` - `true` if successful
+      - Example:
+        ```javascript
+        await tb.system.users.add({ 
+          username: 'XSTARS', 
+          password: 'terbium1234', 
+          pfp: 'data:image/png;base64,...', 
+          perm: 'Admin' 
+        });
+        ```
+
+    - **remove**
+      - Description: Removes a user from the system
+      - Parameters:
+        - `id: string` - Username to remove
+      - Returns: `Promise<boolean>` - `true` if successful
+      - Example:
+        ```javascript
+        await tb.system.users.remove('XSTARS');
+        ```
+
+    - **update**
+      - Description: Updates the data on a user
+      - Parameters:
+        - `user: { username: string, password?: string, pfp?: string, perm?: string, securityQuestion?: object }` - User information to update
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.users.update({ 
+          username: 'XSTARS', 
+          password: 'iloveterbium', 
+          pfp: 'data:image/png;base64,...', 
+          perm: 'Public' 
+        });
+        ```
+
+    - **renameUser**
+      - Description: Renames a user in the system
+      - Parameters:
+        - `olduser: string` - Current username
+        - `newuser: string` - New username
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.users.renameUser('oldname', 'newname');
+        ```
+
+  - **bootmenu**
+    - **addEntry**
+      - Description: Adds a boot entry into the Terbium Boot Menu
+      - Parameters:
+        - `name: string` - The name to display in the boot menu
+        - `file: string` - The file to boot from (file path)
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.bootmenu.addEntry('Legacy TB', '/legacy-tb/index.html');
+        ```
+
+    - **removeEntry**
+      - Description: Removes a boot entry from the Terbium Boot Menu
+      - Parameters:
+        - `name: string` - The name of the entry to remove
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.bootmenu.removeEntry('Legacy TB');
+        ```
+
+### Terbium Cloud (tauth)
+  - **client**
+    - Description: The authentication client instance for Terbium Cloud services
+    - Returns: `AuthClient` - Authentication client object
+
+  - **signIn**
+    - Description: Sign in to Terbium Cloud Account
+    - Returns: `Promise<any>` - Sign-in response with user data
+    - Example:
+      ```javascript
+      try {
+        const result = await tb.tauth.signIn();
+        console.log("Signed in:", result.data.user);
+      } catch (err) {
+        console.error("Sign-in cancelled or failed:", err);
+      }
+      ```
+
+  - **signOut**
+    - Description: Sign out from Terbium Cloud Account
+    - Returns: `Promise<void>`
+    - Example:
+      ```javascript
+      await tb.tauth.signOut();
+      console.log("Signed out successfully");
+      ```
+
+  - **isTACC**
+    - Description: Checks if the current user (or specified user) is a Terbium Cloud Account
+    - Parameters:
+      - `username?: string` - Username to check (defaults to current user)
+    - Returns: `Promise<boolean>` - `true` if user has TACC, `false` otherwise
+    - Example:
+      ```javascript
+      const hasTACC = await tb.tauth.isTACC();
+      if (hasTACC) {
+        console.log("User has a Terbium Cloud Account");
+      }
+      ```
+
+  - **updateInfo**
+    - Description: Updates Terbium Cloud Account information
+    - Parameters:
+      - `user: Partial<User>` - User information to update (can include username, pfp, email, password, etc.)
+    - Returns: `Promise<void>`
+    - Example:
+      ```javascript
+      await tb.tauth.updateInfo({ 
+        username: "newusername", 
+        pfp: "data:image/png;base64,..." 
+      });
+      ```
+
+  - **getInfo**
+    - Description: Gets Terbium Cloud Account information
+    - Parameters:
+      - `username?: string` - Username to get info for (defaults to current user)
+    - Returns: `Promise<User | null>` - User account information or null if not found
+    - Example:
+      ```javascript
+      const info = await tb.tauth.getInfo();
+      if (info) {
+        console.log("Account info:", info);
+      }
+      ```
+
+  - **sync**
+    - **retrieve**
+      - Description: Retrieves synced data from Terbium Cloud (settings, WebDAV servers, etc.)
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.tauth.sync.retrieve();
+        console.log("Settings synced from cloud");
+        ```
+
+    - **upload**
+      - Description: Uploads local settings and data to Terbium Cloud
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.tauth.sync.upload();
+        console.log("Settings uploaded to cloud");
+        ```
+
+    - **isSyncing**
+      - Description: Indicates whether a sync operation is currently in progress
+      - Returns: `boolean` - `true` if syncing, `false` otherwise
+      - Example:
+        ```javascript
+        if (tb.tauth.sync.isSyncing) {
+          console.log("Sync in progress...");
+        }
+        ```
+
+### Mediaplayer
+  > <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> Make sure that the endtime for the music and video island is formatted in seconds and not milliseconds or minutes, that applies to the time parameter (start time) as well.
+  
   - **music**
     - Description: Activates the Music optimized Media Island
     - Parameters:
-      - `props: artist: string, track_name: string, album: string, time: number<seconds>, background: string<url>, endtime: number<seconds>`
+      - `props: { artist: string, track_name: string, album?: string, time?: number, background: string, endtime: number }` - Music player properties.
     - Example:
-        ```javascript
-        tb.mediaplayer.music({
-          track_name: "Starboy",
-          artist: "The Weeknd",
-          endtime: "231",
-          background: "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/02/17/ce/0217ce34-c2b9-3d3d-1dec-586db3948753/23UMGIM22526.rgb.jpg/1200x1200bf-60.jpg"
-        })
-        ```
+      ```javascript
+      tb.mediaplayer.music({
+        track_name: "Starboy",
+        artist: "The Weeknd",
+        endtime: 231,
+        background: "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/02/17/ce/0217ce34-c2b9-3d3d-1dec-586db3948753/23UMGIM22526.rgb.jpg/1200x1200bf-60.jpg"
+      });
+      ```
 
   - **video**
     - Description: Activates the Video optimized Media Island
     - Parameters:
-      - `props: creator: string, video_name: string, time: number<seconds>, background: string<url>, endtime: number<seconds>`
+      - `props: { creator: string, video_name: string, time?: number, background: string, endtime: number }` - Video player properties.
     - Example:
-        ```javascript
-        tb.mediaplayer.video({
-          video_name: "The school smp one year later...",
-          creator: "Playingallday383",
-          endtime: "1273",
-          background: "https://i.ytimg.com/vi/kiKmSq4gxNU/hqdefault.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLA7dIIlpVKFjx2yZTkZYqptEzKbSA"
-        })
-        ```
+      ```javascript
+      tb.mediaplayer.video({
+        video_name: "The school smp one year later...",
+        creator: "Playingallday383",
+        endtime: 1273,
+        background: "https://i.ytimg.com/vi/kiKmSq4gxNU/hqdefault.jpg"
+      });
+      ```
 
   - **hide**
     - Description: Hides the media island.
+    - Example:
+      ```javascript
+      tb.mediaplayer.hide();
+      ```
 
   - **pauseplay**
     - Description: Pauses or plays the content connected to the media island
+    - Example:
+      ```javascript
+      tb.mediaplayer.pauseplay();
+      ```
 
   - **isExisting**
     - Description: Tells you if the media island is already present or not.
-    - Returns: `boolean` - True or False
+    - Returns: `Promise<boolean>` - `true` if media island exists, `false` otherwise
     - Example:
       ```javascript
-      if (tb.mediaplayer.isExisting === true) {
-        console.log('womp womp, A island is already there')
+      const exists = await tb.mediaplayer.isExisting();
+      if (exists) {
+        console.log('A media island is already there');
       }
       ```
 
@@ -727,49 +1148,58 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Description: Opens a file with the associated app based on file type.
       - Parameters:
         - `path: string` - Path of the file.
-        - `type: string` - Type of the file.
+        - `type: string` - Type of the file (e.g., "text", "image", "video", "audio", "pdf", "webpage").
+      - Returns: `Promise<void>`
       - Example:
         ```javascript
-        tb.file.handler.openFile("/home/example.txt", "text");
-        ```
-    - **addHandler**
-      - Description: Adds a handler to a file
-      - Returns: `Promise<Boolean>` Returns true if succeeded
-      - Parameters:
-        - `appname: string` - App Name
-        - `extension: string` - File Extension
-      - Example:
-        ```javascript
-        tb.file.handler.addHandler("ruffle", "swf")
-        ```
-    - **removeHandler**
-      - Description: Adds a handler to a file
-      - Returns: `Promise<Boolean>` Returns true if succeeded
-      - Parameters:
-        - `extension: string` - File Extension
-      - Example:
-        ```javascript
-        tb.file.handler.removeHandler("swf")
+        await tb.file.handler.openFile("/home/example.txt", "text");
         ```
 
-### Aditional Libraries
+    - **addHandler**
+      - Description: Adds a handler for a specific file extension
+      - Parameters:
+        - `app: string` - App name to handle the file type
+        - `ext: string` - File extension
+      - Returns: `Promise<boolean>` - Returns `true` if succeeded
+      - Example:
+        ```javascript
+        await tb.file.handler.addHandler("ruffle", "swf");
+        ```
+
+    - **removeHandler**
+      - Description: Removes a handler for a specific file extension
+      - Parameters:
+        - `ext: string` - File extension
+      - Returns: `Promise<boolean>` - Returns `true` if succeeded
+      - Example:
+        ```javascript
+        await tb.file.handler.removeHandler("swf");
+        ```
+
+### Additional Libraries
   - **[libcurl](https://www.npmjs.com/package/libcurl.js)**
-    - Description: The libcurl networking API, Used in Anura.net, TB Apps and tb.system.download
+    - Description: The libcurl networking API, used in Anura.net, TB Apps and tb.system.download
   - **[fflate](https://www.npmjs.com/package/fflate)**
-    - Description: ZIP tool for Anura File Manager and TB Files App
+    - Description: ZIP compression/decompression tool for Anura File Manager and TB Files App
   - **fs**
-    - Description: Stub for Filer if its undefined in the application
+    - Description: File system API (TFS) for reading/writing files
   - **crypto**
-    - Description: Password Encryption Tool
+    - Description: Password encryption tool
     - Parameters:
-      - `pass` - Password to Encrypt
-      - `file?` - (optional) File to save the password to
-    - Returns: `Promise<string>`
-    - Example:
-      ```js
-        const gitpass = await tb.crypto('iloveterbium1234', '/system/var/git/cache.LOCK')
-      ```
-  - **liquor**
-    - Description: Stub for Anura if its undefined in the application
+      - `pass: string` - Password to encrypt
+      - `file?: string` - (optional) File to save the password to
+    - Returns: `Promise<string>` - Encrypted password or "Complete" if saved to file
+  - **vfs**
+    - Description: Virtual File System for WebDAV servers and remote storage
+  - **buffer**
+    - Description: Buffer utility (from Filer) for working with binary data
+  - **registry**
+    - Description: System registry for storing and retrieving system-wide configuration
+  - **sh**
+    - Description: Shell interface for file system operations
+  - **liquor (Anura)**
+    - Description: Anura subsystem stub, provides compatibility with Anura applications
+  - **lemonade (Electron)**
+    - Description: Electron API compatibility layer for desktop-like features
 
 Have fun developing for Terbium!

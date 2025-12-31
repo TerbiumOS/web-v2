@@ -1,47 +1,71 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accounts</title>
-    <script src="/assets/libs/filer.min.js"></script>
-    <script src="/assets/libs/tailwind.min.js"></script>
-    <style>
-        @font-face {
-            font-family: Inter;
-            src: url(/fonts/Inter.ttf);
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accounts</title>
+  <script src="/assets/libs/filer.min.js"></script>
+  <script src="/assets/libs/tailwind.min.js"></script>
+  <style>
+    @font-face {
+      font-family: Inter;
+      src: url(/fonts/Inter.ttf); }
 
-        * {
-            font-family: Inter;
-        }
+    * { font-family: Inter; }
 
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-thumb {
+      background: #ffffff30;
+      border-radius: 8px;
+      border: 2px solid transparent; }
+    ::-webkit-scrollbar-track { background: transparent; }
 
-        ::-webkit-scrollbar-thumb {
-            background-color: #ffffff30;
-            border-radius: 8px;
-            border: 2px solid transparent;
-        }
+    /* animations */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);} }
 
-        ::-webkit-scrollbar-track {
-            background-color: transparent;
-        }
-    </style>
+    /* page stuff */
+    .page-animate { animation: fadeUp 0.4s ease-out forwards; }
+    .accounts-animate { animation: fadeUp 0.35s ease-out 0.1s forwards; opacity:0; }
+
+    .current-accounts > div {
+      animation: scaleUp 0.3s ease-out forwards;
+      transition: transform 0.2s, box-shadow 0.3s; }
+    .current-accounts > div:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 10px rgba(255,255,255,0.7); }
+    .current-accounts svg[fill="#e74949"] {
+      transition: transform 0.2s, fill 0.2s; }
+    .current-accounts svg[fill="#e74949"]:hover {
+      transform: scale(1.2);
+      fill: #ff6969; }
+
+    /* button tingz */
+    button:hover { transform: scale(1.03); }
+
+    /* float first account automatically */
+    .current-accounts > div:first-child {
+      animation: float 5s ease-in-out infinite; }
+  </style>
 </head>
-    <body class="text-white h-full">
-        <div class="flex flex-col p-2 h-full gap-3">
-            <h2 class="text-2xl font-bold">Accounts</h2>
-            <div class="current-accounts flex flex-wrap gap-2 max-h-[166px] overflow-auto p-2 bg-[#ffffff18] rounded-lg"></div>
-            <button class="flex gap-1.5 w-max py-2 px-4 rounded-md bg-[#ffffff10] shadow-[0px_0px_6px_0px_#00000052,_inset_0_0_0_0.5px_#ffffff38] hover:bg-[#ffffff20] duration-150" onmousedown="createAccount()">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
-                    <path d="M5.25 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM2.25 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM18.75 7.5a.75.75 0 0 0-1.5 0v2.25H15a.75.75 0 0 0 0 1.5h2.25v2.25a.75.75 0 0 0 1.5 0v-2.25H21a.75.75 0 0 0 0-1.5h-2.25V7.5Z" />
-                </svg>
-                <span class="font-semibold">Create Account</span>
-            </button>
-        </div>
-        <script src="./index.js"></script>
-    </body>
+
+<body class="text-white h-full">
+  <div class="flex flex-col p-2 h-full gap-3 page-animate">
+    <h2 class="text-2xl font-bold">Account Manager</h2>
+
+    <div class="current-accounts flex flex-wrap gap-3 max-h-[200px] overflow-auto p-3 bg-[#ffffff18] rounded-lg accounts-animate">
+    </div>
+
+    <button class="flex gap-1.5 w-max py-2 px-4 rounded-md bg-[#ffffff10] shadow-[0_0_6px_0_#00000052,_inset_0_0_0_0.5px_#ffffff38] hover:bg-[#ffffff20]"
+      onmousedown="createAccount()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+        <path d="M5.25 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM2.25 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM18.75 7.5a.75.75 0 0 0-1.5 0v2.25H15a.75.75 0 0 0 0 1.5h2.25v2.25a.75.75 0 0 0 1.5 0v-2.25H21a.75.75 0 0 0 0-1.5h-2.25V7.5Z"/>
+      </svg>
+      <span class="font-semibold">Create Account</span>
+    </button>
+  </div>
+
+  <script src="./index.js"></script>
+</body>
 </html>

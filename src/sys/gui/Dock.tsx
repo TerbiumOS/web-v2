@@ -99,8 +99,11 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 			setUser(user);
 		};
 		window.addEventListener("accUpd", fetchUser);
-		fetchUser();
-		return () => window.removeEventListener("accUpd", fetchUser);
+		window.addEventListener("tfsready", fetchUser);
+		return () => {
+			window.removeEventListener("accUpd", fetchUser);
+			window.removeEventListener("tfsready", fetchUser);
+		};
 	}, []);
 
 	const filteredSysApps = systemApps.filter((item, index, self) => index === self.findIndex(t => t.title === item.title && t.icon === item.icon && t.src === item.src) && (!item.user || item.user === user.username));

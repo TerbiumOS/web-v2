@@ -1,12 +1,11 @@
 import { useEffect, useState, useRef } from "react";
-import { dirExists, fileExists } from "./sys/types";
+import { dirExists, fileExists, UserSettings } from "./sys/types";
 import { hash } from "./hash.json";
 import paths from "./installer.json";
 
 export default function Updater() {
 	const [progress, setProgress] = useState(0);
 	const statusref = useRef<HTMLDivElement>(null);
-	const isDev = import.meta.env.DEV;
 
 	async function copyDir(inp: string, dest: string, rn?: boolean) {
 		if (rn === true) {
@@ -18,7 +17,7 @@ export default function Updater() {
 		const totalFiles = files.length;
 		for (const [index, file] of files.entries()) {
 			const stats = await window.tb.fs.promises.stat(`${inp}/${file}`);
-			if (stats.isDirectory()) {
+			if (stats && stats.isDirectory()) {
 				await window.tb.fs.promises.mkdir(`${dest}/${file}`);
 				await copyDir(`${inp}/${file}`, `${dest}/${file}`, true);
 			} else {
@@ -268,16 +267,90 @@ export default function Updater() {
 				await window.tb.fs.promises.writeFile(`/apps/user/${user}/browser/favorites.json`, JSON.stringify([]));
 				await window.tb.fs.promises.writeFile(`/apps/user/${user}/browser/userscripts.json`, JSON.stringify([]));
 			}
+			// v2.2 Update
+			for (const user of await window.tb.fs.promises.readdir("/home/")) {
+				const usrSettings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${user}/settings.json`, "utf8"));
+				if (!usrSettings.window) {
+					usrSettings.window = {
+						winAccent: "#ffffff",
+						blurlevel: 18,
+						alwaysMaximized: false,
+						alwaysFullscreen: false,
+					};
+					usrSettings.showFPS = false;
+					await window.tb.fs.promises.writeFile(`/home/${user}/settings.json`, JSON.stringify(usrSettings, null, 4));
+				}
+			}
 			setProgress(80);
 			statusref.current!.innerText = "Cleaning up...";
 			setProgress(95);
 			await window.tb.sh.promises.rm(`/system/tmp/terb-upd/`, { recursive: true });
 			window.onbeforeunload = null;
+			sessionStorage.setItem("justUpdated", "true");
 			setProgress(100);
 			statusref.current!.innerText = "Restarting...";
 			window.location.reload();
 		};
-		main();
+		const migrateFs = async () => {
+			async function copyRecursive(src: string, dest: string) {
+				const entries = await Filer.fs.promises.readdir(src);
+				for (const entry of entries) {
+					const srcPath = src.endsWith("/") ? src + entry : src + "/" + entry;
+					const destPath = dest.endsWith("/") ? dest + entry : dest + "/" + entry;
+					const stat = await Filer.fs.promises.stat(srcPath);
+					if (stat.isDirectory()) {
+						if (!(await dirExists(destPath))) {
+							await window.tb.fs.promises.mkdir(destPath);
+						}
+						await copyRecursive(srcPath, destPath);
+					} else {
+						const fileBuffer = await Filer.fs.promises.readFile(srcPath);
+						await window.tb.fs.promises.writeFile(destPath, fileBuffer);
+					}
+					statusref.current!.innerText = `Copying: ${srcPath}`;
+				}
+			}
+			await copyRecursive("/", "/");
+			setProgress(85);
+			statusref.current!.innerText = "Recreating Desktop Shortcuts...";
+			for (const user of await window.tb.fs.promises.readdir("/home/")) {
+				const items = JSON.parse(await window.tb.fs.promises.readFile(`/home/${user}/desktop/.desktop.json`, "utf8"));
+				for (const item of items) {
+					const target = await Filer.fs.promises.readlink(item.item);
+					await window.tb.fs.promises.symlink(target, item.item);
+					statusref.current!.innerText = `Creating shortcut: ${item.name}.lnk...`;
+				}
+			}
+			setProgress(93);
+			statusref.current!.innerText = "Formatting Filer...";
+			const fsh = new Filer.fs.Shell();
+			for (const loc of await Filer.fs.promises.readdir("//")) {
+				await fsh.promises.rm(`/${loc}`, { recursive: true });
+			}
+			setProgress(99);
+			statusref.current!.innerText = "Migration complete!";
+			sessionStorage.removeItem("migrateFs");
+			statusref.current!.innerText = "Updating System Files...";
+			main();
+		};
+		const run = async () => {
+			if (!sessionStorage.getItem("migrateFs")) {
+				const existsOPFS = await dirExists("/system/etc/terbium/");
+				const existsFiler = await Filer.fs.promises
+					.stat("/system/etc/terbium/")
+					.then(() => true)
+					.catch(() => false);
+				if (!existsOPFS && existsFiler) {
+					sessionStorage.setItem("migrateFs", "true");
+				}
+			}
+			if (sessionStorage.getItem("migrateFs")) {
+				await migrateFs();
+			} else {
+				await main();
+			}
+		};
+		run();
 	}, []);
 
 	return (

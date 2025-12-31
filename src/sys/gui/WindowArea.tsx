@@ -57,22 +57,21 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	const [src, setSrc] = useState(config.src);
 	const originalSize = useRef<{ width: number; height: number } | null>(null);
 	const [isSnapped, setIsSnapped] = useState(false);
+	const [accent, setAccent] = useState<string>("#ffffff18");
+	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 	const mobileCheck = async () => {
-		if ((await window.tb.platform.getPlatform()) === "mobile") {
+		const platform = await window.tb.platform.getPlatform();
+		const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
+		if (platform === "mobile" || settings.window.alwaysMaximized === true) {
 			setMaximized(true);
 		}
 	};
 	mobileCheck();
-	
+
 	useEffect(() => {
 		const loadOptimizationSettings = async () => {
 			try {
-				const settings: UserSettings = JSON.parse(
-					await window.tb.fs.promises.readFile(
-						`/home/${sessionStorage.getItem("currAcc")}/settings.json`,
-						"utf8"
-					)
-				);
+				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
 				setOptimizationsEnabled(settings.windowOptimizations ?? true);
 			} catch (err) {
 				console.error("Failed to load optimization settings:", err);
@@ -110,6 +109,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				} else {
 					setSrc(`${window.location.origin}/service/${await window.tb.proxy.encode(config.src, "XOR")}`);
 				}
+				const instanceWin = (await window.anura.wm.getWeakRef(Number(config.pid))) || {};
 				Object.assign(srcRef.current?.contentWindow as typeof window, {
 					tb: window.parent.tb,
 					anura: window.parent.anura,
@@ -118,8 +118,11 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					ExternalApp: window.parent.ExternalApp,
 					ExternalLib: window.parent.ExternalLib,
 					Filer: window.parent.Filer,
+					instanceWindow: instanceWin,
 				});
 			} else {
+				console.log(await window.anura.wm.getWeakRef(Number(config.pid)));
+				const instanceWin = (await window.anura.wm.getWeakRef(Number(config.pid))) || {};
 				Object.assign(srcRef.current?.contentWindow as typeof window, {
 					tb: window.parent.tb,
 					anura: window.parent.anura,
@@ -128,6 +131,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					ExternalApp: window.parent.ExternalApp,
 					ExternalLib: window.parent.ExternalLib,
 					Filer: window.parent.Filer,
+					instanceWindow: instanceWin,
 				});
 			}
 		};
@@ -138,15 +142,18 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			if (e.detail === config.pid) {
 				if (srcRef.current?.contentWindow) {
 					srcRef.current.contentWindow.location.reload();
-					Object.assign(srcRef.current?.contentWindow, {
-						tb: window.parent.tb,
-						anura: window.parent.anura,
-						AliceWM: window.parent.AliceWM,
-						LocalFS: window.parent.LocalFS,
-						ExternalApp: window.parent.ExternalApp,
-						ExternalLib: window.parent.ExternalLib,
-						Filer: window.parent.Filer,
-					});
+					srcRef.current.onload = () => {
+						Object.assign(srcRef.current?.contentWindow!, {
+							tb: window.parent.tb,
+							anura: window.parent.anura,
+							AliceWM: window.parent.AliceWM,
+							LocalFS: window.parent.LocalFS,
+							ExternalApp: window.parent.ExternalApp,
+							ExternalLib: window.parent.ExternalLib,
+							Filer: window.parent.Filer,
+							instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)) || {},
+						});
+					};
 				}
 			}
 		};
@@ -234,7 +241,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 						click: () => {
 							if (srcRef.current?.contentWindow) {
 								srcRef.current.contentWindow.location.reload();
-								Object.assign(srcRef.current?.contentWindow as any, {
+								Object.assign(srcRef.current?.contentWindow!, {
 									tb: window.parent.tb,
 									anura: window.parent.anura,
 									AliceWM: window.parent.AliceWM,
@@ -242,6 +249,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 									ExternalApp: window.parent.ExternalApp,
 									ExternalLib: window.parent.ExternalLib,
 									Filer: window.parent.Filer,
+									instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)) || {},
 								});
 							}
 						},
@@ -261,21 +269,31 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			if (det.pid === config.pid) {
 				if (srcRef.current?.contentWindow) {
 					setSrc(det.url);
-					Object.assign(srcRef.current?.contentWindow, {
-						tb: window.parent.tb,
-						anura: window.parent.anura,
-						AliceWM: window.parent.AliceWM,
-						LocalFS: window.parent.LocalFS,
-						ExternalApp: window.parent.ExternalApp,
-						ExternalLib: window.parent.ExternalLib,
-						Filer: window.parent.Filer,
-					});
+					srcRef.current.onload = () => {
+						Object.assign(srcRef.current?.contentWindow!, {
+							tb: window.parent.tb,
+							anura: window.parent.anura,
+							AliceWM: window.parent.AliceWM,
+							LocalFS: window.parent.LocalFS,
+							ExternalApp: window.parent.ExternalApp,
+							ExternalLib: window.parent.ExternalLib,
+							Filer: window.parent.Filer,
+							instanceWindow: window.anura.wm.getWeakRef(Number(config.pid)) || {},
+						});
+					};
 				}
 			}
 		};
 		const minall: any = () => {
 			if (!minimized) setMinimized(true);
 		};
+
+		const updAccent = async () => {
+			const settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8")) as UserSettings;
+			setAccent(`${settings.window.winAccent}${settings.window.blurlevel}`);
+			setIsFullscreen(settings.window.alwaysFullscreen);
+		};
+		updAccent();
 
 		window.addEventListener("reload-win", reload as EventListener);
 		window.addEventListener("max-win", max as EventListener);
@@ -288,6 +306,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		window.addEventListener("upd-src", changeURL as EventListener);
 		window.addEventListener("sel-win", selWin as EventListener);
 		window.addEventListener("min-wins", minall);
+		window.addEventListener("upd-accent", updAccent);
 		if (regionRef.current) regionRef.current.addEventListener("contextmenu", debugCTX);
 		return () => {
 			window.removeEventListener("reload-win", reload as EventListener);
@@ -301,6 +320,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			window.removeEventListener("upd-src", changeURL as EventListener);
 			window.removeEventListener("sel-win", selWin as EventListener);
 			window.removeEventListener("min-wins", minall);
+			window.removeEventListener("upd-accent", updAccent);
 			if (regionRef.current) regionRef.current.removeEventListener("contextmenu", debugCTX);
 		};
 	}, []);
@@ -372,14 +392,14 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	// Disable pointer events on all iframes when dragging
 	useEffect(() => {
 		if (isDragging || isResizing) {
-			const iframes = document.querySelectorAll('iframe');
+			const iframes = document.querySelectorAll("iframe");
 			iframes.forEach(iframe => {
-				iframe.style.pointerEvents = 'none';
+				iframe.style.pointerEvents = "none";
 			});
 		} else {
-			const iframes = document.querySelectorAll('iframe');
+			const iframes = document.querySelectorAll("iframe");
 			iframes.forEach(iframe => {
-				iframe.style.pointerEvents = 'auto';
+				iframe.style.pointerEvents = "auto";
 			});
 		}
 	}, [isDragging, isResizing]);
@@ -486,15 +506,15 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				}
 				return;
 			}
-			
+
 			// With optimizations: use requestAnimationFrame
 			lastMouseEvent = e;
-			
+
 			if (!animationFrameId) {
 				animationFrameId = requestAnimationFrame(() => {
 					if (!lastMouseEvent) return;
 					const e = lastMouseEvent;
-					
+
 					setIsResizing(true);
 					setMaximized(false);
 					windowRef.current!.style.transform = "";
@@ -535,7 +555,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 							setY(newY);
 						}
 					}
-					
+
 					animationFrameId = null;
 				});
 			}
@@ -577,10 +597,10 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			className={`
             ${className ? className : ""}
             absolute
-            bg-[#ffffff18]
+            bg-[${accent}]
             rounded-lg shadow-window-shadow overflow-hidden
             ${minimized ? "translate-y-3 opacity-0 duration-150 hidden" : " translate-y-0 opacity-100"}
-            ${maximized ? "left-0 right-0 top-0 bottom-0 opacity-100 w-full h-full" : `w-[${width}px] h-[${height}px]`}
+            ${maximized ? `left-0 right-0 top-0 bottom-0 opacity-100 w-full ${isFullscreen ? "h-[106%]" : "h-full"}` : `w-[${width}px] h-[${height}px]`}
         `}
 			style={{
 				left: maximized ? "" : x,
@@ -592,6 +612,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					contain: "layout style paint",
 					willChange: isDragging || isResizing ? "transform, left, top" : "auto",
 				}),
+				backgroundColor: accent,
 			}}
 			onMouseDown={() => {
 				updateInfo({ appname: typeof config.title === "string" ? config.title : config.title?.text });
@@ -659,15 +680,15 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 							if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
 							return;
 						}
-						
+
 						// With optimizations: use requestAnimationFrame
 						lastMouseEvent = e;
-						
+
 						if (!animationFrameId) {
 							animationFrameId = requestAnimationFrame(() => {
 								if (!lastMouseEvent) return;
 								const e = lastMouseEvent;
-								
+
 								if (windowRef.current) windowRef.current.style.transform = "";
 								setIsDragging(true);
 								setMaximized(false);
@@ -676,7 +697,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 								handleSnap(newX, newY);
 								if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
 								if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
-								
+
 								animationFrameId = null;
 							});
 						}
@@ -737,12 +758,12 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					setMaximized(!maximized);
 				}}
 			>
-				<div className="flex gap-2 items-center">
+				<div className="flex gap-2 items-center flex-row w-full">
 					<img src={config.icon} alt="icon" className="w-5 h-5 pointer-events-none select-none" draggable={false} />
 					<span ref={titleRef} className="font-[680] pointer-events-none select-none">
 						{title}
 					</span>
-					{titlebarhtml && <div ref={thtmlref} />}
+					{titlebarhtml && <div className="w-[80%]" ref={thtmlref} />}
 				</div>
 				{controls ? (
 					<div className="controls flex gap-1">
@@ -988,7 +1009,6 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					key={config.src}
 					ref={srcRef}
 					src={src}
-					sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-downloads"
 					loading={optimizationsEnabled && minimized ? "lazy" : "eager"}
 					onLoad={() => {
 						if (config.message) {
@@ -998,18 +1018,16 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 						const sr2 = document.createElement("script");
 						sr1.src = "/cursor_changer.js";
 						sr2.src = "/media_interactions.js";
-						if (srcRef.current?.contentDocument) {
-							srcRef.current?.contentDocument.head.appendChild(sr2);
-							srcRef.current?.contentDocument.head.appendChild(sr1);
-						}
+						srcRef.current?.contentDocument?.head.appendChild(sr1);
+						srcRef.current?.contentDocument?.head.appendChild(sr2);
 					}}
 					referrerPolicy="no-referrer"
-					style={{ 
-						border: "none", 
-						all: "initial", 
-						width: "100%", 
-						height: "calc(100% - 40px)", 
-						pointerEvents: isMouseDown ? "none" : "auto", 
+					style={{
+						border: "none",
+						all: "initial",
+						width: "100%",
+						height: "calc(100% - 40px)",
+						pointerEvents: isMouseDown ? "none" : "auto",
 						userSelect: "none",
 						...(optimizationsEnabled && { contain: "strict" }),
 					}}
@@ -1022,12 +1040,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 // Memoize WindowElement to prevent unnecessary re-renders
 const MemoizedWindowElement = memo(WindowElement, (prevProps, nextProps) => {
 	// Only re-render if config changes in meaningful ways
-	return (
-		prevProps.config.wid === nextProps.config.wid &&
-		prevProps.config.zIndex === nextProps.config.zIndex &&
-		prevProps.config.focused === nextProps.config.focused &&
-		prevProps.className === nextProps.className
-	);
+	return prevProps.config.wid === nextProps.config.wid && prevProps.config.zIndex === nextProps.config.zIndex && prevProps.config.focused === nextProps.config.focused && prevProps.className === nextProps.className;
 });
 
 const DesktopItems = () => {
@@ -1075,7 +1088,7 @@ const DesktopItems = () => {
 						for (const item of addedItems) {
 							const itemExists = desktopConfig.some((config: any) => config.item === `/home/${user}/desktop/${item}`);
 							if (!itemExists) {
-								const type = (await window.tb.fs.promises.lstat(`/home/${user}/desktop/${item}`)).type.toLowerCase();
+								const type = (await window.tb.fs.promises.stat(`/home/${user}/desktop/${item}`))!.type.toLowerCase();
 								if (type === "symlink") {
 									const isAppJson = (await window.tb.fs.promises.readFile(await window.tb.fs.promises.readlink(`/home/${user}/desktop/${item}`))).includes("config");
 									desktopConfig.push({
@@ -1135,7 +1148,7 @@ const DesktopItems = () => {
 			var allItems: any[] = [];
 			const items = JSON.parse(await window.tb.fs.promises.readFile(`/home/${user}/desktop/.desktop.json`, "utf8"));
 			for (const item of items) {
-				const type = (await window.tb.fs.promises.lstat(item.item)).type.toLowerCase();
+				const type = (await window.tb.fs.promises.stat(item.item))!.type.toLowerCase();
 				const position = item.position;
 				if (type === "symlink") {
 					allItems.push({
@@ -1561,7 +1574,7 @@ const DesktopItems = () => {
 						id="desktop-item"
 						className="group relative size-max min-w-16 min-h-16 flex flex-col items-center justify-center p-2 text-sm font-medium text-wrap select-none"
 						onDoubleClick={() => {
-							createWindow(item.config);
+							createWindow({ ...item.config, wid: undefined });
 						}}
 						style={{
 							position: "absolute",
@@ -1594,7 +1607,7 @@ const DesktopItems = () => {
 										text: "Delete Shortcut",
 										click: async () => {
 											const stat = await window.tb.fs.promises.stat(`/home/${user}/desktop/${item.item}`);
-											if (stat.isDirectory()) {
+											if (stat!.isDirectory()) {
 												// @ts-expect-error
 												await new window.tb.fs.Shell().promises.rm(`/home/${user}/desktop/${item.item}`, { recursive: true });
 											} else {

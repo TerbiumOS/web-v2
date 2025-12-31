@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./styles/wifi.css";
 import { fileExists } from "../types";
-import { init } from "@paralleldrive/cuid2";
 
 interface Server {
 	id: string;
