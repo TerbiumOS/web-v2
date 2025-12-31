@@ -1,13 +1,14 @@
 # Security Policy
 
-### Supported Terbium Versions
+## Supported Terbium Versions
 
 | Version | Supported |
 | ------- | --------- |
-| 2.0.0-beta  | ❌ |
+| 2.0.0-beta | ❌ |
 | 2.0.0-beta2 | ❌ |
-| 2.0.0-beta3 | ✅ |
-| 2.1.0  | ✅ |
+| 2.0.0-beta3 | ❌ |
+| 2.1.0 | ✅ |
+| 2.2.0 | ✅ |
 
 If your version of terbium is unsupported, please do not make a GitHub Issue about it. Please update to a newer version if your running a unsupported version.
 
