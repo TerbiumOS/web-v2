@@ -56,31 +56,31 @@ export const fileExists = async (path: string): Promise<boolean> => {
 };
 
 export async function unzip(path: string, target: string) {
-		const response = await fetch("/fs/" + path);
-		const zipFileContent = await response.arrayBuffer();
-		if (!(await dirExists(target))) {
-			// @ts-expect-error types
-			await window.tb.fs.promises.mkdir(target, { recursive: true });
-		}
-		const compressedFiles = fflate.unzipSync(new Uint8Array(zipFileContent));
-		for (const [relativePath, content] of Object.entries(compressedFiles)) {
-			const fullPath = `${target}/${relativePath}`;
-			const pathParts = fullPath.split("/");
-			let currentPath = "";
-			for (let i = 0; i < pathParts.length; i++) {
-				currentPath += pathParts[i] + "/";
-				if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
-					await window.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.tb.buffer.from(content), "arraybuffer");
-				} else if (!(await dirExists(currentPath))) {
-					await window.tb.fs.promises.mkdir(currentPath);
-				}
-			}
-			if (relativePath.endsWith("/")) {
-				await window.tb.fs.promises.mkdir(fullPath);
-			}
-		}
-		return "Done!";
+	const response = await fetch("/fs/" + path);
+	const zipFileContent = await response.arrayBuffer();
+	if (!(await dirExists(target))) {
+		// @ts-expect-error types
+		await window.tb.fs.promises.mkdir(target, { recursive: true });
 	}
+	const compressedFiles = fflate.unzipSync(new Uint8Array(zipFileContent));
+	for (const [relativePath, content] of Object.entries(compressedFiles)) {
+		const fullPath = `${target}/${relativePath}`;
+		const pathParts = fullPath.split("/");
+		let currentPath = "";
+		for (let i = 0; i < pathParts.length; i++) {
+			currentPath += pathParts[i] + "/";
+			if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
+				await window.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.tb.buffer.from(content), "arraybuffer");
+			} else if (!(await dirExists(currentPath))) {
+				await window.tb.fs.promises.mkdir(currentPath);
+			}
+		}
+		if (relativePath.endsWith("/")) {
+			await window.tb.fs.promises.mkdir(fullPath);
+		}
+	}
+	return "Done!";
+}
 
 /**
  * @interface User
