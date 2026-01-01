@@ -41,7 +41,7 @@ export async function BuildApps() {
 								data.config.src = data.config.src.replace(`/apps/${data.name.toLowerCase()}.tapp/`, `/fs/apps/system/${data.name.toLowerCase()}.tapp/`);
 								data.config.icon = data.config.icon.replace(`/apps/${data.name.toLowerCase()}.tapp/`, `/fs/apps/system/${data.name.toLowerCase()}.tapp/`);
 							}
-							result.push({ name: data.name, config: {...data.wmArgs, src: `/fs/apps/system/${data.name.toLowerCase()}.tapp/${data.wmArgs.src}`, icon: `/fs/apps/system/${data.name.toLowerCase()}.tapp/${data.wmArgs.icon}`} });
+							result.push({ name: data.name, config: { ...data.wmArgs, src: `/fs/apps/system/${data.name.toLowerCase()}.tapp/${data.wmArgs.src}`, icon: `/fs/apps/system/${data.name.toLowerCase()}.tapp/${data.wmArgs.icon}` } });
 						}
 					} catch (t) {
 						consola.error(`Error parsing ${indexFilePath}:`, t instanceof Error ? t.message : String(t));
