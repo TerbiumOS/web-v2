@@ -6,6 +6,7 @@ import { TServer } from "./server";
 import { version } from "./package.json";
 import open from "open";
 import { exec } from "child_process";
+import AdmZip from "adm-zip";
 
 consola.info("Bootstrapping TerbiumOS [v" + version + "]");
 
@@ -36,15 +37,25 @@ export async function BuildApps() {
 					try {
 						const data = JSON.parse(fs.readFileSync(indexFilePath, "utf-8"));
 						if (data.name && data.config) {
-							if (data.name !== "Browser") {
-								data.config.src = data.config.src.replace(`/apps/${data.name.toLowerCase()}.tapp/`, `/fs/apps/system/${data.name.toLowerCase()}.tapp/`);
-								data.config.icon = data.config.icon.replace(`/apps/${data.name.toLowerCase()}.tapp/`, `/fs/apps/system/${data.name.toLowerCase()}.tapp/`);
-							}
 							result.push({ name: data.name, config: data.config });
 						}
 					} catch (t) {
-						consola.error(`Error parsing ${indexFilePath}:`, t.message);
+						consola.error(`Error parsing ${indexFilePath}:`, t instanceof Error ? t.message : String(t));
 					}
+				}
+			} else if (i.name.endsWith(".zip")) {
+				const zipPath = path.join(dir, i.name);
+				try {
+					const zip = new AdmZip(zipPath);
+					const configEntry = zip.getEntry(".tbconfig");
+					if (configEntry) {
+						const configData = JSON.parse(configEntry.getData().toString("utf-8"));
+						if (configData.title && configData.wmArgs) {
+							result.push({ name: configData.title, config: configData.wmArgs });
+						}
+					}
+				} catch (t) {
+					consola.error(`Error reading ${zipPath}:`, t instanceof Error ? t.message : String(t));
 				}
 			}
 		});
@@ -115,6 +126,8 @@ export async function CreateAppsPaths() {
 			} else {
 				collectPaths(appPath);
 			}
+		} else if (app.name.toLowerCase().endsWith(".zip")) {
+			accmp.push(app.name);
 		}
 	});
 
