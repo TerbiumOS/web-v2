@@ -40,14 +40,16 @@ export async function BuildApps() {
 							if (data.name !== "Browser") {
 								data.config.src = data.config.src.replace(`/apps/${data.name.toLowerCase()}.tapp/`, `/fs/apps/system/${data.name.toLowerCase()}.tapp/`);
 								data.config.icon = data.config.icon.replace(`/apps/${data.name.toLowerCase()}.tapp/`, `/fs/apps/system/${data.name.toLowerCase()}.tapp/`);
+							} else {
+								return;
 							}
-							result.push({ name: data.name, config: { ...data.wmArgs, src: `/fs/apps/system/${data.name.toLowerCase()}.tapp/${data.wmArgs.src}`, icon: `/fs/apps/system/${data.name.toLowerCase()}.tapp/${data.wmArgs.icon}` } });
+							result.push({ name: data.name, config: data.config });
 						}
 					} catch (t) {
 						consola.error(`Error parsing ${indexFilePath}:`, t instanceof Error ? t.message : String(t));
 					}
 				}
-			} else if (i.name.endsWith(".zip")) {
+			} else if (i.name.endsWith(".tapp.zip")) {
 				const zipPath = path.join(dir, i.name);
 				try {
 					const zip = new AdmZip(zipPath);
@@ -130,7 +132,7 @@ export async function CreateAppsPaths() {
 			} else {
 				collectPaths(appPath);
 			}
-		} else if (app.name.toLowerCase().endsWith(".zip")) {
+		} else if (app.name.toLowerCase().endsWith(".tapp.zip")) {
 			accmp.push(app.name);
 		}
 	});

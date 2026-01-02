@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { dirExists, fileExists, UserSettings } from "./sys/types";
+import { dirExists, fileExists, unzip, UserSettings } from "./sys/types";
 import { hash } from "./hash.json";
 import paths from "./installer.json";
 
@@ -113,6 +113,16 @@ export default function Updater() {
 					} catch (err) {
 						console.error(err);
 					}
+				} else if (item.toString().endsWith(".tapp.zip")) {
+					const res = await fetch(`/apps/${item.toString()}`);
+					if (!res.ok) {
+						console.error(`Failed to fetch /apps/${item.toString()}: ${res.status} ${res.statusText}`);
+						continue;
+					}
+					const data = await res.arrayBuffer();
+					await window.tb.fs.promises.writeFile(`/apps/system/${item}`, window.tb.buffer.from(data));
+					await unzip(`/apps/system/${item}`, `/apps/system/${item.slice(0, -4)}`);
+					await window.tb.fs.promises.unlink(`/apps/system/${item}`);
 				} else {
 					const path = `/apps/system/${item.toString()}`;
 					const dir = path.substring(0, path.lastIndexOf("/"));
