@@ -204,7 +204,7 @@ async function handleCommand(name, args) {
 		scriptRes = await fetch(scriptPaths[0]);
 	} catch {
 		try {
-			scriptRes = await fetch(scriptPathss[1]);
+			scriptRes = await fetch(scriptPaths[1]);
 		} catch (error) {
 			displayError(`Failed to fetch script: ${error.message}`);
 			createNewCommandInput();
