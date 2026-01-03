@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { version } from "../package.json";
-import { unzipSync } from "fflate";
 import { libcurl } from "libcurl.js";
-import { dirExists } from "./sys/types";
+import { dirExists, unzip } from "./sys/types";
 import { hash } from "./hash.json";
 import apps from "./apps.json";
 
@@ -258,33 +257,6 @@ export default function Recovery() {
 		};
 		fauxput.click();
 	};
-
-	async function unzip(path: string, target: string) {
-		const response = await fetch("/fs/" + path);
-		const zipFileContent = await response.arrayBuffer();
-		if (!(await dirExists(target))) {
-			// @ts-expect-error types
-			await window.tb.fs.promises.mkdir(target, { recursive: true });
-		}
-		const compressedFiles = unzipSync(new Uint8Array(zipFileContent));
-		for (const [relativePath, content] of Object.entries(compressedFiles)) {
-			const fullPath = `${target}/${relativePath}`;
-			const pathParts = fullPath.split("/");
-			let currentPath = "";
-			for (let i = 0; i < pathParts.length; i++) {
-				currentPath += pathParts[i] + "/";
-				if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
-					await window.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.tb.buffer.from(content), "arraybuffer");
-				} else if (!(await dirExists(currentPath))) {
-					await window.tb.fs.promises.mkdir(currentPath);
-				}
-			}
-			if (relativePath.endsWith("/")) {
-				await window.tb.fs.promises.mkdir(fullPath);
-			}
-		}
-		return "Done!";
-	}
 
 	async function download(url: string, location: string) {
 		if (!window.loadLock) {
