@@ -3,23 +3,12 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@4.19.0/css/xterm.css" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@latest/css/xterm.css" />
         <link rel="stylesheet" href="./terminal.css" />
         <title>terminal</title>
     </head>
     <body>
-        <script src="/assets/libs/filer.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/xterm@4.19.0/lib/xterm.js"></script>
         <script src="https://cdn.jsdelivr.net/gh/lit/dist@3/all/lit-all.min.js" type="module"></script>
-        <script type="importmap">
-            {
-                "imports": {
-                    "yargs-parser": "https://unpkg.com/yargs-parser@22.0.0/browser.js",
-                    "iso-http": "/assets/libs/http.min.js",
-                    "git": "https://cdn.jsdelivr.net/npm/isomorphic-git@latest/+esm"
-                }
-            }
-        </script>
         <script src="./index.js" type="module"></script>
         <script src="./terminal_com.js"></script>
         <div id="term">

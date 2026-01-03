@@ -76,3 +76,8 @@ body {
 .error-text {
 	color: #e64343;
 }
+
+.xterm-helpers {
+	position: fixed;
+    opacity: 0;
+}

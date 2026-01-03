@@ -1,6 +1,7 @@
-import parser from "yargs-parser";
-import http from "iso-http";
-import git from "git";
+import parser from "https://unpkg.com/yargs-parser@22.0.0/browser.js";
+import http from "https://cdn.jsdelivr.net/npm/isomorphic-git@1.36.1/http/web/index.js";
+import git from "https://cdn.jsdelivr.net/npm/isomorphic-git@latest/+esm";
+import { Terminal } from "https://cdn.jsdelivr.net/npm/@xterm/xterm@latest/+esm";
 
 /**
  * @typedef {import("yargs-parser").Arguments} argv
@@ -64,17 +65,18 @@ let path = `/home/${sessionStorage.getItem("currAcc")}/`;
 const HISTORY_LIMIT = 1000;
 const HISTORY_FILE = ".bash_history";
 
-const term = new Terminal();
+const term = new Terminal({
+	theme: {
+		background: "#000000",
+		cursor: "#ffffff",
+		selection: "#444444",
+	},
+	cursorBlink: true,
+});
 document.addEventListener("DOMContentLoaded", async () => {
 	term.open(document.getElementById("term"));
 	term.writeln(`TerbiumOS [Version: ${tb.system.version()}]`);
 	term.writeln(`Type 'help' for a list of commands.`);
-	term.setOption("theme", {
-		background: "#000000",
-		cursor: "#ffffff",
-		selection: "#444444",
-	});
-	term.setOption("cursorBlink", true);
 	window.term = term;
 
 	// Load command history
@@ -158,8 +160,10 @@ document.addEventListener("DOMContentLoaded", async () => {
  * @returns {void}
  */
 function resizeTerm() {
-	const cols = Math.floor(window.innerWidth / term._core._renderService.dimensions.actualCellWidth);
-	const rows = Math.floor(window.innerHeight / term._core._renderService.dimensions.actualCellHeight);
+	const charWidth = term._core._renderService.dimensions.css.cell.width;
+	const charHeight = term._core._renderService.dimensions.css.cell.height;
+	const cols = Math.floor(window.innerWidth / charWidth);
+	const rows = Math.floor(window.innerHeight / charHeight);
 	term.resize(cols, rows);
 }
 setTimeout(resizeTerm, 50);
