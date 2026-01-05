@@ -40,8 +40,6 @@ export async function BuildApps() {
 							if (data.name !== "Browser") {
 								data.config.src = data.config.src.replace(`/apps/${data.name.toLowerCase()}.tapp/`, `/fs/apps/system/${data.name.toLowerCase()}.tapp/`);
 								data.config.icon = data.config.icon.replace(`/apps/${data.name.toLowerCase()}.tapp/`, `/fs/apps/system/${data.name.toLowerCase()}.tapp/`);
-							} else {
-								return;
 							}
 							result.push({ name: data.name, config: data.config });
 						}
