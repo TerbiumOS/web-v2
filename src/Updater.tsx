@@ -290,6 +290,24 @@ export default function Updater() {
 					usrSettings.showFPS = false;
 					await window.tb.fs.promises.writeFile(`/home/${user}/settings.json`, JSON.stringify(usrSettings, null, 4));
 				}
+				// hotfix for v2.2.1 & migration from v2.0.0-beta.x to v2.1.x
+				if (await fileExists(`/home/${user}/desktop/browser.lnk`)) {
+					await window.tb.fs.promises.writeFile(`/home/${user}/desktop/browser.lnk`, "symlink:/apps/system/browser.tapp/index.json:file");
+					const desktopItems = JSON.parse(await window.tb.fs.promises.readFile(`/home/${user}/desktop/.desktop.json`, "utf8"));
+					const hasBrowserShortcut = desktopItems.some((item: any) => item.name?.toLowerCase?.() === "browser" || item.item === `/home/${user}/desktop/browser.lnk`);
+					if (!hasBrowserShortcut) {
+						desktopItems.push({
+							name: "Browser",
+							item: `/home/${user}/desktop/browser.lnk`,
+							position: {
+								custom: false,
+								top: desktopItems.length,
+								left: 0,
+							},
+						});
+						await window.tb.fs.promises.writeFile(`/home/${user}/desktop/.desktop.json`, JSON.stringify(desktopItems, null, 4));
+					}
+				}
 			}
 			if (!(await dirExists("/system/etc/terbium/taccs.json"))) {
 				await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify({}));
