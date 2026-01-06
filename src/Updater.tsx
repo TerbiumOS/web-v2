@@ -309,7 +309,7 @@ export default function Updater() {
 					}
 				}
 			}
-			if (!(await dirExists("/system/etc/terbium/taccs.json"))) {
+			if (!(await fileExists("/system/etc/terbium/taccs.json"))) {
 				await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify({}));
 			}
 			setProgress(80);
