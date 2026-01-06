@@ -1,4 +1,4 @@
-import { AliceWM } from "../AliceWM";
+import { AliceWM, WindowInformation } from "../AliceWM";
 import { AppManifest } from "../Anura";
 import { App } from "./App";
 import { LocalFS } from "../api/LocalFS";
@@ -43,9 +43,7 @@ export class ExternalApp extends App {
 		//  TODO: have a "allowmultiinstance" option in manifest? it might confuse users, some windows open a second, some focus
 		// if (this.windowinstance) return;
 		if (this.manifest.type === "auto") {
-			// @ts-expect-error
-			const anura: Anura = window.anura;
-			const win = anura.wm.create(this, this.manifest.wininfo as unknown as object);
+			const win = await window.anura.wm.create(this, this.manifest.wininfo as unknown as WindowInformation);
 
 			const iframe = document.createElement("iframe");
 			// CSS injection here but it's no big deal
@@ -88,7 +86,7 @@ export class ExternalApp extends App {
 			}
 
 			Object.assign(iframe.contentWindow as any, {
-				anura,
+				anura: window.anura,
 				AliceWM,
 				ExternalApp,
 				LocalFS,
@@ -151,7 +149,7 @@ export class ExternalApp extends App {
 					process: win,
 				},
 				open: async (url: string | URL) => {
-					const browser = await anura.import("anura.libbrowser");
+					const browser = await window.anura.import("anura.libbrowser");
 					browser.openTab(url);
 				},
 			});
@@ -209,9 +207,7 @@ export class ExternalApp extends App {
 			return;
 		} else if (this.manifest.type === "webview") {
 			// FOR INTERNAL USE ONLY
-			// @ts-expect-error
-			const anura: Anura = window.anura;
-			const win = anura.wm.create(this, this.manifest.wininfo as unknown as object);
+			const win = await window.anura.wm.create(this, this.manifest.wininfo as unknown as WindowInformation);
 
 			const iframe = document.createElement("iframe");
 			// CSS injection here but it's no big deal

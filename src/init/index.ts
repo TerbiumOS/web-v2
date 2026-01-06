@@ -20,6 +20,7 @@ export async function init() {
 		await window.tb.fs.promises.mkdir("/apps");
 		await window.tb.fs.promises.mkdir("/apps/system");
 		await copyfs();
+		window.dispatchEvent(new CustomEvent("oobe-setupstage", { detail: "Initializing File System..." }));
 		await window.tb.fs.promises.mkdir("/apps/user");
 		await window.tb.fs.promises.writeFile("/apps/web_apps.json", JSON.stringify({ apps: [] }));
 	} else {
