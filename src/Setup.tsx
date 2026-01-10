@@ -1064,7 +1064,6 @@ export default function Setup() {
 			if (ranRef.current) return;
 			ranRef.current = true;
 			const updateActionText = (e: CustomEvent) => {
-				console.log("Setup Stage:", e.detail);
 				if (actionRef.current) {
 					actionRef.current.innerHTML = e.detail;
 				}

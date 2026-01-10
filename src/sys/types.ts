@@ -540,6 +540,11 @@ export interface COM {
 			addHandler(app: string, ext: string): void;
 			removeHandler(ext: string): void;
 		};
+		icons: {
+			get(ext: string): Promise<string>;
+			set(ext: string, iconPath: string): Promise<boolean>;
+			remove(ext: string): Promise<boolean>;
+		}
 	};
 	node: {
 		webContainer: import("@webcontainer/api").WebContainer | {};

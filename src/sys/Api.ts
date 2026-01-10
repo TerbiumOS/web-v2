@@ -1214,83 +1214,90 @@ export default async function Api() {
 		file: {
 			handler: {
 				openFile: async (path: string, type: string) => {
+					const message = { type: "process", path: path };
 					const settings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
 					const fApps = settings["fileAssociatedApps"];
-					const app = fApps[type];
-					try {
-						let appInfo;
-						if (await fileExists(`/apps/system/${app}/.tbconfig`)) {
-							appInfo = JSON.parse(await window.tb.fs.promises.readFile(`/apps/system/${app}/.tbconfig`, "utf8"));
-						} else if (await fileExists(`/apps/user/${await window.tb.user.username()}/${app}/.tbconfig`)) {
-							appInfo = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${await window.tb.user.username()}/${app}/.tbconfig`, "utf8"));
-						} else {
-							appInfo = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${await window.tb.user.username()}/${app}/index.json`, "utf8"));
-						}
-						const message = { type: "process", path: path };
-						createWindow({
-							title: appInfo.name,
-							src: appInfo.src,
-							size: {
-								width: 460,
-								height: 460,
-								minWidth: 160,
-								minHeight: 160,
-							},
-							icon: appInfo.icon,
-							message: JSON.stringify(message),
-						});
-					} catch (err: any) {
-						if (err.code === "ENOENT") {
-							const message = { type: "process", path: path };
-							switch (type) {
-								case "text":
-									createWindow({
-										title: "Text Editor",
-										src: "/fs/apps/system/text editor.tapp/index.html",
-										size: {
-											width: 460,
-											height: 460,
-											minWidth: 160,
-											minHeight: 160,
-										},
-										icon: "/fs/apps/system/text editor.tapp/icon.svg",
-										message: JSON.stringify(message),
-									});
-									break;
-								case "image":
-								case "video":
-								case "audio":
-								case "pdf":
-									createWindow({
-										title: "Media Viewer",
-										src: "/fs/apps/system/media viewer.tapp/index.html",
-										size: {
-											width: 460,
-											height: 460,
-											minWidth: 160,
-											minHeight: 160,
-										},
-										icon: "/fs/apps/system/media viewer.tapp/icon.svg",
-										message: JSON.stringify(message),
-									});
-									break;
-								case "webpage":
-									createWindow({
-										title: "Terbium Webview",
-										src: `/fs/${path}`,
-										size: {
-											width: 460,
-											height: 460,
-											minWidth: 160,
-											minHeight: 160,
-										},
-										icon: "/apps/browser.tapp/icon.svg",
-									});
-									break;
+					const customHandler = fApps?.[type];
+					if (customHandler) {
+						try {
+							const installed = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
+							let appInfo = installed.find((a: any) => a.name.toLowerCase() === customHandler.toLowerCase());
+							if (!appInfo) {
+								try {
+									const altAppInfo = installed.find((a: any) => a.name.toLowerCase() === `${customHandler.toLowerCase()}.tapp`);
+									if (altAppInfo) {
+										appInfo = altAppInfo;
+									}
+								} catch {
+									console.error(`App "${customHandler}" not found in installed apps`);
+								}
 							}
-						} else {
-							throw err;
-						}
+							if (appInfo.user === "System") return;
+							const appConfigRaw = JSON.parse(await window.tb.fs.promises.readFile(appInfo.config, "utf8"));							
+							let windowConfig;
+							if (appConfigRaw.wmArgs) {
+								windowConfig = { ...appConfigRaw.wmArgs };
+								const configDir = appInfo.config.replace(/\/(\.tbconfig|index\.json)$/, "");
+								if (windowConfig.src && !windowConfig.src.startsWith("/")) {
+									windowConfig.src = `/fs/${configDir}/${windowConfig.src}`;
+								}
+								if (windowConfig.icon && !windowConfig.icon.startsWith("/")) {
+									windowConfig.icon = `/fs/${configDir}/${windowConfig.icon}`;
+								}
+							}
+							
+							createWindow({
+								...windowConfig,
+								message: JSON.stringify(message),
+							});
+							return;
+						} catch {};
+					}
+					switch (type) {
+						case "text":
+							createWindow({
+								title: "Text Editor",
+								src: "/fs/apps/system/text editor.tapp/index.html",
+								size: {
+									width: 460,
+									height: 460,
+									minWidth: 160,
+									minHeight: 160,
+								},
+								icon: "/fs/apps/system/text editor.tapp/icon.svg",
+								message: JSON.stringify(message),
+							});
+							break;
+						case "image":
+						case "video":
+						case "audio":
+						case "pdf":
+							createWindow({
+								title: "Media Viewer",
+								src: "/fs/apps/system/media viewer.tapp/index.html",
+								size: {
+									width: 460,
+									height: 460,
+									minWidth: 160,
+									minHeight: 160,
+								},
+								icon: "/fs/apps/system/media viewer.tapp/icon.svg",
+								message: JSON.stringify(message),
+							});
+							break;
+						case "webpage":
+							createWindow({
+								title: "Terbium Webview",
+								src: `/fs/${path}`,
+								size: {
+									width: 460,
+									height: 460,
+									minWidth: 160,
+									minHeight: 160,
+								},
+								icon: "/apps/browser.tapp/icon.svg",
+							});
+							break;
 					}
 				},
 				addHandler: async (app: string, ext: string) => {
@@ -1306,6 +1313,36 @@ export default async function Api() {
 					return true;
 				},
 			},
+			icons: {
+				get: async (ext: string) => {
+					const fileExts = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/file-icons.json", "utf8"));
+					const extName = fileExts["ext-to-name"][ext.toLowerCase()];
+					if (extName && fileExts["name-to-path"][extName]) {
+						return fileExts["name-to-path"][extName];
+					}
+					return fileExts["name-to-path"]["Unknown"];
+				},
+				set: async (ext: string, iconPath: string) => {
+					const fileExts = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/file-icons.json", "utf8"));
+					const normalizedExt = ext.toLowerCase().replace(/^\./, "");
+					const extName = normalizedExt.charAt(0).toUpperCase() + normalizedExt.slice(1);
+					fileExts["ext-to-name"][normalizedExt] = extName;
+					fileExts["name-to-path"][extName] = iconPath;
+					await window.tb.fs.promises.writeFile("/system/etc/terbium/file-icons.json", JSON.stringify(fileExts, null, 2), "utf8");
+					return true;
+				},
+				remove: async (ext: string) => {
+					const fileExts = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/file-icons.json", "utf8"));
+					const normalizedExt = ext.toLowerCase().replace(/^\./, "");
+					const extName = fileExts["ext-to-name"][normalizedExt];
+					if (extName) {
+						delete fileExts["ext-to-name"][normalizedExt];
+						delete fileExts["name-to-path"][extName];
+						await window.tb.fs.promises.writeFile("/system/etc/terbium/file-icons.json", JSON.stringify(fileExts, null, 2), "utf8");
+					}
+					return true;
+				}
+			}
 		},
 	};
 
