@@ -1233,7 +1233,7 @@ export default async function Api() {
 								}
 							}
 							if (appInfo.user === "System") return;
-							const appConfigRaw = JSON.parse(await window.tb.fs.promises.readFile(appInfo.config, "utf8"));							
+							const appConfigRaw = JSON.parse(await window.tb.fs.promises.readFile(appInfo.config, "utf8"));
 							let windowConfig;
 							if (appConfigRaw.wmArgs) {
 								windowConfig = { ...appConfigRaw.wmArgs };
@@ -1245,13 +1245,13 @@ export default async function Api() {
 									windowConfig.icon = `/fs/${configDir}/${windowConfig.icon}`;
 								}
 							}
-							
+
 							createWindow({
 								...windowConfig,
 								message: JSON.stringify(message),
 							});
 							return;
-						} catch {};
+						} catch {}
 					}
 					switch (type) {
 						case "text":
@@ -1341,8 +1341,8 @@ export default async function Api() {
 						await window.tb.fs.promises.writeFile("/system/etc/terbium/file-icons.json", JSON.stringify(fileExts, null, 2), "utf8");
 					}
 					return true;
-				}
-			}
+				},
+			},
 		},
 	};
 

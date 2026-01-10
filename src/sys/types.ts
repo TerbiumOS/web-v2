@@ -544,7 +544,7 @@ export interface COM {
 			get(ext: string): Promise<string>;
 			set(ext: string, iconPath: string): Promise<boolean>;
 			remove(ext: string): Promise<boolean>;
-		}
+		};
 	};
 	node: {
 		webContainer: import("@webcontainer/api").WebContainer | {};
