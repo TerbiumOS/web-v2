@@ -6,7 +6,7 @@ const tb_dialog = tb.dialog;
 
 tb_island.addControl({
 	text: "File",
-	appname: "media-viewer",
+	appname: "Media Viewer",
 	id: "media-file",
 	click: () => {
 		const ctx = document.createElement("div");
@@ -56,7 +56,7 @@ tb_island.addControl({
 });
 tb_island.addControl({
 	text: "Computer",
-	appname: "com.tb.media-viewer",
+	appname: "Media Viewer",
 	id: "media-computer",
 	click: () => {
 		const ctx = document.createElement("div");

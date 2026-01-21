@@ -1,4 +1,13 @@
 import * as id3 from "https://unpkg.com/id3js@latest/lib/id3.js";
+import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.min.mjs";
+
+if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
+	console.log("Setting up PDF.js worker");
+	pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.worker.min.mjs";
+} else if (pdfjsLib) {
+	console.log("Setting up PDF.js worker src");
+	pdfjsLib.GlobalWorkerOptions = { workerSrc: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.worker.min.mjs" };
+}
 
 window.addEventListener("load", async () => {
 	parent.postMessage(JSON.stringify({ type: "ready" }), "*");
@@ -209,7 +218,7 @@ async function openFile(url, ext, fileName, dav) {
 			</div>
 			<style>
 				.custom-video-player {
-					width: 75%;
+					width: 90%;
 					height: 75%;
 					background: #000;
 					border-radius: 8px;
@@ -413,7 +422,7 @@ async function openFile(url, ext, fileName, dav) {
 			</div>
 			<style>
 				.custom-audio-player {
-					width: 75%;
+					width: 82%;
 					height: 200px;
 					background: #000;
 					border-radius: 8px;

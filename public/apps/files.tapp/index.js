@@ -582,6 +582,8 @@ const cm = async e => {
 						parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "video");
 					} else if (data["audio"].includes(ext)) {
 						parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "audio");
+					} else if (data["pdf"].includes(ext)) {
+						parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "pdf");
 					} else if (ext.toLowerCase() === "tapp.zip") {
 						try {
 							const path = e.target.getAttribute("path");
@@ -726,6 +728,8 @@ const cm = async e => {
 											parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "video");
 										} else if (data["audio"].includes(ext)) {
 											parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "audio");
+										} else if (data["pdf"].includes(ext)) {
+											parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "pdf");
 										}
 										break;
 									case "webview":
@@ -800,6 +804,8 @@ const cm = async e => {
 										parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "video");
 									} else if (data["audio"].includes(ext)) {
 										parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "audio");
+									} else if (data["pdf"].includes(ext)) {
+										parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "pdf");
 									}
 									break;
 								case "webview":
@@ -1522,6 +1528,8 @@ const createPath = async (title, path, type) => {
 				parent.window.tb.file.handler.openFile(item.getAttribute("path"), "video");
 			} else if (data["audio"].includes(ext)) {
 				parent.window.tb.file.handler.openFile(item.getAttribute("path"), "audio");
+			} else if (data["pdf"].includes(ext)) {
+				parent.window.tb.file.handler.openFile(item.getAttribute("path"), "pdf");
 			} else if (ext.toLowerCase() === "tapp.zip") {
 				try {
 					const path = e.target.getAttribute("path");
@@ -1666,6 +1674,8 @@ const createPath = async (title, path, type) => {
 									parent.window.tb.file.handler.openFile(item.getAttribute("path"), "video");
 								} else if (data["audio"].includes(ext)) {
 									parent.window.tb.file.handler.openFile(item.getAttribute("path"), "audio");
+								} else if (data["pdf"].includes(ext)) {
+									parent.window.tb.file.handler.openFile(item.getAttribute("path"), "pdf");
 								}
 								break;
 							case "webview":
@@ -1994,6 +2004,8 @@ const openPath = async (path, override = false) => {
 											parent.window.tb.file.handler.openFile(itemPath, "video");
 										} else if (data["audio"].includes(ext)) {
 											parent.window.tb.file.handler.openFile(itemPath, "audio");
+										} else if (data["pdf"].includes(ext)) {
+											parent.window.tb.file.handler.openFile(itemPath, "pdf");
 										}
 										break;
 									case "webview":
