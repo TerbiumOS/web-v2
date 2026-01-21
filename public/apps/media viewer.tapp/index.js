@@ -626,7 +626,7 @@ async function openFile(url, ext, fileName, dav) {
 					console.log("Error reading ID3 tags:", e);
 				}
 			}
-		}
+		};
 		audioElem.addEventListener("play", p);
 		p();
 		audioElem.play();
