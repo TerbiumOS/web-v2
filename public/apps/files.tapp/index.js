@@ -517,6 +517,7 @@ const getItemDetails = async path => {
 			let owner = stats.uid;
 			let mode = stats.mode;
 			let version = stats.version;
+			let mime = stats.mime;
 
 			let message = JSON.stringify({
 				type: "item-details",
@@ -525,6 +526,7 @@ const getItemDetails = async path => {
 					name: name,
 					type: type,
 					size: size,
+					mime: mime,
 					created: created,
 					modified: modified,
 					accessed: accessed,
@@ -1647,7 +1649,6 @@ const createPath = async (title, path, type) => {
 				const parts = name.split(".");
 				const extKey = parts.length > 2 ? parts.slice(-2).join(".").toLowerCase() : parts.slice(-1).join(".").toLowerCase();
 				const allHandlers = JSON.parse(await window.parent.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"))["fileAssociatedApps"] || {};
-				console.log(allHandlers, extKey);
 				if (allHandlers[extKey]) {
 					parent.window.tb.file.handler.openFile(path, extKey);
 					return;

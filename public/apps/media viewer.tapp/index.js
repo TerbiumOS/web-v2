@@ -11,6 +11,11 @@ if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
 
 window.addEventListener("load", async () => {
 	parent.postMessage(JSON.stringify({ type: "ready" }), "*");
+	setTimeout(() => {
+		if (!asked) {
+			showFileBrowser();
+		}
+	}, 100);
 });
 
 async function openFile(url, ext, fileName, dav) {
@@ -81,28 +86,23 @@ async function openFile(url, ext, fileName, dav) {
 		imgObj.onload = () => {
 			initializeCanvas();
 		};
-
 		function initializeCanvas() {
 			canvas.width = window.innerWidth;
 			canvas.height = window.innerHeight;
 			drawImageWithOffsetAndScale();
 		}
-
 		window.addEventListener("resize", function () {
 			initializeCanvas();
 		});
-
 		canvas.addEventListener("mousedown", function (e) {
 			isDragging = true;
 			isMouseDown = true;
 			startCoords = { x: e.clientX, y: e.clientY };
 		});
-
 		window.addEventListener("mouseup", function () {
 			isDragging = false;
 			isMouseDown = false;
 		});
-
 		canvas.addEventListener("mousemove", function (e) {
 			if (isDragging) {
 				const deltaX = e.clientX - startCoords.x;
@@ -113,18 +113,15 @@ async function openFile(url, ext, fileName, dav) {
 				drawImageWithOffsetAndScale();
 			}
 		});
-
 		canvas.addEventListener("touchstart", e => {
 			isDragging = true;
 			isMouseDown = true;
 			startCoords = { x: e.touches[0].clientX, y: e.touches[0].clientY };
 		});
-
 		window.addEventListener("touchend", () => {
 			isDragging = false;
 			isMouseDown = false;
 		});
-
 		canvas.addEventListener("touchmove", e => {
 			if (isDragging) {
 				const deltaX = e.touches[0].clientX - startCoords.x;
@@ -135,17 +132,14 @@ async function openFile(url, ext, fileName, dav) {
 				drawImageWithOffsetAndScale();
 			}
 		});
-
 		canvas.addEventListener("mouseleave", () => {
 			isDragging = false;
 		});
-
 		canvas.addEventListener("mouseenter", () => {
 			if (isMouseDown) {
 				isDragging = true;
 			}
 		});
-
 		canvas.addEventListener("wheel", function (e) {
 			const zoomSpeed = 0.1;
 			e.preventDefault();
@@ -156,7 +150,6 @@ async function openFile(url, ext, fileName, dav) {
 			}
 			drawImageWithOffsetAndScale();
 		});
-
 		function drawImageWithOffsetAndScale() {
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			const newWidth = imgObj.width * scale;
@@ -167,41 +160,143 @@ async function openFile(url, ext, fileName, dav) {
 		}
 	} else if (exts["pdf"].includes(ext)) {
 		document.querySelector(".media").innerHTML = "";
-		const canvas = document.createElement("canvas");
-		canvas.style.width = "75%";
-		canvas.style.height = "75%";
-		document.querySelector(".media").appendChild(canvas);
+		const pdfContainer = document.createElement("div");
+		pdfContainer.className = "pdf-container";
+		pdfContainer.style.display = "flex";
+		pdfContainer.style.flexDirection = "column";
+		pdfContainer.style.alignItems = "center";
+		pdfContainer.style.gap = "20px";
+		pdfContainer.style.overflow = "auto";
+		pdfContainer.style.width = "100%";
+		pdfContainer.style.height = "100%";
+		pdfContainer.style.transformOrigin = "top center";
+		pdfContainer.style.paddingTop = "56px";
+		document.querySelector(".media").appendChild(pdfContainer);
 		const loadingTask = pdfjsLib.getDocument({ url });
 		const pdf = await loadingTask.promise;
-		const page = await pdf.getPage(1);
-		let scale = 1.5;
-		const viewport = page.getViewport({ scale });
-		canvas.width = viewport.width;
-		canvas.height = viewport.height;
-		const context = canvas.getContext("2d");
-		const renderContext = {
-			canvasContext: context,
-			viewport: viewport,
-		};
-		await page.render(renderContext).promise;
-
-		window.addEventListener("wheel", function (e) {
-			const zoomSpeed = 0.1;
-			e.preventDefault();
-			if (e.deltaY < 0) {
-				scale *= 1 + zoomSpeed;
-			} else {
-				scale /= 1 + zoomSpeed;
+		for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+			const page = await pdf.getPage(pageNum);
+			const viewport = page.getViewport({ scale: 1 });
+			const canvas = document.createElement("canvas");
+			canvas.style.maxWidth = "75%";
+			canvas.style.height = "auto";
+			canvas.width = viewport.width;
+			canvas.height = viewport.height;
+			const context = canvas.getContext("2d");
+			const renderContext = {
+				canvasContext: context,
+				viewport: viewport,
+			};
+			await page.render(renderContext).promise;
+			pdfContainer.appendChild(canvas);
+		}
+		const controls = document.createElement("div");
+		controls.className = "pdf-controls";
+		controls.innerHTML = `
+			<div class="pdf-controls-inner">
+				<button class="prev-btn" title="Previous page">◀</button>
+				<button class="next-btn" title="Next page">▶</button>
+				<span class="page-indicator">1 / ${pdf.numPages}</span>
+				<input type="number" min="1" max="${pdf.numPages}" class="page-input" value="1" style="width:68px">
+				<button class="go-btn">Go</button>
+			</div>
+			<style>
+				.pdf-controls {
+					position: absolute;
+					top: 12px;
+					left: 50%;
+					transform: translateX(-50%);
+					z-index: 50;
+					font-family: 'Inter', sans-serif;
+				}
+				.pdf-controls-inner {
+					background: rgba(0,0,0,0.55);
+					color: #fff;
+					padding: 8px 10px;
+					border-radius: 6px;
+					display: flex;
+					gap: 8px;
+					align-items: center;
+					font-size: 14px;
+					box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+				}
+				.pdf-controls button {
+					background: rgba(255,255,255,0.08);
+					border: none;
+					color: #fff;
+					padding: 6px 8px;
+					border-radius: 4px;
+					cursor: pointer;
+				}
+				.pdf-controls button:disabled {
+					opacity: 0.45;
+					cursor: default;
+				}
+				.pdf-controls input {
+					outline: none;
+					border: none;
+					background-color: #00000028;
+					color: #ffffff;
+					border-radius: 8px;
+					padding: 6px 10px;
+					font-weight: 700;
+					font-family: Inter, sans-serif;
+					font-size: 14.5px;
+				}
+			</style>
+		`;
+		document.querySelector(".media").appendChild(controls);
+		const canvases = pdfContainer.querySelectorAll("canvas");
+		let currentPage = 1;
+		const prevBtn = controls.querySelector(".prev-btn");
+		const nextBtn = controls.querySelector(".next-btn");
+		const pageIndicator = controls.querySelector(".page-indicator");
+		const pageInput = controls.querySelector(".page-input");
+		const goBtn = controls.querySelector(".go-btn");
+		function updateControls() {
+			pageIndicator.textContent = `${currentPage} / ${canvases.length}`;
+			pageInput.value = currentPage;
+			prevBtn.disabled = currentPage <= 1;
+			nextBtn.disabled = currentPage >= canvases.length;
+		}
+		function showPage(page) {
+			page = Math.max(1, Math.min(page, canvases.length));
+			const target = canvases[page - 1];
+			if (!target) return;
+			pdfContainer.scrollTo({ top: target.offsetTop - 10, behavior: "smooth" });
+			currentPage = page;
+			updateControls();
+		}
+		prevBtn.addEventListener("click", () => showPage(currentPage - 1));
+		nextBtn.addEventListener("click", () => showPage(currentPage + 1));
+		goBtn.addEventListener("click", () => showPage(parseInt(pageInput.value, 10)));
+		pageInput.addEventListener("keydown", e => {
+			if (e.key === "Enter") showPage(parseInt(pageInput.value, 10));
+		});
+		pdfContainer.addEventListener("scroll", () => {
+			const containerRect = pdfContainer.getBoundingClientRect();
+			const containerCenter = containerRect.top + containerRect.height / 2;
+			let closestIndex = 0;
+			let closestDist = Infinity;
+			canvases.forEach((c, idx) => {
+				const r = c.getBoundingClientRect();
+				const cCenter = r.top + r.height / 2;
+				const dist = Math.abs(cCenter - containerCenter);
+				if (dist < closestDist) {
+					closestDist = dist;
+					closestIndex = idx;
+				}
+			});
+			if (currentPage !== closestIndex + 1) {
+				currentPage = closestIndex + 1;
+				updateControls();
 			}
-			canvas.style.transform = `scale(${scale})`;
 		});
-
-		window.addEventListener("resize", () => {
-			canvas.style.transform = `scale(${scale})`;
-		});
-
-		canvas.addEventListener("load", () => {
-			canvas.style.transform = `scale(${scale})`;
+		updateControls();
+		showPage(1);
+		window.addEventListener("keydown", e => {
+			if (e.key === "ArrowLeft") showPage(currentPage - 1);
+			if (e.key === "ArrowRight") showPage(currentPage + 1);
 		});
 	} else if (exts["video"].includes(ext)) {
 		const videoPlayerHTML = `
@@ -739,6 +834,50 @@ async function openFile(url, ext, fileName, dav) {
 	}
 }
 
+function showFileBrowser() {
+	if (asked) return;
+	asked = true;
+	if (!(window.parent && window.parent.tb && window.parent.tb.dialog && window.parent.tb.fs && window.parent.tb.window)) return;
+	window.parent.tb.dialog.FileBrowser({
+		title: "Open a file",
+		onOk: async file => {
+			const ext = file.split(".").pop();
+			let json = JSON.parse(await window.parent.tb.fs.promises.readFile("/apps/system/files.tapp/extensions.json", "utf8"));
+			if (file.includes("http")) {
+				openFile(file, ext, file.split("/").pop(), true);
+			} else if (json["image"].includes(ext)) {
+				let img = await window.parent.tb.fs.promises.readFile(file);
+				let blob = new Blob([img], { type: "image/" + ext });
+				let url = URL.createObjectURL(blob);
+				openFile(url, ext, file.split("/").pop());
+			} else if (json["animated"].includes(ext)) {
+				let img = await window.parent.tb.fs.promises.readFile(file);
+				let blob = new Blob([img], { type: "image/" + ext });
+				let url = URL.createObjectURL(blob);
+				openFile(url, ext, file.split("/").pop());
+			} else if (json["pdf"].includes(ext)) {
+				let pdf = await window.parent.tb.fs.promises.readFile(file);
+				let blob = new Blob([pdf], { type: "application/pdf" });
+				let url = URL.createObjectURL(blob);
+				openFile(url, ext, file.split("/").pop());
+			} else if (json["video"].includes(ext)) {
+				let video = await window.parent.tb.fs.promises.readFile(file);
+				let blob = new Blob([video], { type: "video/" + ext });
+				let url = URL.createObjectURL(blob);
+				openFile(url, ext, file.split("/").pop());
+			} else if (json["audio"].includes(ext)) {
+				let audio = await window.parent.tb.fs.promises.readFile(file);
+				let blob = new Blob([audio], { type: "audio/" + ext });
+				let url = URL.createObjectURL(blob);
+				openFile(url, ext, file.split("/").pop());
+			}
+		},
+		onCancel: () => {
+			window.parent.tb.window.close();
+		},
+	});
+}
+
 let asked = false;
 window.addEventListener("message", async e => {
 	let data;
@@ -748,45 +887,10 @@ window.addEventListener("message", async e => {
 		data = e.data;
 	}
 	if (data === undefined && !asked) {
-		asked = true;
-		tb.dialog.FileBrowser({
-			title: "Open a file",
-			onOk: async file => {
-				const ext = file.split(".").pop();
-				let json = JSON.parse(await window.parent.tb.fs.promises.readFile("/apps/system/files.tapp/extensions.json", "utf8"));
-				if (file.includes("http")) {
-					openFile(file, ext, file.split("/").pop(), true);
-				} else if (json["image"].includes(ext)) {
-					let img = await window.parent.tb.fs.promises.readFile(file);
-					let blob = new Blob([img], { type: "image/" + ext });
-					let url = URL.createObjectURL(blob);
-					openFile(url, ext, file.split("/").pop());
-				} else if (json["animated"].includes(ext)) {
-					let img = await window.parent.tb.fs.promises.readFile(file);
-					let blob = new Blob([img], { type: "image/" + ext });
-					let url = URL.createObjectURL(blob);
-					openFile(url, ext, file.split("/").pop());
-				} else if (json["pdf"].includes(ext)) {
-					let pdf = await window.parent.tb.fs.promises.readFile(file);
-					let blob = new Blob([pdf], { type: "application/pdf" });
-					let url = URL.createObjectURL(blob);
-					openFile(url, ext, file.split("/").pop());
-				} else if (json["video"].includes(ext)) {
-					let video = await window.parent.tb.fs.promises.readFile(file);
-					let blob = new Blob([video], { type: "video/" + ext });
-					let url = URL.createObjectURL(blob);
-					openFile(url, ext, file.split("/").pop());
-				} else if (json["audio"].includes(ext)) {
-					let audio = await window.parent.tb.fs.promises.readFile(file);
-					let blob = new Blob([audio], { type: "audio/" + ext });
-					let url = URL.createObjectURL(blob);
-					openFile(url, ext, file.split("/").pop());
-				}
-			},
-		});
+		showFileBrowser();
 	}
 	if (data && data.type === "process") {
-		asked = false;
+		asked = true;
 		if (data.path) {
 			const ext = data.path.split(".").pop();
 			let json = JSON.parse(await window.parent.tb.fs.promises.readFile("/apps/system/files.tapp/extensions.json", "utf8"));

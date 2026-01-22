@@ -9,14 +9,7 @@ tb_island.addControl({
 	appname: "Media Viewer",
 	id: "media-file",
 	click: () => {
-		const ctx = document.createElement("div");
-		ctx.classList.add("context-menu", "fade-in");
-		if (parent.document.querySelector(".context-menu")) {
-			parent.document.querySelector(".context-menu").remove();
-		}
-		ctx.id = "media-files_ctx";
-		ctx.style.left = `6px`;
-		ctx.style.top = parent.document.querySelector(".app_island").clientHeight + 12 + "px";
+		const appIsland = parent.document.querySelector(".app_island");
 		const options = [
 			{
 				text: "Open File",
@@ -24,7 +17,7 @@ tb_island.addControl({
 					await tb.dialog.FileBrowser({
 						title: "Select a file to view",
 						onOk: async file => {
-							let url = `${(parent, window.location.origin)}/fs/${file}`;
+							const url = `${parent.window.location.origin}/fs/${file}`;
 							const ext = file.split(".").pop();
 							openFile(url, ext);
 						},
@@ -32,25 +25,10 @@ tb_island.addControl({
 				},
 			},
 		];
-		options.forEach(option => {
-			const btn = document.createElement("button");
-			btn.classList.add("context-menu-button");
-			btn.innerText = option.text;
-			btn.onclick = option.click;
-			ctx.appendChild(btn);
-		});
-		parent.document.body.appendChild(ctx);
-		parent.window.addEventListener("click", e => {
-			if (!e.target.classList.contains("app_control")) {
-				if (parent.document.querySelector(".context-menu")) {
-					parent.document.querySelector(".context-menu").classList.add("fade-out");
-					setTimeout(() => {
-						if (parent.document.querySelector(".context-menu")) {
-							parent.document.querySelector(".context-menu").remove();
-						}
-					}, 100);
-				}
-			}
+		tb.contextmenu.create({
+			x: appIsland.clientWidth - 110,
+			y: appIsland.clientHeight + 12,
+			options: options,
 		});
 	},
 });
@@ -59,14 +37,7 @@ tb_island.addControl({
 	appname: "Media Viewer",
 	id: "media-computer",
 	click: () => {
-		const ctx = document.createElement("div");
-		ctx.classList.add("context-menu", "fade-in");
-		if (parent.document.querySelector(".context-menu")) {
-			parent.document.querySelector(".context-menu").remove();
-		}
-		ctx.id = "media-computer_ctx";
-		ctx.style.left = `6px`;
-		ctx.style.top = parent.document.querySelector(".app_island").clientHeight + 12 + "px";
+		const appIsland = parent.document.querySelector(".app_island");
 		const options = [
 			{
 				text: "Open File from PC",
@@ -83,25 +54,10 @@ tb_island.addControl({
 				},
 			},
 		];
-		options.forEach(option => {
-			const btn = document.createElement("button");
-			btn.classList.add("context-menu-button");
-			btn.innerText = option.text;
-			btn.onclick = option.click;
-			ctx.appendChild(btn);
-		});
-		parent.document.body.appendChild(ctx);
-		parent.window.addEventListener("click", e => {
-			if (!e.target.classList.contains("app_control")) {
-				if (parent.document.querySelector(".context-menu")) {
-					parent.document.querySelector(".context-menu").classList.add("fade-out");
-					setTimeout(() => {
-						if (parent.document.querySelector(".context-menu")) {
-							parent.document.querySelector(".context-menu").remove();
-						}
-					}, 100);
-				}
-			}
+		tb.contextmenu.create({
+			x: appIsland.clientWidth - 110,
+			y: appIsland.clientHeight + 12,
+			options: options,
 		});
 	},
 });
