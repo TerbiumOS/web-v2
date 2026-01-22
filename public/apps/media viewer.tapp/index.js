@@ -604,16 +604,94 @@ async function openFile(url, ext, fileName, dav) {
 					const tags = await id3.fromFile(new File([blob], "audio.mp3", { type: blob.type }));
 					let image = null;
 					if (tags.images && tags.images.length > 0) {
-						// TODO fix stupid blob issue
 						const imageData = tags.images[0];
-						const arrayBuffer = imageData.data;
-						const uint8Array = new Uint8Array(window.parent.tb.buffer.from(arrayBuffer));
-						const blob = new Blob([uint8Array], { type: imageData.format });
-						image = URL.createObjectURL(blob);
-						audioVisual.style.backgroundImage = `url(${image})`;
-						audioVisual.style.backgroundSize = "cover";
-						audioVisual.style.backgroundPosition = "center";
-						audioVisual.innerHTML = "";
+						try {
+							if (image && typeof image === "string" && image.startsWith("blob:")) {
+								URL.revokeObjectURL(image);
+								image = null;
+							}
+							let data = imageData.data;
+							let uint8;
+							if (data instanceof ArrayBuffer) {
+								uint8 = new Uint8Array(data);
+							} else if (ArrayBuffer.isView(data)) {
+								uint8 = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+							} else if (Array.isArray(data)) {
+								uint8 = new Uint8Array(data);
+							} else if (typeof data === "string") {
+								const b64 = data.replace(/^data:\w+\/[a-zA-Z+]+;base64,/, "");
+								const raw = atob(b64);
+								uint8 = new Uint8Array(raw.length);
+								for (let i = 0; i < raw.length; ++i) uint8[i] = raw.charCodeAt(i);
+							} else if (window.parent && window.parent.tb && window.parent.tb.buffer && typeof window.parent.tb.buffer.from === "function") {
+								const buf = window.parent.tb.buffer.from(data);
+								uint8 = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+							} else {
+								throw new Error("Unknown image data type: " + Object.prototype.toString.call(data));
+							}
+							const mime = imageData.format || imageData.mime || "image/jpeg";
+							const signatures = [
+								{ name: "jpeg", sig: [0xff, 0xd8, 0xff] },
+								{ name: "png", sig: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] },
+								{ name: "gif", sig: [0x47, 0x49, 0x46, 0x38] },
+							];
+							let startIndex = 0;
+							for (const s of signatures) {
+								const sig = s.sig;
+								for (let i = 0; i <= uint8.length - sig.length; i++) {
+									let ok = true;
+									for (let j = 0; j < sig.length; j++) {
+										if (uint8[i + j] !== sig[j]) {
+											ok = false;
+											break;
+										}
+									}
+									if (ok) {
+										startIndex = i;
+										break;
+									}
+								}
+								if (startIndex) break;
+							}
+							if (startIndex > 0) {
+								uint8 = uint8.subarray(startIndex);
+								console.warn("Sliced album art buffer to skip", startIndex, "bytes of leading data");
+							}
+							const blob = new Blob([uint8], { type: mime });
+							image = URL.createObjectURL(blob);
+							audioVisual.style.backgroundImage = `url("${image}")`;
+							audioVisual.style.backgroundSize = "cover";
+							audioVisual.style.backgroundPosition = "center";
+							audioVisual.innerHTML = "";
+							const uint8ToBase64 = u8 => {
+								const CHUNK = 0x8000;
+								let index = 0;
+								let result = [];
+								while (index < u8.length) {
+									result.push(String.fromCharCode.apply(null, u8.subarray(index, Math.min(index + CHUNK, u8.length))));
+									index += CHUNK;
+								}
+								return btoa(result.join(""));
+							};
+							const testImg = new Image();
+							testImg.onload = () => {
+								if (audioVisual.contains(testImg)) audioVisual.removeChild(testImg);
+							};
+							testImg.onerror = () => {
+								console.warn("Album art blob failed to load; trying base64 fallback");
+								try {
+									const b64 = uint8ToBase64(uint8);
+									const dataUrl = `data:${mime};base64,${b64}`;
+									testImg.src = dataUrl;
+									audioVisual.style.backgroundImage = `url("${dataUrl}")`;
+								} catch (err) {
+									console.warn("Base64 fallback failed", err);
+								}
+							};
+							testImg.src = image;
+						} catch (err) {
+							console.warn("Failed to decode album art:", err, imageData);
+						}
 					}
 					const title = tags.title || fileName || "Unknown Title";
 					const artist = tags.artist || "Unknown Artist";
