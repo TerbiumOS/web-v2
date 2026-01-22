@@ -44,9 +44,7 @@ export default function MediaIsland() {
 
 function Music({ track_name, artist, endtime, onRemove, onPausePlay, onNext, onBack, onSeek, time }: MediaProps & { onRemove: () => void }) {
 	const [isPaused, setIsPaused] = useState(false);
-	const [elapsedTime, setElapsedTime] = useState(() =>
-		typeof time === "number" ? Math.max(0, Math.min(time, endtime)) : 0
-	);
+	const [elapsedTime, setElapsedTime] = useState(() => (typeof time === "number" ? Math.max(0, Math.min(time, endtime)) : 0));
 	const [track, setTrack] = useState(track_name);
 	const rafRef = useRef<number | null>(null);
 	const lastClientXRef = useRef<number | null>(null);
@@ -305,9 +303,7 @@ function Music({ track_name, artist, endtime, onRemove, onPausePlay, onNext, onB
 
 function Video({ video_name, creator, endtime, onRemove, onPausePlay, onBack, onNext, onSeek, time }: MediaProps & { onRemove: () => void }) {
 	const [isPaused, setIsPaused] = useState(false);
-	const [elapsedTime, setElapsedTime] = useState(() =>
-		typeof time === "number" ? Math.max(0, Math.min(time, endtime)) : 0
-	);
+	const [elapsedTime, setElapsedTime] = useState(() => (typeof time === "number" ? Math.max(0, Math.min(time, endtime)) : 0));
 	const [video, setVideo] = useState(video_name);
 	const rafRef = useRef<number | null>(null);
 	const lastClientXRef = useRef<number | null>(null);
