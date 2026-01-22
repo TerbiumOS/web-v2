@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">API Docs</span>
 
-**Last Updated**: v2.2.0 - 12/30/2025
+**Last Updated**: v2.3.0-dev - 01/21/2026
 
 So you're looking to use Terbium APIs. Well, you're in the right place! Terbium has a decent amount of components which I will break down below. The pages will include a description of the functions and code examples.
 
@@ -1092,7 +1092,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **music**
     - Description: Activates the Music optimized Media Island
     - Parameters:
-      - `props: { artist: string, track_name: string, album?: string, time?: number, background: string, endtime: number }` - Music player properties.
+      - `props: { artist: string, track_name: string, album?: string, time?: number, background: string, endtime: number, onSeek?: void, onPausePlay: void, onNext?: void; onBack?: void }` - Music player properties.
     - Example:
       ```javascript
       tb.mediaplayer.music({
@@ -1106,7 +1106,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **video**
     - Description: Activates the Video optimized Media Island
     - Parameters:
-      - `props: { creator: string, video_name: string, time?: number, background: string, endtime: number }` - Video player properties.
+      - `props: { creator: string, video_name: string, time?: number, background: string, endtime: number, onSeek?: void, onPausePlay: void, onNext?: void; onBack?: void }` - Video player properties.
     - Example:
       ```javascript
       tb.mediaplayer.video({

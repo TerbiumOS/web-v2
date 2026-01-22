@@ -337,6 +337,7 @@ export interface MediaProps {
 	background?: string;
 	endtime: number;
 	onPausePlay: void;
+	onSeek?: void;
 	onNext?: void;
 	onBack?: void;
 }

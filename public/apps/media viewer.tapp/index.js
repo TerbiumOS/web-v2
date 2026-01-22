@@ -708,6 +708,9 @@ async function openFile(url, ext, fileName, dav) {
 								audioElem.pause();
 							}
 						},
+						onSeek: time => {
+							audioElem.currentTime = time;
+						},
 					});
 				} catch (e) {
 					console.log("Error reading ID3 tags:", e);

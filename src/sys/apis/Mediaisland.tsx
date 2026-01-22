@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import "../gui/styles/mediaisland.css";
 import { MediaProps } from "../types";
 
@@ -42,10 +42,19 @@ export default function MediaIsland() {
 	);
 }
 
-function Music({ track_name, artist, endtime, onRemove, onPausePlay, onNext, onBack }: MediaProps & { onRemove: () => void }) {
+function Music({ track_name, artist, endtime, onRemove, onPausePlay, onNext, onBack, onSeek, time }: MediaProps & { onRemove: () => void }) {
 	const [isPaused, setIsPaused] = useState(false);
-	const [elapsedTime, setElapsedTime] = useState(0);
+	const [elapsedTime, setElapsedTime] = useState(() =>
+		typeof time === "number" ? Math.max(0, Math.min(time, endtime)) : 0
+	);
 	const [track, setTrack] = useState(track_name);
+	const rafRef = useRef<number | null>(null);
+	const lastClientXRef = useRef<number | null>(null);
+	useEffect(() => {
+		if (typeof time === "number") {
+			setElapsedTime(Math.max(0, Math.min(time, endtime)));
+		}
+	}, [time, endtime]);
 	useEffect(() => {
 		let cancelled = false;
 		let localId: ReturnType<typeof setTimeout> | null = null;
@@ -69,18 +78,27 @@ function Music({ track_name, artist, endtime, onRemove, onPausePlay, onNext, onB
 			if (localId) clearTimeout(localId);
 		};
 	}, [isPaused]);
-	useEffect(() => {
-		window.addEventListener("tb-pause-isl", () => PausePlay);
-		return () => window.removeEventListener("tb-pause-isl", () => PausePlay);
-	});
-	const PausePlay = () => {
+	const PausePlay = useCallback(() => {
 		setIsPaused(prev => !prev);
 		// @ts-expect-error
 		if (onPausePlay) {
 			// @ts-expect-error
 			onPausePlay();
 		}
-	};
+	}, [onPausePlay]);
+	useEffect(() => {
+		const handler = () => PausePlay();
+		window.addEventListener("tb-pause-isl", handler);
+		return () => window.removeEventListener("tb-pause-isl", handler);
+	}, [PausePlay]);
+	useEffect(() => {
+		return () => {
+			if (rafRef.current) {
+				cancelAnimationFrame(rafRef.current);
+				rafRef.current = null;
+			}
+		};
+	}, []);
 	const next = () => {
 		if (onNext) {
 			// @ts-ignore
@@ -97,6 +115,14 @@ function Music({ track_name, artist, endtime, onRemove, onPausePlay, onNext, onB
 			onRemove();
 		}
 	};
+	const seek = (value: number) => {
+		const clamped = Math.max(0, Math.min(value, endtime));
+		setElapsedTime(clamped);
+		if (onSeek) {
+			// @ts-expect-error
+			onSeek(clamped);
+		}
+	};
 	const formatTime = (time: number) => {
 		const minutes = Math.floor(time / 60);
 		const seconds = time % 60;
@@ -107,6 +133,11 @@ function Music({ track_name, artist, endtime, onRemove, onPausePlay, onNext, onB
 			setTrack(track.slice(0, 21) + "...");
 		}
 	}, [track_name]);
+	const updSeek = (clientX: number, el: HTMLDivElement) => {
+		const rect = el.getBoundingClientRect();
+		const rel = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+		seek(Math.round(rel * endtime));
+	};
 	return (
 		<div className="music-player w-[250px] h-[50px]">
 			<div className="info">
@@ -159,17 +190,132 @@ function Music({ track_name, artist, endtime, onRemove, onPausePlay, onNext, onB
 			</div>
 			<div className="seekbar">
 				<h4 id="currenttime">{formatTime(elapsedTime)}</h4>
-				<div className="bar"></div>
+				<div
+					className="bar custom-range cursor-pointer"
+					style={{
+						position: "relative",
+						flex: 1,
+						height: 6,
+						borderRadius: 999,
+						background: "#7b7b7b",
+						margin: "0 8px",
+					}}
+					role="slider"
+					aria-valuemin={0}
+					aria-valuemax={endtime}
+					aria-valuenow={elapsedTime}
+					tabIndex={0}
+					onKeyDown={e => {
+						if (e.key === "ArrowLeft") seek(Math.max(0, elapsedTime - 5));
+						if (e.key === "ArrowRight") seek(Math.min(endtime, elapsedTime + 5));
+					}}
+					onPointerDown={e => {
+						e.preventDefault();
+						const el = e.currentTarget as HTMLDivElement;
+						try {
+							el.setPointerCapture(e.pointerId);
+						} catch {}
+						const handle = el.querySelector(".custom-handle") as HTMLDivElement | null;
+						if (handle) {
+							handle.style.opacity = "1";
+							handle.style.transform = "translate(-50%, -50%) scale(1.25)";
+						}
+						lastClientXRef.current = e.clientX;
+						updSeek(e.clientX, el);
+					}}
+					onPointerMove={e => {
+						if (!(e.buttons & 1)) return;
+						const el = e.currentTarget as HTMLDivElement;
+						lastClientXRef.current = e.clientX;
+						if (rafRef.current == null) {
+							rafRef.current = requestAnimationFrame(() => {
+								rafRef.current = null;
+								if (lastClientXRef.current != null) {
+									updSeek(lastClientXRef.current, el);
+								}
+							});
+						}
+					}}
+					onPointerUp={e => {
+						const el = e.currentTarget as HTMLDivElement;
+						try {
+							el.releasePointerCapture(e.pointerId);
+						} catch {}
+						const handle = el.querySelector(".custom-handle") as HTMLDivElement | null;
+						if (handle) {
+							handle.style.opacity = "0";
+							handle.style.transform = "translate(-50%, -50%) scale(1)";
+						}
+						if (rafRef.current) {
+							cancelAnimationFrame(rafRef.current);
+							rafRef.current = null;
+						}
+						lastClientXRef.current = null;
+					}}
+					onPointerCancel={e => {
+						const el = e.currentTarget as HTMLDivElement;
+						const handle = el.querySelector(".custom-handle") as HTMLDivElement | null;
+						if (handle) {
+							handle.style.opacity = "0";
+							handle.style.transform = "translate(-50%, -50%) scale(1)";
+						}
+						if (rafRef.current) {
+							cancelAnimationFrame(rafRef.current);
+							rafRef.current = null;
+						}
+						lastClientXRef.current = null;
+					}}
+				>
+					<div
+						className="progress"
+						style={{
+							position: "absolute",
+							left: 0,
+							top: 0,
+							height: "100%",
+							width: `${endtime ? (elapsedTime / endtime) * 100 : 0}%`,
+							background: "#fff",
+							borderRadius: 999,
+							transition: "width 0.05s linear",
+						}}
+					/>
+					<div
+						className="custom-handle"
+						style={{
+							position: "absolute",
+							top: "50%",
+							left: `${endtime ? (elapsedTime / endtime) * 100 : 0}%`,
+							transform: "translate(-50%, -50%) scale(1)",
+							width: 10,
+							height: 10,
+							borderRadius: 999,
+							background: "#fff",
+							opacity: 0,
+							transition: "transform 0.12s ease, opacity 0.12s ease",
+							boxShadow: "0 0 0 6px rgba(255,255,255,0.06)",
+							pointerEvents: "none",
+						}}
+					/>
+				</div>
 				<h4 id="endtime">{formatTime(endtime)}</h4>
 			</div>
 		</div>
 	);
 }
 
-function Video({ video_name, creator, endtime, onRemove, onPausePlay, onBack, onNext }: MediaProps & { onRemove: () => void }) {
+function Video({ video_name, creator, endtime, onRemove, onPausePlay, onBack, onNext, onSeek, time }: MediaProps & { onRemove: () => void }) {
 	const [isPaused, setIsPaused] = useState(false);
-	const [elapsedTime, setElapsedTime] = useState(0);
+	const [elapsedTime, setElapsedTime] = useState(() =>
+		typeof time === "number" ? Math.max(0, Math.min(time, endtime)) : 0
+	);
 	const [video, setVideo] = useState(video_name);
+	const rafRef = useRef<number | null>(null);
+	const lastClientXRef = useRef<number | null>(null);
+	useEffect(() => {
+		if (typeof time === "number") {
+			setElapsedTime(Math.max(0, Math.min(time, endtime)));
+		}
+	}, [time, endtime]);
 	useEffect(() => {
 		let cancelled = false;
 		let localId: ReturnType<typeof setTimeout> | null = null;
@@ -193,15 +339,27 @@ function Video({ video_name, creator, endtime, onRemove, onPausePlay, onBack, on
 			if (localId) clearTimeout(localId);
 		};
 	}, [isPaused]);
-	useEffect(() => {
-		window.addEventListener("tb-pause-isl", () => PausePlay);
-		return () => window.removeEventListener("tb-pause-isl", () => PausePlay);
-	});
-	const PausePlay = () => {
+	const PausePlay = useCallback(() => {
 		setIsPaused(prev => !prev);
 		// @ts-expect-error
-		onPausePlay();
-	};
+		if (onPausePlay) {
+			// @ts-expect-error
+			onPausePlay();
+		}
+	}, [onPausePlay]);
+	useEffect(() => {
+		const handler = () => PausePlay();
+		window.addEventListener("tb-pause-isl", handler);
+		return () => window.removeEventListener("tb-pause-isl", handler);
+	}, [PausePlay]);
+	useEffect(() => {
+		return () => {
+			if (rafRef.current) {
+				cancelAnimationFrame(rafRef.current);
+				rafRef.current = null;
+			}
+		};
+	}, []);
 	const next = () => {
 		if (onNext) {
 			// @ts-ignore
@@ -218,6 +376,14 @@ function Video({ video_name, creator, endtime, onRemove, onPausePlay, onBack, on
 			onRemove();
 		}
 	};
+	const seek = (value: number) => {
+		const clamped = Math.max(0, Math.min(value, endtime));
+		setElapsedTime(clamped);
+		if (onSeek) {
+			// @ts-expect-error
+			onSeek(clamped);
+		}
+	};
 	const formatTime = (time: number) => {
 		const minutes = Math.floor(time / 60);
 		const seconds = time % 60;
@@ -228,6 +394,11 @@ function Video({ video_name, creator, endtime, onRemove, onPausePlay, onBack, on
 			setVideo(video.slice(0, 21) + "...");
 		}
 	}, [video_name]);
+	const updSeek = (clientX: number, el: HTMLDivElement) => {
+		const rect = el.getBoundingClientRect();
+		const rel = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+		seek(Math.round(rel * endtime));
+	};
 	return (
 		<div className="music-player w-[250px] h-[50px]">
 			<div className="info">
@@ -280,7 +451,113 @@ function Video({ video_name, creator, endtime, onRemove, onPausePlay, onBack, on
 			</div>
 			<div className="seekbar">
 				<h4 id="currenttime">{formatTime(elapsedTime)}</h4>
-				<div className="bar"></div>
+				<div
+					className="bar custom-range cursor-pointer"
+					style={{
+						position: "relative",
+						flex: 1,
+						height: 6,
+						borderRadius: 999,
+						background: "#7b7b7b",
+						margin: "0 8px",
+					}}
+					role="slider"
+					aria-valuemin={0}
+					aria-valuemax={endtime}
+					aria-valuenow={elapsedTime}
+					tabIndex={0}
+					onKeyDown={e => {
+						if (e.key === "ArrowLeft") seek(Math.max(0, elapsedTime - 5));
+						if (e.key === "ArrowRight") seek(Math.min(endtime, elapsedTime + 5));
+					}}
+					onPointerDown={e => {
+						e.preventDefault();
+						const el = e.currentTarget as HTMLDivElement;
+						try {
+							el.setPointerCapture(e.pointerId);
+						} catch {}
+						const handle = el.querySelector(".custom-handle") as HTMLDivElement | null;
+						if (handle) {
+							handle.style.opacity = "1";
+							handle.style.transform = "translate(-50%, -50%) scale(1.25)";
+						}
+						lastClientXRef.current = e.clientX;
+						updSeek(e.clientX, el);
+					}}
+					onPointerMove={e => {
+						if (!(e.buttons & 1)) return;
+						const el = e.currentTarget as HTMLDivElement;
+						lastClientXRef.current = e.clientX;
+						if (rafRef.current == null) {
+							rafRef.current = requestAnimationFrame(() => {
+								rafRef.current = null;
+								if (lastClientXRef.current != null) {
+									updSeek(lastClientXRef.current, el);
+								}
+							});
+						}
+					}}
+					onPointerUp={e => {
+						const el = e.currentTarget as HTMLDivElement;
+						try {
+							el.releasePointerCapture(e.pointerId);
+						} catch {}
+						const handle = el.querySelector(".custom-handle") as HTMLDivElement | null;
+						if (handle) {
+							handle.style.opacity = "0";
+							handle.style.transform = "translate(-50%, -50%) scale(1)";
+						}
+						if (rafRef.current) {
+							cancelAnimationFrame(rafRef.current);
+							rafRef.current = null;
+						}
+						lastClientXRef.current = null;
+					}}
+					onPointerCancel={e => {
+						const el = e.currentTarget as HTMLDivElement;
+						const handle = el.querySelector(".custom-handle") as HTMLDivElement | null;
+						if (handle) {
+							handle.style.opacity = "0";
+							handle.style.transform = "translate(-50%, -50%) scale(1)";
+						}
+						if (rafRef.current) {
+							cancelAnimationFrame(rafRef.current);
+							rafRef.current = null;
+						}
+						lastClientXRef.current = null;
+					}}
+				>
+					<div
+						className="progress"
+						style={{
+							position: "absolute",
+							left: 0,
+							top: 0,
+							height: "100%",
+							width: `${endtime ? (elapsedTime / endtime) * 100 : 0}%`,
+							background: "#fff",
+							borderRadius: 999,
+							transition: "width 0.05s linear",
+						}}
+					/>
+					<div
+						className="custom-handle"
+						style={{
+							position: "absolute",
+							top: "50%",
+							left: `${endtime ? (elapsedTime / endtime) * 100 : 0}%`,
+							transform: "translate(-50%, -50%) scale(1)",
+							width: 10,
+							height: 10,
+							borderRadius: 999,
+							background: "#fff",
+							opacity: 0,
+							transition: "transform 0.12s ease, opacity 0.12s ease",
+							boxShadow: "0 0 0 6px rgba(255,255,255,0.06)",
+							pointerEvents: "none",
+						}}
+					/>
+				</div>
 				<h4 id="endtime">{formatTime(endtime)}</h4>
 			</div>
 		</div>
