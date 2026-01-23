@@ -4,9 +4,6 @@ import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149
 if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
 	console.log("Setting up PDF.js worker");
 	pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.worker.min.mjs";
-} else if (pdfjsLib) {
-	console.log("Setting up PDF.js worker src");
-	pdfjsLib.GlobalWorkerOptions = { workerSrc: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.worker.min.mjs" };
 }
 
 window.addEventListener("load", async () => {
