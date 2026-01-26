@@ -969,6 +969,61 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
         await tb.system.users.renameUser('oldname', 'newname');
         ```
 
+  - **startup**
+    - **addProc**
+      - Description: Adds a new process to the startup list. This will register a package or command to run on system or user startup.
+      - Parameters:
+        - `pkgorname: string` - The package name or unique identifier for the startup entry.
+        - `target: "System" | "User"` - Whether the startup entry is registered system-wide or for the current user.
+        - `cmd?: string` - Optional command to execute for the entry (if different from the package default).
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.startup.addProc('my-service', 'System', 'alert("alert evaled")');
+        ```
+
+    - **removeProc**
+      - Description: Removes a previously registered startup process.
+      - Parameters:
+        - `pkgorname: string` - The package name or identifier of the entry to remove.
+        - `target: "System" | "User"` - The scope from which to remove the entry.
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.startup.removeProc('my-service', 'System');
+        ```
+
+    - **enable**
+      - Description: Enables a registered startup process so it will run at boot for the specified scope.
+      - Parameters:
+        - `pkgorname: string` - The package name or identifier of the entry to enable.
+        - `target: "System" | "User"` - The scope in which to enable the entry.
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.startup.enable('my-service', 'User');
+        ```
+
+    - **disable**
+      - Description: Disables a registered startup process so it will not run at boot.
+      - Parameters:
+        - `pkgorname: string` - The package name or identifier of the entry to disable.
+        - `target: "System" | "User"` - The scope in which to disable the entry.
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.startup.disable('my-service', 'User');
+        ```
+
+    - **list**
+      - Description: Lists all configured startup entries.
+      - Returns: `Promise<object[]>` - An array of startup entries (each entry contains details such as name, target, command, enabled state).
+      - Example:
+        ```javascript
+        const procs = await tb.system.startup.list();
+        console.log(procs);
+        ```
+
   - **bootmenu**
     - **addEntry**
       - Description: Adds a boot entry into the Terbium Boot Menu

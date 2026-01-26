@@ -856,13 +856,13 @@ export default function Setup() {
 		};
 		const opts = JSON.parse(sessionStorage.getItem("tacc-settings") as string) || [];
 		type OptionItem = { id: string; label: string; raw: any };
-			const isb64 = (v: any) => {
-				if (!v || typeof v !== "string") return false;
-				if (v.startsWith("data:")) return true;
-				const stripped = v.replace(/\s+/g, "");
-				return /^[A-Za-z0-9+/=]+$/.test(stripped) && stripped.length > 200;
-			};
-			const normalizeRaw = (r: any) => (typeof r === "string" && isb64(r) ? "Synced Wallpaper" : r);
+		const isb64 = (v: any) => {
+			if (!v || typeof v !== "string") return false;
+			if (v.startsWith("data:")) return true;
+			const stripped = v.replace(/\s+/g, "");
+			return /^[A-Za-z0-9+/=]+$/.test(stripped) && stripped.length > 200;
+		};
+		const normalizeRaw = (r: any) => (typeof r === "string" && isb64(r) ? "Synced Wallpaper" : r);
 		const getOptions = (cat: string): OptionItem[] => {
 			const val = (opts[0] as any)[cat];
 			if (cat === "settings" && val && typeof val === "object") {

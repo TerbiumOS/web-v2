@@ -495,6 +495,13 @@ export interface COM {
 			addEntry(name: string, file: string): void;
 			removeEntry(name: string): void;
 		};
+		startup: {
+			addProc(apporname: string, target: "System" | "User", cmd?: string): Promise<void>;
+			removeProc(apporname: string, target: "System" | "User"): Promise<void>;
+			enable(apporname: string, target: "System" | "User"): Promise<void>;
+			disable(apporname: string, target: "System" | "User"): Promise<void>;
+			list(): Promise<string[]>;
+		};
 	};
 	libcurl: typeof libcurl;
 	fflate: typeof fflate;

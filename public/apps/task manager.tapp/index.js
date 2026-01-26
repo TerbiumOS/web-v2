@@ -33,13 +33,21 @@ document.addEventListener("DOMContentLoaded", () => {
 function loadPane(val) {
 	const sys = document.getElementById("sysinf");
 	const main = document.getElementById("appl");
+	const startup = document.getElementById("startup");
 	if (val === "sys") {
 		sys.classList.remove("opacity-0", "pointer-events-none");
 		main.classList.add("opacity-0", "pointer-events-none");
+		startup.classList.add("opacity-0", "pointer-events-none");
 		getSpecs();
+	} else if (val === "startup") {
+		startup.classList.remove("opacity-0", "pointer-events-none");
+		main.classList.add("opacity-0", "pointer-events-none");
+		sys.classList.add("opacity-0", "pointer-events-none");
+		getStartups();
 	} else {
 		main.classList.remove("opacity-0", "pointer-events-none");
 		sys.classList.add("opacity-0", "pointer-events-none");
+		startup.classList.add("opacity-0", "pointer-events-none");
 	}
 }
 
@@ -166,5 +174,142 @@ async function getTasks() {
 		if (!Object.values(windows).some(win => win.id === winID)) {
 			main.removeChild(entry);
 		}
+	});
+}
+
+async function getStartups() {
+	const tbody = document.getElementById("startupTbody");
+	if (!tbody) return;
+	tbody.innerHTML = "<tr><td class='text-sm'>Loading startup processes...</td></tr>";
+	let data;
+	try {
+		data = await window.parent.tb.system.startup.list();
+	} catch (err) {
+		console.error("Failed to load startup list:", err);
+		tbody.innerHTML = "<tr><td class='text-sm'>Failed to load startup processes</td></tr>";
+		return;
+	}
+	const scopeFilterEl = document.getElementById("startupScopeSelect");
+	const scopeFilter = scopeFilterEl ? scopeFilterEl.value : "all";
+	const entries = [];
+	for (const scope of Object.keys(data || {})) {
+		const procs = data[scope] || {};
+		for (const name of Object.keys(procs)) {
+			const e = procs[name];
+			entries.push({ name, scope, start: e.start, installedby: e.installedby || "-", enabled: !!e.enabled });
+		}
+	}
+	if (entries.length === 0) {
+		tbody.innerHTML = "<tr><td class='text-sm'>No Startup processes found</td></tr>";
+		return;
+	}
+	const filtered = entries.filter(ent => (scopeFilter === "all" ? true : ent.scope === scopeFilter));
+	if (filtered.length === 0) {
+		tbody.innerHTML = "<tr><td class='text-sm'>No Startup processes found for selected scope</td></tr>";
+		return;
+	}
+	tbody.innerHTML = "";
+	for (const ent of filtered) {
+		const tr = document.createElement("tr");
+		tr.classList.add("hover:bg-[#ffffff18]", "duration-150", "ease-in-out", "px-2.5");
+		const thName = document.createElement("th");
+		thName.textContent = ent.name;
+		thName.classList.add("text-left", "py-2.5", "pl-3.5", "pr-[100px]");
+		const tdScope = document.createElement("td");
+		tdScope.textContent = ent.scope;
+		tdScope.classList.add("px-3.5");
+		const tdCmd = document.createElement("td");
+		tdCmd.classList.add("px-3.5", "text-sm", "text-[#ffffffb3]");
+		tdCmd.textContent = ent.start;
+		const tdInstalled = document.createElement("td");
+		tdInstalled.classList.add("px-3.5");
+		tdInstalled.textContent = ent.installedby;
+		const tdEnabled = document.createElement("td");
+		const enabledSpan = document.createElement("span");
+		enabledSpan.textContent = ent.enabled ? "Yes" : "No";
+		tdEnabled.appendChild(enabledSpan);
+		const tdActions = document.createElement("td");
+		const btnToggle = document.createElement("button");
+		btnToggle.classList.add("mr-2", "w-max", "py-1", "px-2", "rounded-md", "bg-[#ffffff10]");
+		btnToggle.textContent = ent.enabled ? "Disable" : "Enable";
+		btnToggle.onclick = async () => {
+			try {
+				if (ent.enabled) {
+					await window.parent.tb.system.startup.disable(ent.name, ent.scope === "System" ? "System" : "User");
+				} else {
+					await window.parent.tb.system.startup.enable(ent.name, ent.scope === "System" ? "System" : "User");
+				}
+				await getStartups();
+			} catch (err) {
+				console.error(err);
+			}
+		};
+		const btnRemove = document.createElement("button");
+		btnRemove.classList.add("w-max", "py-1", "px-2", "rounded-md", "bg-[#ff000018]");
+		btnRemove.textContent = "Remove";
+		btnRemove.onclick = async () => {
+			window.parent.tb.dialog.Select({
+				title: `Remove startup entry '${ent.name}'?`,
+				options: [
+					{ text: "Yes", value: "yes" },
+					{ text: "No", value: "no" },
+				],
+				onOk: async choice => {
+					if (choice === "yes") {
+						try {
+							await window.parent.tb.system.startup.removeProc(ent.name, ent.scope === "System" ? "System" : "User");
+							await getStartups();
+						} catch (err) {
+							console.error(err);
+						}
+					}
+				},
+			});
+		};
+		tdActions.appendChild(btnToggle);
+		tdActions.appendChild(btnRemove);
+		tr.appendChild(thName);
+		tr.appendChild(tdScope);
+		tr.appendChild(tdCmd);
+		tr.appendChild(tdInstalled);
+		tr.appendChild(tdEnabled);
+		tr.appendChild(tdActions);
+		document.getElementById("startupTbody").appendChild(tr);
+	}
+}
+
+const refreshBtn = document.getElementById("refreshStartup");
+if (refreshBtn) refreshBtn.addEventListener("click", getStartups);
+const scopeSelect = document.getElementById("startupScopeSelect");
+if (scopeSelect) scopeSelect.addEventListener("change", getStartups);
+const addBtn = document.getElementById("addStartupBtn");
+if (addBtn) {
+	addBtn.addEventListener("click", () => {
+		window.parent.tb.dialog.Message({
+			title: "Enter a name for the startup entry",
+			onOk: name => {
+				if (!name) return;
+				window.parent.tb.dialog.Select({
+					title: "Select scope",
+					options: [
+						{ text: "System", value: "System" },
+						{ text: "User", value: "User" },
+					],
+					onOk: scope => {
+						window.parent.tb.dialog.Message({
+							title: "Enter the start command (optional)",
+							onOk: async cmd => {
+								try {
+									await window.parent.tb.system.startup.addProc(name, scope, cmd || undefined);
+									getStartups();
+								} catch (err) {
+									console.error(err);
+								}
+							},
+						});
+					},
+				});
+			},
+		});
 	});
 }

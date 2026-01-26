@@ -312,6 +312,14 @@ export default function Updater() {
 			if (!(await fileExists("/system/etc/terbium/taccs.json"))) {
 				await window.tb.fs.promises.writeFile("/system/etc/terbium/taccs.json", JSON.stringify({}));
 			}
+			if (!(await fileExists("/system/var/terbium/startup.json"))) {
+				const users = await window.tb.fs.promises.readdir("/home/");
+				const startupObj = {
+					System: {},
+					...Object.fromEntries(users.map(user => [user, {}])),
+				};
+				await window.tb.fs.promises.writeFile("/system/var/terbium/startup.json", JSON.stringify(startupObj), "utf8");
+			}
 			setProgress(80);
 			statusref.current!.innerText = "Cleaning up...";
 			setProgress(95);
@@ -390,7 +398,7 @@ export default function Updater() {
 			<div className="duration-150 flex flex-col justify-center items-center">
 				<div className="text-container relative flex flex-col justify-center items-end">
 					<div className="bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text flex flex-col lg:items-center md:items-center sm:items-center">
-						<span className="font-[700] lg:text-[34px] md:text-[28px] sm:text-[22px] text-right duration-150">
+						<span className="font-bold lg:text-[34px] md:text-[28px] sm:text-[22px] text-right duration-150">
 							<span className="font-[1000] duration-150">Terbium is updating</span>
 						</span>
 						<br />

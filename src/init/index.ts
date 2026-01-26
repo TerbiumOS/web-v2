@@ -114,6 +114,7 @@ export async function init() {
 			},
 		];
 		await window.tb.fs.promises.writeFile("/system/var/terbium/dock.json", JSON.stringify(dockPins));
+		await window.tb.fs.promises.writeFile("/system/var/terbium/startup.json", JSON.stringify({ System: {}, [user]: {} }), "utf8");
 		await window.tb.fs.promises.mkdir("/system/lib");
 		await window.tb.fs.promises.mkdir("/system/lib/anura");
 		await window.tb.fs.promises.mkdir("/system/tmp");

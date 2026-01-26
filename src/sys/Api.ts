@@ -27,6 +27,7 @@ import { useWindowStore } from "./Store";
 import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
 import { vFS } from "./vFS";
 import { auth, getinfo, setinfo } from "./apis/utils/tauth";
+import { launchProcs, addStartupProc, removeStartupProc, enableProc, disableProc } from "./apis/utils/startupHandler";
 
 const system = new System();
 const pw = new pwd();
@@ -875,6 +876,24 @@ export default async function Api() {
 					await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify(dat, null, 2));
 				},
 			},
+			startup: {
+				async addProc(pkgorname: string, target: "System" | "User", cmd?: string) {
+					await addStartupProc(pkgorname, target, cmd);
+				},
+				async removeProc(pkgorname: string, target: "System" | "User") {
+					await removeStartupProc(pkgorname, target);
+				},
+				async enable(pkgorname: string, target: "System" | "User") {
+					await enableProc(pkgorname, target);
+				},
+				async disable(pkgorname: string, target: "System" | "User") {
+					await disableProc(pkgorname, target);
+				},
+				async list() {
+					const procs = JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/startup.json", "utf8"));
+					return procs;
+				},
+			},
 		},
 		libcurl: libcurl,
 		fflate: fflate,
@@ -1564,6 +1583,7 @@ export default async function Api() {
 			}
 		});
 	}
+	launchProcs();
 	document.addEventListener("libcurl_load", wsld);
 	window.tb.node.webContainer = await initializeWebContainer();
 }
