@@ -856,24 +856,37 @@ export default function Setup() {
 		};
 		const opts = JSON.parse(sessionStorage.getItem("tacc-settings") as string) || [];
 		type OptionItem = { id: string; label: string; raw: any };
+			const isb64 = (v: any) => {
+				if (!v || typeof v !== "string") return false;
+				if (v.startsWith("data:")) return true;
+				const stripped = v.replace(/\s+/g, "");
+				return /^[A-Za-z0-9+/=]+$/.test(stripped) && stripped.length > 200;
+			};
+			const normalizeRaw = (r: any) => (typeof r === "string" && isb64(r) ? "Synced Wallpaper" : r);
 		const getOptions = (cat: string): OptionItem[] => {
 			const val = (opts[0] as any)[cat];
 			if (cat === "settings" && val && typeof val === "object") {
 				const copy = { ...val };
-				return Object.entries(copy).flatMap(([k, v]) => (v && typeof v === "object" && !Array.isArray(v) ? Object.entries(v).map(([kk, vv]) => ({ id: `settings.${k}.${kk}`, label: `${k}.${kk}`, raw: vv })) : [{ id: `settings.${k}`, label: k, raw: v }]));
+				return Object.entries(copy).flatMap(([k, v]) => {
+					if (v && typeof v === "object" && !Array.isArray(v)) {
+						return Object.entries(v).map(([kk, vv]) => ({ id: `settings.${k}.${kk}`, label: `${k}.${kk}`, raw: normalizeRaw(vv) }));
+					} else {
+						return [{ id: `settings.${k}`, label: k, raw: normalizeRaw(v) }];
+					}
+				});
 			}
 			if (Array.isArray(val)) {
 				return val.length === 0
 					? []
 					: val.map((item, i) => {
 							let label = typeof item === "object" && item ? item.name || item.url || JSON.stringify(item).slice(0, 30) : String(item);
-							return { id: `${cat}[${i}]`, label, raw: item };
+							return { id: `${cat}[${i}]`, label, raw: normalizeRaw(item) };
 						});
 			}
 			if (val && typeof val === "object") {
-				return Object.keys(val).map(k => ({ id: `${cat}.${k}`, label: k, raw: val[k] }));
+				return Object.keys(val).map(k => ({ id: `${cat}.${k}`, label: k, raw: normalizeRaw(val[k]) }));
 			}
-			return [{ id: cat, label: `${cat}: ${String(val)}`, raw: val }];
+			return [{ id: cat, label: `${cat}: ${String(val)}`, raw: normalizeRaw(val) }];
 		};
 		const categories = Object.keys(opts[0]);
 		const [currMap, setCurrMap] = useState<Record<string, string[]>>(() =>

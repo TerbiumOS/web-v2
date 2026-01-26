@@ -1046,8 +1046,27 @@ export default async function Api() {
 					const info = await window.tb.tauth.getInfo();
 					if (!info) throw new Error("No TACC info found");
 					window.tb.tauth.sync.isSyncing = true;
-					const settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
+					let settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
 					const davs = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/files/davs.json`, "utf8"));
+					if (!settings.wallpaper.startsWith("/assets/wallpapers")) {
+						const res = await fetch(`/fs/${settings.wallpaper}`);
+						const blob = await res.blob();
+						const reader = new FileReader();
+						const dataURL: Promise<string> = new Promise((resolve, reject) => {
+							reader.onloadend = () => {
+								if (typeof reader.result === "string") {
+									resolve(reader.result);
+								} else {
+									reject(new Error("Failed to convert wallpaper to data URL"));
+								}
+							};
+							reader.onerror = () => {
+								reject(new Error("Failed to read wallpaper blob"));
+							};
+						});
+						reader.readAsDataURL(blob);
+						settings.wallpaper = await dataURL;
+					}
 					const toupload = [
 						{
 							settings: settings,
