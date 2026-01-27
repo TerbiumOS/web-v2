@@ -10,9 +10,7 @@ interface RequestOptions {
 export class Net {
 	async request(url: string, options: RequestOptions = {}): Promise<Response> {
 		const controller = options.timeout ? new AbortController() : null;
-		const timeoutId = options.timeout
-			? setTimeout(() => controller?.abort(), options.timeout)
-			: null;
+		const timeoutId = options.timeout ? setTimeout(() => controller?.abort(), options.timeout) : null;
 
 		try {
 			const response = await window.tb.libcurl.fetch(url, {

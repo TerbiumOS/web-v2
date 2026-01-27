@@ -109,7 +109,7 @@ export class BrowserWindow {
 
 	unmaximize() {
 		this.emit("unmaximize");
-		console.log("API Stub")
+		console.log("API Stub");
 	}
 
 	isMaximized(): boolean {

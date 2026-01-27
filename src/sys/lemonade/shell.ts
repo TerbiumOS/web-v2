@@ -6,7 +6,7 @@ export class Shell {
 
 	async openPath(path: string) {
 		console.log(`Opening path: ${path}`);
-		window.tb.system.openApp("Files")
+		window.tb.system.openApp("Files");
 	}
 
 	showItemInFolder(fullPath: string): void {
@@ -24,7 +24,7 @@ export class Shell {
 			const destPath = `${trashPath}/${fileName}`;
 			try {
 				await window.tb.fs.promises.mkdir(trashPath);
-			} catch {}			
+			} catch {}
 			await window.tb.fs.promises.rename(fullPath, destPath);
 			return true;
 		} catch (error) {

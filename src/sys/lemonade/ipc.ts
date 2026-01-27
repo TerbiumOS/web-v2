@@ -54,7 +54,7 @@ export class IpcRenderer {
 				channel,
 				args,
 			},
-			"*"
+			"*",
 		);
 	}
 
@@ -68,10 +68,7 @@ export class IpcRenderer {
 		return new Promise((resolve, reject) => {
 			const messageId = Math.random().toString(36).substring(7);
 			const responseHandler = (event: MessageEvent) => {
-				if (
-					event.data?.type === "ipc-response" &&
-					event.data?.messageId === messageId
-				) {
+				if (event.data?.type === "ipc-response" && event.data?.messageId === messageId) {
 					window.removeEventListener("message", responseHandler);
 					if (event.data.error) {
 						reject(event.data.error);
@@ -89,7 +86,7 @@ export class IpcRenderer {
 					args,
 					messageId,
 				},
-				"*"
+				"*",
 			);
 			setTimeout(() => {
 				window.removeEventListener("message", responseHandler);
@@ -166,7 +163,7 @@ export class IpcMain {
 			return listener(event, ...args);
 		};
 		this.invokeHandlers.set(channel, wrapper);
-    }
+	}
 	removeHandler(channel: string): void {
 		this.invokeHandlers.delete(channel);
 	}
