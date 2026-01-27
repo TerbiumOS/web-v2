@@ -8,6 +8,7 @@ Welcome to Terbium v2's Documentation. Here is a simple table of contents to hel
 - [Backend Configuration Options](./backend-configuration.md)
 - [Anura Compatability & API Support](./anura-compat.md)
 - [Electron Compatability & API Support](./lemonade-compat.md)
+- [Introduction to Lemonade](./lemonade.md)
 - [Terbium API Documentation](./apis/readme.md)
 - [Static Hosting](./static-hosting.md)
 - [UPK Builds](./upk-build.md)
