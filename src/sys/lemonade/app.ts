@@ -27,7 +27,7 @@ export class App {
 			home: `/home/${username}`,
 			appData: `/apps/user/${username}/`,
 			userData: `/home/${username}/lemonade.conf`,
-			temp: `/system/temp/`,
+			temp: `/system/tmp/`,
 			downloads: `/home/${username}/`,
 			documents: `/home/${username}/Documents`,
 			desktop: `/home/${username}/Desktop`,
