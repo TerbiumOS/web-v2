@@ -99,9 +99,9 @@ setInterval(() => {
 					fw?.click();
 					window.parent.tb.mediaplayer.hide();
 				},
-				onSeek: (val) => {
+				onSeek: val => {
 					seeker = val;
-				}
+				},
 			};
 		});
 	});
