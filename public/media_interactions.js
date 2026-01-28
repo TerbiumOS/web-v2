@@ -50,16 +50,13 @@ setInterval(() => {
 	const ytmTab = document.querySelector(".ytmusic-app");
 	if (ytmTab) {
 		const playButtons = [document.querySelector("ytmusic-play-button-renderer"), document.querySelector("tp-yt-paper-icon-button#play-pause-button")];
-
 		const nex = document.querySelector('tp-yt-paper-icon-button[title="Next"]');
 		const bac = document.querySelector('tp-yt-paper-icon-button[title="Previous"]');
 		const pic = document.querySelector(".image.style-scope.ytmusic-player-bar")?.src;
 		const aname = document.querySelector("yt-formatted-string.byline.style-scope")?.innerHTML;
 		const cmf = document.querySelector(".title.style-scope.ytmusic-player-bar")?.innerHTML;
-
 		const timeText = document.querySelector("span.time-info.style-scope.ytmusic-player-bar")?.textContent.trim();
 		const [currTimeStr, endTimeStr] = timeText?.split(" / ") || [];
-
 		const config = () => ({
 			track_name: cmf,
 			artist: aname,
@@ -89,7 +86,7 @@ setInterval(() => {
 			const end = document.querySelector('.playbackTimeline__duration span[aria-hidden="true"]')?.textContent;
 			const fw = document.querySelector(".playControls__next");
 			const bk = document.querySelector(".playControls__prev");
-
+			const seeker = document.querySelector(".playbackTimeline__progressWrapper.sc-mx-1x").ariaValueNow;
 			return {
 				track_name: sname.length > 18 ? sname.slice(0, 18) + "..." : sname,
 				artist: aname,
@@ -102,6 +99,9 @@ setInterval(() => {
 					fw?.click();
 					window.parent.tb.mediaplayer.hide();
 				},
+				onSeek: (val) => {
+					seeker = val;
+				}
 			};
 		});
 	});
@@ -118,7 +118,6 @@ setInterval(() => {
 			const bg = getBg(bgStyle);
 			const bk = document.querySelector(".fn72ari9aEmKo4JcwteT");
 			const fw = document.querySelector(".mnipjT4SLDMgwiDCEnRC");
-
 			return {
 				track_name: track,
 				artist: artist,
@@ -145,7 +144,6 @@ setInterval(() => {
 				const vidName = document.querySelector("yt-formatted-string.style-scope.ytd-watch-metadata")?.innerHTML;
 				const creator = document.querySelector("a.yt-simple-endpoint.style-scope.yt-formatted-string")?.innerHTML;
 				const duration = document.querySelector(".ytp-time-duration")?.innerHTML;
-
 				runMp({
 					type: "video",
 					video_name: vidName,
