@@ -145,7 +145,8 @@ export function TServer() {
 			method: req.method,
 			headers: req.headers as any,
 			body: req.method === "GET" || req.method === "HEAD" ? undefined : (req as any),
-		});
+			duplex: "half",
+		} as any);
 
 		try {
 			const response = await app.fetch(request);
