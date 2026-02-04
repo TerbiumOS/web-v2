@@ -47,6 +47,7 @@ export async function getinfo(user?: string | null, pass?: string | null, settin
 		await auth.signIn.email({
 			email: user,
 			password: pass,
+			rememberMe: true,
 		});
 	}
 
@@ -83,6 +84,7 @@ export async function setinfo(user?: string | null, pass?: string | null, settin
 		await auth.signIn.email({
 			email: user,
 			password: pass,
+			rememberMe: true,
 		});
 	}
 	if (!setting || !toset) {

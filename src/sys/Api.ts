@@ -910,6 +910,7 @@ export default async function Api() {
 							await window.tb.tauth.client.signIn.email({
 								email: username,
 								password: password,
+								rememberMe: true,
 								fetchOptions: {
 									onSuccess: async response => {
 										const exists = await window.tb.fs.promises.exists("/system/etc/terbium/taccs.json");
