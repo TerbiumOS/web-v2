@@ -237,5 +237,10 @@
 		"name": "exit",
 		"description": "Exit the terminal",
 		"usage": "exit"
+	},
+	{
+		"name": "ssh",
+		"description": "Connect to a remote server via SSH",
+		"usage": "ssh [user@]hostname [command]"
 	}
 ]
