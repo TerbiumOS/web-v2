@@ -241,7 +241,29 @@
 	},
 	{
 		"name": "ssh",
-		"description": "Connect to a remote server via SSH",
-		"usage": "ssh [user@]hostname [command]"
+		"description": "Connect to a remote server via SSH (uses WebContainer or libcurl.js)",
+		"usage": "ssh [user@]hostname [options]",
+		"options": {
+			"--host": "Remote host to connect to",
+			"--port": "Port number (default: 22)",
+			"--username": "Username for authentication",
+			"--password": "Password for authentication",
+			"-p": "Prompt for password (secure)",
+			"--privateKey": "Private key content for authentication",
+			"-i": "Path to private key file",
+			"--disconnect": "Disconnect current SSH session",
+			"--status": "Show current connection status",
+			"--help, -h": "Show help message"
+		}
+	},
+	{
+		"name": "ssh-keygen",
+		"description": "Generate, manage and convert SSH keys",
+		"usage": "ssh-keygen [options]",
+		"options": {
+			"-t type": "Specifies the type of key to create.",
+			"-b bits": "Specifies the number of bits in the key.",
+			"-f filename": "Specifies the filename of the key file."
+		}
 	}
 ]

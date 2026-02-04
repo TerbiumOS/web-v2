@@ -62,6 +62,8 @@ export default function Updater() {
 				"tb.js",
 				"touch.js",
 				"unzip.js",
+				"ssh.js",
+				"ssh-keygen.js",
 			];
 			if (await dirExists("/system/tmp/terb-upd/")) {
 				await window.tb.sh.promises.rm(`/system/tmp/terb-upd/`, { recursive: true });
