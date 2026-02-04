@@ -16,15 +16,15 @@ async function pkg(args) {
 				const response = await tb.libcurl.fetch(repo);
 				let repoData = rType === "terbium" ? (await response.json()).apps : (await (await tb.libcurl.fetch(repo.replace("manifest.json", "list.json"))).json()).apps;
 				const packageName = args._[1];
-				const exactMatch = repoData.find(pkg => pkg.name.toLowerCase() === packageName);
+				const exactMatch = repoData.find(pkg => pkg.name.toLowerCase() === packageName.toLowerCase());
 				if (exactMatch) {
 					displayOutput(`Installing ${exactMatch.name}...`);
 					if (exactMatch.requirements) {
-						if (exactMatch.requirements.os < window.parent.tb.system.version()) {
+						if (exactMatch.requirements.os && semverCompare(exactMatch.requirements.os, window.parent.tb.system.version()) > 0) {
 							displayError(`This app requires terbium version: ${exactMatch.requirements.os} or later`);
 							createNewCommandInput();
 							return;
-						} else if (exactMatch.requirements.proxy !== (await window.parent.tb.proxy.get())) {
+						} else if (exactMatch.requirements.proxy && exactMatch.requirements.proxy !== (await window.parent.tb.proxy.get())) {
 							displayError(`This app requires ${exactMatch.requirements.proxy} as the default proxy.`);
 							createNewCommandInput();
 							return;
@@ -79,7 +79,7 @@ async function pkg(args) {
 			if (args._[1]) {
 				const packageName = args._[1];
 				let installed = JSON.parse(await window.parent.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
-				const appIndex = installed.findIndex(app => app.name.toLowerCase() === packageName);
+				const appIndex = installed.findIndex(app => app.name.toLowerCase() === packageName.toLowerCase());
 				if (appIndex !== -1) {
 					const app = installed[appIndex];
 					installed.splice(appIndex, 1);
@@ -101,14 +101,14 @@ async function pkg(args) {
 					} else if (configPath.endsWith("manifest.json")) {
 						try {
 							await window.parent.tb.fs.promises.unlink(`/system/etc/anura/configs/${app.name}.json`);
-							await tb.sh.rm(configPath.replace("/manifest.json", "/"));
+							await tb.sh.rm(configPath.replace("/manifest.json", "/"), { recursive: true });
 						} catch {}
-						await tb.sh.rm(`/apps/anura/${app.name}`);
+						await tb.sh.rm(`/apps/anura/${app.name}`, { recursive: true });
 						await tb.launcher.removeApp(app.name);
 						delete window.parent.anura.apps[app.package];
 						displayOutput(`${app.name} has been uninstalled.`);
 					} else if (configPath.endsWith(".tbconfig")) {
-						await tb.sh.rm(configPath.replace("/.tbconfig", "/"));
+						await tb.sh.rm(configPath.replace("/.tbconfig", "/"), { recursive: true });
 						await tb.launcher.removeApp(app.name);
 						displayOutput(`${app.name} has been uninstalled.`);
 					}
@@ -128,13 +128,13 @@ async function pkg(args) {
 				const response = await tb.libcurl.fetch(repo);
 				let repoData = rType === "terbium" ? (await response.json()).apps : (await (await tb.libcurl.fetch(repo.replace("manifest.json", "list.json"))).json()).apps;
 				const packageName = args._[1];
-				const exactMatch = repoData.find(pkg => pkg.name.toLowerCase() === packageName);
+				const exactMatch = repoData.find(pkg => pkg.name.toLowerCase() === packageName.toLowerCase());
 				if (exactMatch.requirements) {
-					if (exactMatch.requirements.os < window.parent.tb.system.version()) {
+					if (exactMatch.requirements.os && semverCompare(exactMatch.requirements.os, window.parent.tb.system.version()) > 0) {
 						displayError(`This app requires terbium version: ${exactMatch.requirements.os} or later`);
 						createNewCommandInput();
 						return;
-					} else if (exactMatch.requirements.proxy !== (await window.parent.tb.proxy.get())) {
+					} else if (exactMatch.requirements.proxy && exactMatch.requirements.proxy !== (await window.parent.tb.proxy.get())) {
 						displayError(`This app requires ${exactMatch.requirements.proxy} as the default proxy.`);
 						createNewCommandInput();
 						return;
@@ -496,6 +496,29 @@ const dirExists = async path => {
 			}
 		});
 	});
+};
+
+/**
+ * Compares two semantic version strings.
+ * @param {string} a - The first version string.
+ * @param {string} b - The second version string.
+ * @returns {number} - Returns 1 if a > b, -1 if a < b, 0 if they are equal.
+ */
+const semverCompare = (a, b) => {
+	const pa = a.split(/[-.]/);
+	const pb = b.split(/[-.]/);
+	for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+		const na = pa[i] || "0";
+		const nb = pb[i] || "0";
+		if (!isNaN(na) && !isNaN(nb)) {
+			if (+na > +nb) return 1;
+			if (+na < +nb) return -1;
+		} else {
+			if (na > nb) return 1;
+			if (na < nb) return -1;
+		}
+	}
+	return 0;
 };
 
 pkg(args);

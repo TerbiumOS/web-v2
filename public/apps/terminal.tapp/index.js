@@ -50,6 +50,11 @@ function htorgb(hex) {
 let accCommand = "";
 
 /**
+ * Cursor position within the current command (for left/right arrow navigation)
+ */
+let cursorPos = 0;
+
+/**
  * Flag to control whether the terminal should process commands
  */
 let isProcessingCommands = true;
@@ -72,6 +77,8 @@ const term = new Terminal({
 		selection: "#444444",
 	},
 	cursorBlink: true,
+	allowTransparency: true,
+	rightClickSelectsWord: true,
 });
 document.addEventListener("DOMContentLoaded", async () => {
 	term.open(document.getElementById("term"));
@@ -84,9 +91,58 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 	term.write("\r\n");
 	await writePowerline();
-	term.onData(async char => {
-		if (!isProcessingCommands) return;
 
+	// Enable copy/paste with Ctrl+C and Ctrl+V
+	term.attachCustomKeyEventHandler(event => {
+		// Allow Ctrl+C for copy (when text is selected)
+		if (event.ctrlKey && event.key === "c" && term.hasSelection()) {
+			return true; // Let browser handle copy
+		}
+		// Allow Ctrl+V for paste
+		if (event.ctrlKey && event.key === "v") {
+			return true; // Let browser handle paste
+		}
+		// Allow Ctrl+X for cut
+		if (event.ctrlKey && event.key === "x" && term.hasSelection()) {
+			return true; // Let browser handle cut
+		}
+		// Allow Ctrl+A for select all (when in command mode)
+		if (event.ctrlKey && event.key === "a" && isProcessingCommands) {
+			event.preventDefault();
+			// Select current command line
+			return false;
+		}
+		return true;
+	});
+
+	// Handle paste events
+	term.onData(async char => {
+		if (!isProcessingCommands) {
+			// If SSH or other mode is active, pass through directly
+			const dataHandler = term._core._inputHandler;
+			if (dataHandler && dataHandler.onData) {
+				dataHandler.onData(char);
+			}
+			return;
+		}
+
+		// Handle paste (multiple characters at once)
+		if (char.length > 1 && !char.startsWith("\x1b")) {
+			// This is pasted text
+			for (const c of char) {
+				await handleChar(c);
+			}
+			return;
+		}
+
+		await handleChar(char);
+	});
+
+	/**
+	 * Handle a single character input
+	 * @param {string} char The character to handle
+	 */
+	async function handleChar(char) {
 		// Handle arrow keys for history navigation
 		// Up arrow
 		if (char === "\x1b[A") {
@@ -97,6 +153,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 				historyIndex--;
 				accCommand = commandHistory[historyIndex];
+				cursorPos = accCommand.length;
 				term.write(accCommand);
 			}
 			return;
@@ -110,21 +167,83 @@ document.addEventListener("DOMContentLoaded", async () => {
 			if (historyIndex < commandHistory.length - 1) {
 				historyIndex++;
 				accCommand = commandHistory[historyIndex];
+				cursorPos = accCommand.length;
 				term.write(accCommand);
 			} else {
 				historyIndex = commandHistory.length;
 				accCommand = "";
+				cursorPos = 0;
 			}
 			return;
 		}
-		// Left arrow
+
+		// Left arrow - move cursor left
+		if (char === "\x1b[D") {
+			if (cursorPos > 0) {
+				cursorPos--;
+				term.write("\x1b[D");
+			}
+			return;
+		}
+
+		// Right arrow - move cursor right
+		if (char === "\x1b[C") {
+			if (cursorPos < accCommand.length) {
+				cursorPos++;
+				term.write("\x1b[C");
+			}
+			return;
+		}
+
+		// Home key - move to beginning
+		if (char === "\x1b[H" || char === "\x1b[1~") {
+			const moveLeft = cursorPos;
+			if (moveLeft > 0) {
+				term.write(`\x1b[${moveLeft}D`);
+				cursorPos = 0;
+			}
+			return;
+		}
+
+		// End key - move to end
+		if (char === "\x1b[F" || char === "\x1b[4~") {
+			const moveRight = accCommand.length - cursorPos;
+			if (moveRight > 0) {
+				term.write(`\x1b[${moveRight}C`);
+				cursorPos = accCommand.length;
+			}
+			return;
+		}
+
+		// Delete key - delete character at cursor
+		if (char === "\x1b[3~") {
+			if (cursorPos < accCommand.length) {
+				accCommand = accCommand.slice(0, cursorPos) + accCommand.slice(cursorPos + 1);
+				// Redraw from cursor to end
+				const remaining = accCommand.slice(cursorPos);
+				term.write(remaining + " ");
+				// Move cursor back
+				term.write(`\x1b[${remaining.length + 1}D`);
+			}
+			return;
+		}
+
+		// Backspace
 		if (char === "\x7f") {
-			if (accCommand.length > 0) {
-				accCommand = accCommand.slice(0, -1);
-				term.write("\b \b");
+			if (cursorPos > 0) {
+				accCommand = accCommand.slice(0, cursorPos - 1) + accCommand.slice(cursorPos);
+				cursorPos--;
+				// Move cursor back, redraw rest of line, add space to clear last char
+				term.write("\b");
+				const remaining = accCommand.slice(cursorPos);
+				term.write(remaining + " ");
+				// Move cursor back to position
+				term.write(`\x1b[${remaining.length + 1}D`);
 			}
 			return;
 		}
+
+		// Enter key
 		if (char === "\r") {
 			term.writeln("");
 			const input = accCommand.trim();
@@ -140,16 +259,33 @@ document.addEventListener("DOMContentLoaded", async () => {
 				await writePowerline();
 			}
 			accCommand = "";
+			cursorPos = 0;
 			return;
 		}
+
+		// Regular character input
 		if (char >= " " && char <= "~") {
-			accCommand += char;
-			term.write(char);
+			// Insert character at cursor position
+			accCommand = accCommand.slice(0, cursorPos) + char + accCommand.slice(cursorPos);
+			cursorPos++;
+
+			// If cursor is at end, just append
+			if (cursorPos === accCommand.length) {
+				term.write(char);
+			} else {
+				// Redraw from cursor position
+				const remaining = accCommand.slice(cursorPos - 1);
+				term.write(remaining);
+				// Move cursor back to correct position
+				term.write(`\x1b[${remaining.length - 1}D`);
+			}
 		}
-	});
+	}
+
 	term.onLineFeed(() => {
 		// Reset because of a newline carriage
 		accCommand = "";
+		cursorPos = 0;
 		historyIndex = commandHistory.length;
 	});
 	term.focus();
