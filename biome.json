@@ -6,7 +6,21 @@
 		"useIgnoreFile": false
 	},
 	"files": {
-		"includes": ["**", "!**/node_modules/**", "!**/dist/**", "!**/public/assets/**", "!**/public/apps/*.lib/**", "!**/public/apps/nfsadapter/**", "!**/public/lib/**", "!**/.vscode/**", "!**/.zed/**", "!**/docs/**", "!**/public/apps/*.app/**", "!**/public/apps/files.tapp/webdav.js"]
+		"includes": [
+			"**",
+			"!**/node_modules/**",
+			"!**/dist/**",
+			"!**/public/assets/**",
+			"!**/public/apps/*.lib/**",
+			"!**/public/apps/nfsadapter/**",
+			"!**/public/lib/**",
+			"!**/.vscode/**",
+			"!**/.zed/**",
+			"!**/docs/**",
+			"!**/public/apps/*.app/**",
+			"!**/public/apps/files.tapp/webdav.js",
+			"!**/public/apps/terminal.tapp/ssh-util.js"
+		]
 	},
 	"formatter": {
 		"enabled": true,

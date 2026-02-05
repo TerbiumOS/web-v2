@@ -1,61 +1,49 @@
-/**
- * Compiled SSH command for TerbiumOS Terminal
- * Copy this file to: /apps/terminal.tapp/scripts/ssh.js
- */
-
 const tbSSH = window.tbSSH;
-
 if (!tbSSH) {
 	displayError("TB-SSH library not loaded!");
 	createNewCommandInput();
 	throw new Error("TB-SSH not available");
 }
-
 if (tb.node.isReady === false) {
 	displayOutput(`\r\nWebContainer has not booted yet. Please wait a few seconds and try again.`);
 	createNewCommandInput();
 	tb.setCommandProcessing(true);
 	throw new Error("WebContainer not ready");
 }
-
 const connectionString = args._[0];
 const port = args.p || args.port;
 const identityFile = args.i || args.identity;
 const verbose = args.v || args.verbose;
-const proxyUrl = args.proxy || localStorage.getItem("SSH_PROXY_URL") || "ws://localhost:3333";
-
+const proxyUrl = args.proxy || "wss://ssh-proxy.terbiumon.top/";
 if (!connectionString) {
-	displayError("Usage: ssh [user@]hostname [-p port] [-i identity_file] [-v]");
+	displayError("Usage: ssh [user@]hostname [-p port] [-i identity_file] [-proxy proxy_url] [-v]");
 	displayOutput("Examples:");
 	displayOutput("  ssh user@example.com");
 	displayOutput("  ssh example.com");
 	displayOutput("  ssh -p 2222 user@example.com");
 	displayOutput("  ssh -i ~/.ssh/id_rsa user@example.com");
+	displayOutput("  ssh --proxy ws://localhost:3333 user@example.com");
 	createNewCommandInput();
 	throw new Error("No connection string provided");
 }
-
 let username, hostname;
 if (connectionString.includes("@")) {
 	[username, hostname] = connectionString.split("@");
 } else {
 	hostname = connectionString;
 }
-
 (async () => {
 	let client = null;
 	try {
 		displayOutput(`Connecting to ${hostname}...`);
 		let usedKey = null;
-
+		displayOutput(`Using proxy URL: ${proxyUrl}`);
 		const configParser = await tbSSH.loadSSHConfig();
-
 		if (configParser) {
 			const hostConfig = configParser.getHost(hostname);
 			if (hostConfig && !username && !port && !identityFile) {
 				displayOutput(`Using SSH config for host: ${hostname}`);
 				if (hostConfig.IdentityFile) {
-					// Diagnostic: check if the IdentityFile is readable
 					try {
 						const pk = await tbSSH.loadPrivateKey(hostConfig.IdentityFile);
 						if (pk) {
@@ -79,10 +67,7 @@ if (connectionString.includes("@")) {
 				}
 			}
 		}
-
-		// Replace procedural client creation with a single robust helper
 		async function getClientInternal() {
-			// Attempt config-based client first
 			if (configParser) {
 				const hostConfig = configParser.getHost(hostname);
 				if (hostConfig && !username && !port && !identityFile) {
@@ -96,8 +81,6 @@ if (connectionString.includes("@")) {
 					}
 				}
 			}
-
-			// Build fallback config
 			const cfg = {
 				host: hostname,
 				port: port ? parseInt(port) : 22,
@@ -105,7 +88,6 @@ if (connectionString.includes("@")) {
 				timeout: 60000,
 				keepaliveInterval: 60000,
 			};
-
 			if (identityFile) {
 				const pk = await tbSSH.loadPrivateKey(identityFile);
 				if (pk) {
@@ -152,8 +134,6 @@ if (connectionString.includes("@")) {
 					cfg.password = password;
 				}
 			}
-
-			// Diagnostic
 			try {
 				if (cfg.privateKey) {
 					try {
@@ -165,12 +145,10 @@ if (connectionString.includes("@")) {
 					displayOutput(`Auth: none`);
 				}
 			} catch (e) {}
-
-			// Try WebSocket proxy client (works in WebContainer)
 			if (typeof tbSSH.createSSHClientWithProxy === "function") {
 				try {
 					displayOutput(`Attempting WebSocket proxy connection via ${proxyUrl}...`);
-					const wsClient = tbSSH.createSSHClientWithProxy(cfg, proxyUrl);
+					const wsClient = tbSSH.createSSHClientWithProxy(cfg, proxyUrl, true);
 					await wsClient.connect();
 					if (wsClient.isConnected()) return wsClient;
 				} catch (e) {
@@ -178,8 +156,6 @@ if (connectionString.includes("@")) {
 					if (verbose) displayError(`Stack: ${e.stack}`);
 				}
 			}
-
-			// Try generic factory
 			try {
 				const c = await tbSSH.createSSHClient(cfg);
 				if (c && typeof c.connect === "function") return c;
@@ -188,8 +164,6 @@ if (connectionString.includes("@")) {
 				displayError(`Error creating SSH client for ${hostname}: ${e.message}`);
 				if (verbose) displayError(`Stack: ${e.stack}`);
 			}
-
-			// Fallback to connectToSSH which will perform connect internally
 			if (typeof tbSSH.connectToSSH === "function") {
 				try {
 					const connected = await tbSSH.connectToSSH(cfg.host, cfg.port, cfg.username, cfg.password);
@@ -199,21 +173,16 @@ if (connectionString.includes("@")) {
 					if (verbose) displayError(`Stack: ${e.stack}`);
 				}
 			}
-
 			return null;
 		}
-
 		client = await getClientInternal();
 		if (!client) {
 			displayError(`Failed to create SSH client for ${hostname}`);
 			createNewCommandInput();
 			return;
 		}
-
-		// Ensure client was created successfully before attempting to connect
 		if (!client || typeof client.connect !== "function") {
 			displayError(`Failed to create SSH client for ${hostname}`);
-			// Show what we tried (without exposing secrets)
 			try {
 				displayOutput(`Tried: host=${hostname} port=${port ? parseInt(port) : 22} username=${username || sessionStorage.getItem("currAcc") || "root"} auth=${usedKey ? `key(source=${usedKey})` : "password/none"}`);
 				if (client) {
@@ -225,8 +194,6 @@ if (connectionString.includes("@")) {
 			createNewCommandInput();
 			return;
 		}
-
-		// Connect if needed
 		try {
 			if (typeof client.connect === "function") {
 				if (!(typeof client.isConnected === "function" && client.isConnected())) {
@@ -251,16 +218,11 @@ if (connectionString.includes("@")) {
 			return;
 		}
 		displayOutput(`Connected to ${hostname}`);
-
-		// Handle WebSocket client directly (it has setStream and write methods but no shell method)
 		const isWebSocketClient = typeof client.setStream === "function" && typeof client.write === "function" && typeof client.shell !== "function";
-
 		if (isWebSocketClient) {
 			if (window.parent.tb?.setCommandProcessing) {
 				window.parent.tb.setCommandProcessing(false);
 			}
-
-			// Set up stream for WebSocket client
 			const stream = {
 				onData: data => {
 					const text = typeof data === "string" ? data : new TextDecoder().decode(data);
@@ -276,48 +238,35 @@ if (connectionString.includes("@")) {
 				},
 			};
 			client.setStream(stream);
-
-			// Handle terminal input
 			term.onData(data => {
 				client.write(data);
 			});
-
-			// Handle terminal resize
 			term.onResize(({ cols, rows }) => {
 				if (typeof client.resize === "function") {
 					client.resize(cols, rows);
 				}
 			});
-
-			return; // Exit - WebSocket client handles everything
+			return;
 		}
-
 		const terminal = new tbSSH.SSHTerminal(client);
 		await terminal.start();
-
 		if (window.parent.tb?.setCommandProcessing) {
 			window.parent.tb.setCommandProcessing(false);
 		}
-
 		terminal.onData(data => {
 			term.write(data);
 		});
-
 		terminal.onClose(() => {
 			displayOutput("\r\nConnection closed.");
 			if (client) client.disconnect();
-
 			try {
 				if (typeof inputDisposable !== "undefined" && inputDisposable) inputDisposable.dispose();
 			} catch (e) {}
-
 			if (window.parent.tb?.setCommandProcessing) {
 				window.parent.tb.setCommandProcessing(true);
 			}
-
 			createNewCommandInput();
 		});
-
 		const inputDisposable = term.onData(data => {
 			terminal.write(data);
 		});
