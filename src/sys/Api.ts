@@ -1047,6 +1047,33 @@ export default async function Api() {
 					}
 				}
 			},
+			reauth: async () => {
+				return new Promise<any>((resolve, reject) => {
+					window.tb.dialog.WebAuth({
+						title: "Verify Identity",
+						message: "Please sign in to your Terbium Cloud Account to verify it's you.",
+						onOk: async (username: string, password: string) => {
+							await window.tb.tauth.client.signIn.email({
+								email: username,
+								password: password,
+								rememberMe: true,
+								fetchOptions: {
+									onSuccess: async () => {
+										await window.tb.tauth.sync.retreive();
+										resolve(true);
+									},
+									onError: error => {
+										reject(new Error(error.error.message));
+									},
+								},
+							});
+						},
+						onCancel: () => {
+							reject(new Error("User cancelled the sign-in process"));
+						},
+					});
+				});
+			},
 			sync: {
 				retreive: async () => {
 					const info = await window.tb.tauth.getInfo();

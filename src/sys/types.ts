@@ -513,6 +513,7 @@ export interface COM {
 		signOut(): Promise<void>;
 		isTACC(username?: string): Promise<boolean>;
 		updateInfo(data: any): Promise<void>;
+		reauth(): Promise<void>;
 		sync: {
 			retreive: () => Promise<void>;
 			upload: () => Promise<void>;

@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">API Docs</span>
 
-**Last Updated**: v2.3.0-dev - 01/21/2026
+**Last Updated**: v2.3.0-dev - 02/09/2026
 
 So you're looking to use Terbium APIs. Well, you're in the right place! Terbium has a decent amount of components which I will break down below. The pages will include a description of the functions and code examples.
 
@@ -1097,6 +1097,14 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
         username: "newusername", 
         pfp: "data:image/png;base64,..." 
       });
+      ```
+
+  - **reauth**
+    - Description: Logs back into Terbium Cloud
+    - Returns: `Promise<void>`
+    - Example:
+      ```javascript
+      await tb.tauth.reauth();
       ```
 
   - **getInfo**
