@@ -73,23 +73,25 @@ export async function getinfo(user?: string | null, pass?: string | null, settin
 
 	return {
 		user: uinf,
-		settings: settings ? (() => {
-			try {
-				// @ts-expect-error no
-				return JSON.parse(settings.value);
-			} catch (e) {
-				window.tb.notification.Toast({
-					message: "Your session is out of date. Click OK to sign in to Terbium Cloud again",
-					application: "System",
-					iconSrc: "/fs/apps/system/about.tapp/icon.svg",
-					onOk: async () => {
-						await window.tb.tauth.reauth();
-					},
-					time: 6000,
-				});
-				return null;
-			}
-		})() : null,
+		settings: settings
+			? (() => {
+					try {
+						// @ts-expect-error no
+						return JSON.parse(settings.value);
+					} catch (e) {
+						window.tb.notification.Toast({
+							message: "Your session is out of date. Click OK to sign in to Terbium Cloud again",
+							application: "System",
+							iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+							onOk: async () => {
+								await window.tb.tauth.reauth();
+							},
+							time: 6000,
+						});
+						return null;
+					}
+				})()
+			: null,
 	};
 }
 
