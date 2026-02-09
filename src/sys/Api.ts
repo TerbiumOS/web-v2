@@ -287,13 +287,56 @@ export default async function Api() {
 		},
 		contextmenu: {
 			create(props: cmprops) {
+				let adjustedX = props.x;
+				let adjustedY = props.y;
+				let shouldAdjust = false;
+				if (props.iframe === true) {
+					shouldAdjust = true;
+				} else if (props.iframe === false) {
+					shouldAdjust = false;
+				} else {
+					try {
+						const stack = new Error().stack || "";
+						const isCalledFromIframe =
+							stack.includes("about:srcdoc") ||
+							/at\s+.*?\/apps\/.*?\.tapp\//.test(stack) ||
+							stack.split("\n").some(line => {
+								return line.includes("blob:") || line.includes("/apps/");
+							});
+						shouldAdjust = isCalledFromIframe;
+					} catch (err) {
+						console.warn("Could not detect iframe context for context menu:", err);
+					}
+				}
+				if (shouldAdjust) {
+					try {
+						const currentPID = useWindowStore.getState().currentPID;
+						const windows = useWindowStore.getState().windows;
+						if (currentPID && windows) {
+							const windowConfig = windows.find((w: any) => w.pid === currentPID);
+							if (windowConfig?.wid && windowConfig?.src) {
+								const windowElement = document.getElementById(windowConfig.wid);
+								if (windowElement) {
+									const iframe = windowElement.querySelector("iframe");
+									if (iframe) {
+										const rect = iframe.getBoundingClientRect();
+										adjustedX = props.x + rect.left;
+										adjustedY = props.y + rect.top;
+									}
+								}
+							}
+						}
+					} catch (err) {
+						console.warn("Could not calculate iframe offset for context menu:", err);
+					}
+				}
 				window.dispatchEvent(
 					new CustomEvent("ctxm", {
 						detail: {
 							props: {
 								titlebar: props.titlebar || false,
-								x: props.x,
-								y: props.y,
+								x: adjustedX,
+								y: adjustedY,
 								options: props.options,
 							},
 						},

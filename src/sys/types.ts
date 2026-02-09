@@ -300,6 +300,7 @@ export interface cmprops {
 		color?: string;
 		click: () => void;
 	}[];
+	iframe?: boolean;
 }
 
 export interface AppData {

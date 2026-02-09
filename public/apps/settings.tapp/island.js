@@ -8,6 +8,7 @@ tb_island.addControl({
 		tb.contextmenu.create({
 			x: 6,
 			y: appisland,
+			iframe: false,
 			options: [
 				{
 					text: "Import Settings",
@@ -53,6 +54,7 @@ tb_island.addControl({
 		tb.contextmenu.create({
 			x: 6,
 			y: appisland,
+			iframe: false,
 			options: [
 				{
 					text: "Appearance",

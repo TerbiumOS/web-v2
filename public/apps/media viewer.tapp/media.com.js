@@ -28,6 +28,7 @@ tb_island.addControl({
 		tb.contextmenu.create({
 			x: appIsland.clientWidth - 110,
 			y: appIsland.clientHeight + 12,
+			iframe: false,
 			options: options,
 		});
 	},
@@ -57,6 +58,7 @@ tb_island.addControl({
 		tb.contextmenu.create({
 			x: appIsland.clientWidth - 110,
 			y: appIsland.clientHeight + 12,
+			iframe: false,
 			options: options,
 		});
 	},

@@ -321,8 +321,8 @@ async function loadRepos() {
 			repoCard.addEventListener("contextmenu", function (e) {
 				e.preventDefault();
 				window.parent.tb.contextmenu.create({
-					x: e.clientX + 100,
-					y: e.clientY + 275,
+					x: e.clientX,
+					y: e.clientY,
 					options: [
 						{ text: "Load Repo", click: () => loadRepo(repo.url) },
 						{
@@ -361,8 +361,8 @@ async function loadRepos() {
 			repoCard.addEventListener("contextmenu", function (e) {
 				e.preventDefault();
 				window.parent.tb.contextmenu.create({
-					x: e.clientX + 100,
-					y: e.clientY + 275,
+					x: e.clientX,
+					y: e.clientY,
 					options: [
 						{ text: "Load Repo", click: () => loadRepo(repo.url) },
 						{
@@ -400,8 +400,8 @@ async function loadRepos() {
 			repoCard.addEventListener("contextmenu", function (e) {
 				e.preventDefault();
 				window.parent.tb.contextmenu.create({
-					x: e.clientX + 100,
-					y: e.clientY + 275,
+					x: e.clientX,
+					y: e.clientY,
 					options: [
 						{ text: "Load Repo", click: () => loadRepo(repo.url) },
 						{

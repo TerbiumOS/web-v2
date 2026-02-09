@@ -15,6 +15,7 @@ tb_island.addControl({
 		tb.contextmenu.create({
 			x: 6,
 			y: appIsland.clientHeight + 12,
+			iframe: false,
 			options: [
 				isTrash
 					? null
@@ -154,6 +155,7 @@ tb_island.addControl({
 		tb.contextmenu.create({
 			x: 6,
 			y: appIsland.clientHeight + 12,
+			iframe: false,
 			options: options,
 		});
 	},
@@ -242,6 +244,7 @@ tb_island.addControl({
 		tb.contextmenu.create({
 			x: 6,
 			y: appIsland.clientHeight + 12,
+			iframe: false,
 			options: options,
 		});
 	},

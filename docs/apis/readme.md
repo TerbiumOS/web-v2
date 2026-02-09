@@ -312,7 +312,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **create**
     - Description: Creates a Context Menu at your desired location
     - Parameters:
-      - `props: { x: number, y: number, options: Array, titlebar?: boolean }` - Context menu properties.
+      - `props: { x: number, y: number, options: Array, titlebar?: boolean, iframe?: boolean }` - Context menu properties.
     - Example:
       ```javascript
       tb.contextmenu.create({
