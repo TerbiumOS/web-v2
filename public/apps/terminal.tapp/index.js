@@ -92,24 +92,33 @@ document.addEventListener("DOMContentLoaded", async () => {
 	term.write("\r\n");
 	await writePowerline();
 
-	// Enable copy/paste with Ctrl+C and Ctrl+V
+	// Prevent browser context menu on right-click
+	term.element.addEventListener('contextmenu', (e) => {
+		e.preventDefault();
+	});
+
+	// Handle keyboard shortcuts for copy/paste
 	term.attachCustomKeyEventHandler(event => {
-		// Allow Ctrl+C for copy (when text is selected)
-		if (event.ctrlKey && event.key === "c" && term.hasSelection()) {
-			return true; // Let browser handle copy
+		if (event.ctrlKey && event.key === "c") {
+			if (term.hasSelection()) {
+				navigator.clipboard.writeText(term.getSelection()).catch(console.error);
+				event.preventDefault();
+				return false;
+			}
 		}
-		// Allow Ctrl+V for paste
 		if (event.ctrlKey && event.key === "v") {
-			return true; // Let browser handle paste
-		}
-		// Allow Ctrl+X for cut
-		if (event.ctrlKey && event.key === "x" && term.hasSelection()) {
-			return true; // Let browser handle cut
+			navigator.clipboard.readText().then(text => {
+				for (const c of text) {
+					handleChar(c);
+				}
+			}).catch(console.error);
+			event.preventDefault();
+			return false;
 		}
 		// Allow Ctrl+A for select all (when in command mode)
 		if (event.ctrlKey && event.key === "a" && isProcessingCommands) {
 			event.preventDefault();
-			// Select current command line
+			// Select current command line - not implemented yet
 			return false;
 		}
 		return true;
