@@ -245,7 +245,7 @@ async function pkg(args) {
 			break;
 		case "help":
 		default:
-			displayOutput(`TPKG v1.4.2 - August 2025`);
+			displayOutput(`TPKG v1.4.3 - February 2026`);
 			displayOutput(`Usage: pkg <command>`);
 			displayOutput(" ");
 			displayOutput("All commands:");
