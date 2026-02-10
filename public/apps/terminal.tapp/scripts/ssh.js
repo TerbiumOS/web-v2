@@ -1,14 +1,10 @@
 const tbSSH = window.tbSSH;
 if (!tbSSH) {
-	displayError("TB-SSH library not loaded!");
-	createNewCommandInput();
-	throw new Error("TB-SSH not available");
+	throw new Error("TB-SSH library not loaded!");
 }
 if (tb.node.isReady === false) {
-	displayOutput(`\r\nWebContainer has not booted yet. Please wait a few seconds and try again.`);
-	createNewCommandInput();
 	tb.setCommandProcessing(true);
-	throw new Error("WebContainer not ready");
+	throw new Error("\r\nWebContainer has not booted yet. Please wait a few seconds and try again.");
 }
 const connectionString = args._[0];
 const port = args.p || args.port;
@@ -16,15 +12,14 @@ const identityFile = args.i || args.identity;
 const verbose = args.v || args.verbose;
 const proxyUrl = args.proxy || "wss://ssh-proxy.terbiumon.top/";
 if (!connectionString) {
-	displayError("Usage: ssh [user@]hostname [-p port] [-i identity_file] [-proxy proxy_url] [-v]");
+	displayOutput("Usage: ssh [user@]hostname [-p port] [-i identity_file] [-proxy proxy_url] [-v]");
 	displayOutput("Examples:");
 	displayOutput("  ssh user@example.com");
 	displayOutput("  ssh example.com");
 	displayOutput("  ssh -p 2222 user@example.com");
 	displayOutput("  ssh -i ~/.ssh/id_rsa user@example.com");
 	displayOutput("  ssh --proxy ws://localhost:3333 user@example.com");
-	createNewCommandInput();
-	throw new Error("No connection string provided");
+	throw new Error("Invalid Usage or No connection string provided.");
 }
 let username, hostname;
 if (connectionString.includes("@")) {
