@@ -93,7 +93,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 	await writePowerline();
 
 	// Prevent browser context menu on right-click
-	term.element.addEventListener('contextmenu', (e) => {
+	term.element.addEventListener("contextmenu", e => {
 		e.preventDefault();
 	});
 
@@ -107,11 +107,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 			}
 		}
 		if (event.ctrlKey && event.key === "v") {
-			navigator.clipboard.readText().then(text => {
-				for (const c of text) {
-					handleChar(c);
-				}
-			}).catch(console.error);
+			navigator.clipboard
+				.readText()
+				.then(text => {
+					for (const c of text) {
+						handleChar(c);
+					}
+				})
+				.catch(console.error);
 			event.preventDefault();
 			return false;
 		}

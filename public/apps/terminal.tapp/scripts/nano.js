@@ -110,11 +110,14 @@ async function nano(args) {
 			currentCol++;
 			modified = true;
 			drawEditor();
-		} else if (data === "\x07") { // ^G Help
+		} else if (data === "\x07") {
+			// ^G Help
 			showHelp();
-		} else if (data === "\x0f") { // ^O Write Out
+		} else if (data === "\x0f") {
+			// ^O Write Out
 			saveFile();
-		} else if (data === "\x0b") { // ^K Cut
+		} else if (data === "\x0b") {
+			// ^K Cut
 			cutBuffer = lines[currentLine];
 			lines.splice(currentLine, 1);
 			if (lines.length === 0) lines = [""];
@@ -122,7 +125,8 @@ async function nano(args) {
 			currentCol = Math.min(currentCol, lines[currentLine].length);
 			modified = true;
 			drawEditor();
-		} else if (data === "\x15") { // ^U Paste
+		} else if (data === "\x15") {
+			// ^U Paste
 			if (cutBuffer !== "") {
 				lines.splice(currentLine + 1, 0, cutBuffer);
 				currentLine++;
@@ -130,19 +134,23 @@ async function nano(args) {
 				modified = true;
 				drawEditor();
 			}
-		} else if (data === "\x03") { // ^C Cur Pos
+		} else if (data === "\x03") {
+			// ^C Cur Pos
 			showPosition();
-		} else if (data === "\x16") { // ^V Next Page
+		} else if (data === "\x16") {
+			// ^V Next Page
 			const pageSize = term.rows - 3;
 			currentLine = Math.min(lines.length - 1, currentLine + pageSize);
 			currentCol = Math.min(currentCol, lines[currentLine].length);
 			drawEditor();
-		} else if (data === "\x19") { // ^Y Prev Page
+		} else if (data === "\x19") {
+			// ^Y Prev Page
 			const pageSize = term.rows - 3;
 			currentLine = Math.max(0, currentLine - pageSize);
 			currentCol = Math.min(currentCol, lines[currentLine].length);
 			drawEditor();
-		} else if (data === "\x18") { // ^X Exit
+		} else if (data === "\x18") {
+			// ^X Exit
 			if (modified) {
 				promptSaveOnExit();
 			} else {
@@ -214,7 +222,7 @@ async function nano(args) {
 		term.writeln("");
 		term.write("Save modified buffer? ");
 		let response = "";
-		const promptDisposable = term.onData((data) => {
+		const promptDisposable = term.onData(data => {
 			if (data === "\r" || data === "\n") {
 				if (response.toLowerCase() === "y" || response.toLowerCase() === "yes") {
 					saveFile().then(() => exitEditor());
@@ -224,10 +232,12 @@ async function nano(args) {
 					promptSaveOnExit();
 				}
 				promptDisposable.dispose();
-			} else if (data === "\x03") { // ^C Cancel
+			} else if (data === "\x03") {
+				// ^C Cancel
 				drawEditor();
 				promptDisposable.dispose();
-			} else if (data === "\x7f") { // Backspace
+			} else if (data === "\x7f") {
+				// Backspace
 				if (response.length > 0) {
 					response = response.slice(0, -1);
 					term.write("\b \b");
