@@ -1,15 +1,14 @@
 function ssh_keygen(args) {
-	const parsedArgs = parseArgs(args);
-	if (parsedArgs.help) {
+	if (args.help || args.h) {
 		showHelp();
 		createNewCommandInput();
 		return;
 	}
-	const keyType = parsedArgs.type || "rsa";
-	const bits = parsedArgs.bits || (keyType === "rsa" ? 2048 : keyType === "ed25519" ? 256 : 2048);
-	const comment = parsedArgs.comment || sessionStorage.getItem("currAcc");
-	const filename = parsedArgs.file || `/home/${sessionStorage.getItem("currAcc")}/.ssh/id_${keyType}`;
-	const passphrase = parsedArgs.passphrase || "";
+	const keyType = args.type || args.t || "rsa";
+	const bits = parseInt(args.bits || args.b) || (keyType === "rsa" ? 2048 : keyType === "ed25519" ? 256 : 2048);
+	const comment = args.comment || args.C || sessionStorage.getItem("currAcc");
+	const filename = args.file || args.f || `/home/${sessionStorage.getItem("currAcc")}/.ssh/id_${keyType}`;
+	const passphrase = args.passphrase || args.N || "";
 	if (!["rsa", "ed25519"].includes(keyType)) {
 		displayError(`ssh-keygen: unknown key type ${keyType}`);
 		displayError("Supported types: rsa, ed25519");
@@ -38,46 +37,12 @@ function ssh_keygen(args) {
 			displayOutput(`SHA256:${fingerprint}`);
 			displayOutput(`The key's randomart image is:`);
 			displayOutput(generateRandomArt(fingerprint));
+			createNewCommandInput();
 		})
 		.catch(error => {
 			displayError(`ssh-keygen: ${error.message}`);
+			createNewCommandInput();
 		});
-
-	function parseArgs(args) {
-		const parsed = {
-			type: null,
-			bits: null,
-			comment: null,
-			file: null,
-			passphrase: "",
-			help: false,
-		};
-		for (let i = 0; i < args.length; i++) {
-			switch (args[i]) {
-				case "-t":
-					parsed.type = args[++i];
-					break;
-				case "-b":
-					parsed.bits = parseInt(args[++i]);
-					break;
-				case "-C":
-					parsed.comment = args[++i];
-					break;
-				case "-f":
-					parsed.file = args[++i];
-					break;
-				case "-N":
-					parsed.passphrase = args[++i];
-					break;
-				case "-h":
-				case "--help":
-					parsed.help = true;
-					break;
-			}
-		}
-
-		return parsed;
-	}
 
 	function showHelp() {
 		displayOutput("usage: ssh-keygen [-t keytype] [-b bits] [-C comment] [-f output_keyfile] [-N new_passphrase]");
