@@ -323,6 +323,73 @@ export default function Updater() {
 				};
 				await window.tb.fs.promises.writeFile("/system/var/terbium/startup.json", JSON.stringify(startupObj), "utf8");
 			}
+			// v2.3 update
+			const dockConfig = JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/dock.json", "utf8"));
+			const startConfig = JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/start.json", "utf8"));
+			try {
+				let changed = false;
+				const termHtml = `<div class="term-tab-container">\n<style>.term-tabs{display:flex;align-items:center;gap:6px;width:100%;height:100%;}.term-tab-list{display:flex;gap:6px;align-items:center;overflow:hidden;white-space:nowrap}.term-tab{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:8px;background:transparent;color:#fff;font-weight:700;cursor:pointer;user-select:none;border:1px solid transparent}.term-tab.active{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.08)}.term-tab .close{opacity:0.6;font-weight:600;margin-left:8px}.term-tab-controls{display:flex;gap:6px;align-items:center}.term-add{background:#ffffff0f;color:#fff;border-radius:6px;padding:2px 6px;border:none;font-weight:700;cursor:pointer}</style>\n<div class="term-tabs">\n<div class="term-tab-list" aria-hidden="false"></div>\n<div class="term-tab-controls">\n<button class="term-add" title="New tab">+</button>\n</div>\n</div>\n</div>`;
+				function upgradeEntry(entry: any): boolean {
+					if (!entry || typeof entry !== "object") return false;
+					let updated = false;
+					if (typeof entry.title === "string" && entry.title.toLowerCase() === "terminal") {
+						entry.title = { text: "Terminal", html: termHtml };
+						updated = true;
+					}
+					if (entry.title && typeof entry.title === "object" && entry.title.text && entry.title.text.toLowerCase() === "terminal" && !entry.title.html) {
+						entry.title.html = termHtml;
+						updated = true;
+					}
+					if (entry.src && typeof entry.src === "string" && entry.src.includes("terminal.tapp")) {
+						if (typeof entry.title === "string") {
+							entry.title = { text: "Terminal", html: termHtml };
+							updated = true;
+						} else if (entry.title && typeof entry.title === "object" && !entry.title.html) {
+							entry.title.html = termHtml;
+							updated = true;
+						}
+					}
+					if (entry.size && typeof entry.size === "object" && entry.size.height === 400) {
+						entry.size.height = 415;
+						updated = true;
+					}
+					return updated;
+				}
+				if (Array.isArray(dockConfig)) {
+					dockConfig.forEach((e: any) => {
+						if (upgradeEntry(e)) changed = true;
+					});
+				} else if (dockConfig && typeof dockConfig === "object") {
+					if (Array.isArray(dockConfig.pinned_apps)) {
+						dockConfig.pinned_apps.forEach((e: any) => {
+							if (upgradeEntry(e)) changed = true;
+						});
+					}
+					if (Array.isArray(dockConfig.apps)) {
+						dockConfig.apps.forEach((e: any) => {
+							if (upgradeEntry(e)) changed = true;
+						});
+					}
+					if (Array.isArray(dockConfig.items)) {
+						dockConfig.items.forEach((e: any) => {
+							if (upgradeEntry(e)) changed = true;
+						});
+					}
+				}
+				if (startConfig && Array.isArray(startConfig.system_apps)) {
+					startConfig.system_apps.forEach((app: any) => {
+						if (upgradeEntry(app)) changed = true;
+					});
+				}
+				if (changed) {
+					await window.tb.fs.promises.writeFile("/system/var/terbium/dock.json", JSON.stringify(dockConfig, null, 4), "utf8");
+					await window.tb.fs.promises.writeFile("/system/var/terbium/start.json", JSON.stringify(startConfig, null, 4), "utf8");
+					console.log("Migrated terminal entries in dock.json/start.json to new metadata");
+				}
+			} catch (err) {
+				console.warn("Failed to migrate dock/start config:", err);
+			}
+
 			setProgress(80);
 			statusref.current!.innerText = "Cleaning up...";
 			setProgress(95);

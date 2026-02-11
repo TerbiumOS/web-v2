@@ -29,10 +29,12 @@ async function node(args, term) {
 
 	if (isJshMode) {
 		displayOutput("Starting WebContainer JavaScript shell...");
+		setTabTitle("JSH: Terminal");
 		command = "jsh";
 		commandArgs = [];
 	} else {
 		displayOutput("Starting Node.js...");
+		setTabTitle("NodeJS");
 		command = "node";
 		const { _: positionalArguments, $0: commandName, j: shortJshFlag, jsh: longJshFlag, _raw: rawArgumentString, ...remainingFlags } = args;
 		const positionalArgs = positionalArguments || [];
@@ -94,6 +96,7 @@ async function node(args, term) {
 	inputHandler.dispose();
 	window.removeEventListener("resize", resizeHandler);
 	tb.setCommandProcessing(true);
+	setTabTitle("Terbium TSH");
 	// Display exit message
 	displayOutput(`\r\nWebContainer shell exited with code ${exitCode}`);
 	// Give the focus back to the terminal

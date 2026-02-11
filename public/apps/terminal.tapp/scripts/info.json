@@ -14,7 +14,11 @@
 		"description": "Simple text editor",
 		"usage": "nano [file]"
 	},
-	{ "name": "touch", "description": "Create a file", "usage": "touch [file]" },
+	{
+		"name": "touch",
+		"description": "Create a file",
+		"usage": "touch [file]"
+	},
 	{
 		"name": "rm",
 		"description": "Remove a file or directory",

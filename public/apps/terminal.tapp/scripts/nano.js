@@ -1,14 +1,3 @@
-/**
- * GNU Nano-like text editor for TerbiumOS Terminal
- * @param {Object} args Parsed command arguments
- * @param {Function} displayOutput Function to display output
- * @param {Function} createNewCommandInput Function to create new command input
- * @param {Function} displayError Function to display error
- * @param {Terminal} term The xterm terminal instance
- * @param {string} path Current working directory path
- * @param {Object} terbium Terbium API
- * @param {Object} buffer Buffer API
- */
 async function nano(args) {
 	const filename = args._[0];
 	if (!filename) {
@@ -41,6 +30,7 @@ async function nano(args) {
 	term.write("\x1b[2J\x1b[H");
 	drawEditor();
 	const disposable = term.onData(handleInput);
+	setTabTitle("TSH Nano");
 	function handleInput(data) {
 		if (data === "\x1b") {
 			return;
@@ -160,7 +150,7 @@ async function nano(args) {
 	}
 	function drawEditor() {
 		term.write("\x1b[2J\x1b[H");
-		const title = `GNU nano ${modified ? "[ Modified ] " : ""}${filename}`;
+		const title = `TSH nano ${modified ? "[ Modified ] " : ""}${filename}`;
 		const centerCol = Math.max(1, Math.floor((term.cols - title.length) / 2));
 		term.write(`\x1b[1;${centerCol}H\x1b[7m${title}\x1b[0m`);
 		const maxLines = term.rows - 3;
@@ -249,6 +239,7 @@ async function nano(args) {
 		});
 	}
 	function exitEditor() {
+		setTabTitle("Terbium TSH");
 		terbium.setCommandProcessing(true);
 		disposable.dispose();
 		term.write("\x1b[2J\x1b[H");

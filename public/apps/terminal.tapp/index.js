@@ -54,12 +54,13 @@ let accCommand = "";
  */
 let cursorPos = 0;
 
-/**
- * Flag to control whether the terminal should process commands
- */
-let isProcessingCommands = true;
 tb.setCommandProcessing = status => {
-	isProcessingCommands = status;
+	sessions.forEach(s => {
+		try {
+			s.isProcessingCommands = status;
+			s.localEcho = status;
+		} catch (e) {}
+	});
 };
 /**
  * Last few commands that have been executed
@@ -70,249 +71,512 @@ let path = `/home/${sessionStorage.getItem("currAcc")}/`;
 const HISTORY_LIMIT = 1000;
 const HISTORY_FILE = ".bash_history";
 
-const term = new Terminal({
-	theme: {
-		background: "#000000",
-		cursor: "#ffffff",
-		selection: "#444444",
-	},
-	cursorBlink: true,
-	allowTransparency: true,
-	rightClickSelectsWord: true,
-});
-document.addEventListener("DOMContentLoaded", async () => {
-	term.open(document.getElementById("term"));
-	term.writeln(`TerbiumOS [Version: ${tb.system.version()}]`);
-	term.writeln(`Type 'help' for a list of commands.`);
-	window.term = term;
+class TerminalSession {
+	constructor(name = "Terbium TSH") {
+		this.id = `s-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+		this.name = name;
+		this.container = document.createElement("div");
+		this.container.className = "term-session";
+		this.container.style.width = "100%";
+		this.container.style.height = "100%";
+		this.container.style.display = "none";
+		document.getElementById("term").appendChild(this.container);
 
-	// Load command history
-	await loadHistory();
+		this.term = new Terminal({ theme: { background: "#000000", cursor: "#ffffff", selection: "#444444" }, cursorBlink: true, allowTransparency: true, rightClickSelectsWord: true });
+		this.term.open(this.container);
 
-	term.write("\r\n");
-	await writePowerline();
+		this.accCommand = "";
+		this.cursorPos = 0;
+		this.isProcessingCommands = true;
+		this.localEcho = true;
+		this.commandHistory = [];
+		this.historyIndex = 0;
+		this.path = `/home/${sessionStorage.getItem("currAcc")}/`;
 
-	// Prevent browser context menu on right-click
-	term.element.addEventListener("contextmenu", e => {
-		e.preventDefault();
-	});
+		this._bindEvents();
+		this.loadHistory();
+		this.writePowerline();
+		this.focus();
+	}
 
-	// Handle keyboard shortcuts for copy/paste
-	term.attachCustomKeyEventHandler(event => {
-		if (event.ctrlKey && event.key === "c") {
-			if (term.hasSelection()) {
-				navigator.clipboard.writeText(term.getSelection()).catch(console.error);
+	_bindEvents() {
+		this.term.element.addEventListener("contextmenu", e => e.preventDefault());
+		this.term.attachCustomKeyEventHandler(event => {
+			if (event.ctrlKey && event.key === "c") {
+				if (this.term.hasSelection()) {
+					navigator.clipboard.writeText(this.term.getSelection()).catch(console.error);
+					event.preventDefault();
+					return false;
+				}
+			}
+			if (event.ctrlKey && event.key === "v") {
+				navigator.clipboard
+					.readText()
+					.then(text => {
+						for (const c of text) this.handleChar(c);
+					})
+					.catch(console.error);
 				event.preventDefault();
 				return false;
 			}
-		}
-		if (event.ctrlKey && event.key === "v") {
-			navigator.clipboard
-				.readText()
-				.then(text => {
-					for (const c of text) {
-						handleChar(c);
-					}
-				})
-				.catch(console.error);
-			event.preventDefault();
-			return false;
-		}
-		// Allow Ctrl+A for select all (when in command mode)
-		if (event.ctrlKey && event.key === "a" && isProcessingCommands) {
-			event.preventDefault();
-			// Select current command line - not implemented yet
-			return false;
-		}
-		return true;
-	});
-
-	// Handle paste events
-	term.onData(async char => {
-		if (!isProcessingCommands) {
-			// If SSH or other mode is active, pass through directly
-			const dataHandler = term._core._inputHandler;
-			if (dataHandler && dataHandler.onData) {
-				dataHandler.onData(char);
+			if (event.altKey && event.key === "t") {
+				event.preventDefault();
+				createSession("Terbium TSH");
+				return false;
 			}
-			return;
-		}
-
-		// Handle paste (multiple characters at once)
-		if (char.length > 1 && !char.startsWith("\x1b")) {
-			// This is pasted text
-			for (const c of char) {
-				await handleChar(c);
+			if (event.altKey && event.key === "w") {
+				event.preventDefault();
+				closeSession(this.id);
+				return false;
 			}
-			return;
-		}
+			if (event.altKey && event.key === "Tab") {
+				event.preventDefault();
+				switchSessionNext();
+				return false;
+			}
+			return true;
+		});
 
-		await handleChar(char);
-	});
+		this.term.onData(async char => {
+			if (!this.isProcessingCommands) {
+				const dataHandler = this.term._core._inputHandler;
+				if (dataHandler && dataHandler.onData) dataHandler.onData(char);
+				return;
+			}
+			if (char.length > 1 && !char.startsWith("\x1b")) {
+				for (const c of char) await this.handleChar(c);
+				return;
+			}
+			await this.handleChar(char);
+		});
 
-	/**
-	 * Handle a single character input
-	 * @param {string} char The character to handle
-	 */
-	async function handleChar(char) {
-		// Handle arrow keys for history navigation
-		// Up arrow
+		this.term.onLineFeed(() => {
+			this.accCommand = "";
+			this.cursorPos = 0;
+			this.historyIndex = this.commandHistory.length;
+		});
+	}
+
+	async handleChar(char) {
 		if (char === "\x1b[A") {
-			if (historyIndex > 0 && commandHistory.length > 0) {
-				// Clear current line
-				term.write("\r\x1b[K");
-				await writePowerline();
-
-				historyIndex--;
-				accCommand = commandHistory[historyIndex];
-				cursorPos = accCommand.length;
-				term.write(accCommand);
+			if (this.historyIndex > 0 && this.commandHistory.length > 0) {
+				this.term.write("\r\x1b[K");
+				await this.writePowerline();
+				this.historyIndex--;
+				this.accCommand = this.commandHistory[this.historyIndex];
+				this.cursorPos = this.accCommand.length;
+				this.term.write(this.accCommand);
 			}
 			return;
 		}
-		// Down arrow
 		if (char === "\x1b[B") {
-			// Clear current line
-			term.write("\r\x1b[K");
-			await writePowerline();
-
-			if (historyIndex < commandHistory.length - 1) {
-				historyIndex++;
-				accCommand = commandHistory[historyIndex];
-				cursorPos = accCommand.length;
-				term.write(accCommand);
+			this.term.write("\r\x1b[K");
+			await this.writePowerline();
+			if (this.historyIndex < this.commandHistory.length - 1) {
+				this.historyIndex++;
+				this.accCommand = this.commandHistory[this.historyIndex];
+				this.cursorPos = this.accCommand.length;
+				this.term.write(this.accCommand);
 			} else {
-				historyIndex = commandHistory.length;
-				accCommand = "";
-				cursorPos = 0;
+				this.historyIndex = this.commandHistory.length;
+				this.accCommand = "";
+				this.cursorPos = 0;
 			}
 			return;
 		}
-
-		// Left arrow - move cursor left
 		if (char === "\x1b[D") {
-			if (cursorPos > 0) {
-				cursorPos--;
-				term.write("\x1b[D");
+			if (this.cursorPos > 0) {
+				this.cursorPos--;
+				this.term.write("\x1b[D");
 			}
 			return;
 		}
-
-		// Right arrow - move cursor right
 		if (char === "\x1b[C") {
-			if (cursorPos < accCommand.length) {
-				cursorPos++;
-				term.write("\x1b[C");
+			if (this.cursorPos < this.accCommand.length) {
+				this.cursorPos++;
+				this.term.write("\x1b[C");
 			}
 			return;
 		}
-
-		// Home key - move to beginning
 		if (char === "\x1b[H" || char === "\x1b[1~") {
-			const moveLeft = cursorPos;
+			const moveLeft = this.cursorPos;
 			if (moveLeft > 0) {
-				term.write(`\x1b[${moveLeft}D`);
-				cursorPos = 0;
+				this.term.write(`\x1b[${moveLeft}D`);
+				this.cursorPos = 0;
 			}
 			return;
 		}
-
-		// End key - move to end
 		if (char === "\x1b[F" || char === "\x1b[4~") {
-			const moveRight = accCommand.length - cursorPos;
+			const moveRight = this.accCommand.length - this.cursorPos;
 			if (moveRight > 0) {
-				term.write(`\x1b[${moveRight}C`);
-				cursorPos = accCommand.length;
+				this.term.write(`\x1b[${moveRight}C`);
+				this.cursorPos = this.accCommand.length;
 			}
 			return;
 		}
-
-		// Delete key - delete character at cursor
 		if (char === "\x1b[3~") {
-			if (cursorPos < accCommand.length) {
-				accCommand = accCommand.slice(0, cursorPos) + accCommand.slice(cursorPos + 1);
-				// Redraw from cursor to end
-				const remaining = accCommand.slice(cursorPos);
-				term.write(remaining + " ");
-				// Move cursor back
-				term.write(`\x1b[${remaining.length + 1}D`);
+			if (this.cursorPos < this.accCommand.length) {
+				this.accCommand = this.accCommand.slice(0, this.cursorPos) + this.accCommand.slice(this.cursorPos + 1);
+				const remaining = this.accCommand.slice(this.cursorPos);
+				this.term.write(remaining + " ");
+				this.term.write(`\x1b[${remaining.length + 1}D`);
 			}
 			return;
 		}
-
-		// Backspace
 		if (char === "\x7f") {
-			if (cursorPos > 0) {
-				accCommand = accCommand.slice(0, cursorPos - 1) + accCommand.slice(cursorPos);
-				cursorPos--;
-				// Move cursor back, redraw rest of line, add space to clear last char
-				term.write("\b");
-				const remaining = accCommand.slice(cursorPos);
-				term.write(remaining + " ");
-				// Move cursor back to position
-				term.write(`\x1b[${remaining.length + 1}D`);
+			if (this.cursorPos > 0) {
+				this.accCommand = this.accCommand.slice(0, this.cursorPos - 1) + this.accCommand.slice(this.cursorPos);
+				this.cursorPos--;
+				this.term.write("\b");
+				const remaining = this.accCommand.slice(this.cursorPos);
+				this.term.write(remaining + " ");
+				this.term.write(`\x1b[${remaining.length + 1}D`);
 			}
 			return;
 		}
-
-		// Enter key
 		if (char === "\r") {
-			term.writeln("");
-			const input = accCommand.trim();
+			this.term.writeln("");
+			const input = this.accCommand.trim();
 			if (input.length > 0) {
-				// Save to history
-				await saveToHistory(input);
-
+				await this.saveToHistory(input);
 				const [cmd, ...rawArgs] = input.split(" ");
 				const argv = parser(rawArgs);
 				argv._raw = rawArgs.join(" ");
-				await handleCommand(cmd, argv);
+				await this.handleCommand(cmd, argv);
 			} else {
-				await writePowerline();
+				await this.writePowerline();
 			}
-			accCommand = "";
-			cursorPos = 0;
+			this.accCommand = "";
+			this.cursorPos = 0;
 			return;
 		}
-
-		// Regular character input
 		if (char >= " " && char <= "~") {
-			// Insert character at cursor position
-			accCommand = accCommand.slice(0, cursorPos) + char + accCommand.slice(cursorPos);
-			cursorPos++;
-
-			// If cursor is at end, just append
-			if (cursorPos === accCommand.length) {
-				term.write(char);
-			} else {
-				// Redraw from cursor position
-				const remaining = accCommand.slice(cursorPos - 1);
-				term.write(remaining);
-				// Move cursor back to correct position
-				term.write(`\x1b[${remaining.length - 1}D`);
+			// Only echo locally when localEcho is enabled. In passthrough mode the program will echo input itself.
+			this.accCommand = this.accCommand.slice(0, this.cursorPos) + char + this.accCommand.slice(this.cursorPos);
+			this.cursorPos++;
+			if (this.localEcho) {
+				if (this.cursorPos === this.accCommand.length) {
+					this.term.write(char);
+				} else {
+					const remaining = this.accCommand.slice(this.cursorPos - 1);
+					this.term.write(remaining);
+					this.term.write(`\x1b[${remaining.length - 1}D`);
+				}
 			}
 		}
 	}
 
-	term.onLineFeed(() => {
-		// Reset because of a newline carriage
-		accCommand = "";
-		cursorPos = 0;
-		historyIndex = commandHistory.length;
+	async writePowerline() {
+		const username = await tb.user.username();
+		const userSettings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${username}/settings.json`, "utf8"));
+		const accent = await htorgb(userSettings.accent);
+		const hostname = JSON.parse(await window.parent.tb.fs.promises.readFile("//system/etc/terbium/settings.json"))["host-name"];
+		this.term.write(`\x1b[38;2;${accent.r};${accent.g};${accent.b}m${username}@${hostname}\x1b[39m ~ ${this.path}\x1b[0m: `);
+	}
+
+	async createNewCommandInput() {
+		this.term.write("\r\n");
+		await this.writePowerline();
+		this.historyIndex = this.commandHistory.length;
+	}
+	async displayOutput(message, ...styles) {
+		// If output indicates a shell/program exit, restore local echo / command processing
+		try {
+			const txt = String(message || "");
+			if (/exited with code|shell exited|exit code/gi.test(txt)) {
+				this.exitPassthrough();
+			}
+		} catch (e) {}
+
+		if (message.includes("%c")) {
+			const parts = message.split(/(%c)/);
+			let styled = "";
+			let styleIndex = 0;
+			for (let i = 0; i < parts.length; i++) {
+				if (parts[i] === "%c") {
+					const text = parts[++i] || "";
+					const style = styles[styleIndex++] || "";
+					const colorMatch = style.match(/color:\s*(#[0-9a-fA-F]{3,6})/);
+					if (colorMatch) {
+						const rgb = await htorgb(colorMatch[1]);
+						if (rgb) {
+							styled += `\x1b[38;2;${rgb.r};${rgb.g};${rgb.b}m${text}\x1b[0m`;
+						} else {
+							styled += text;
+						}
+					} else {
+						styled += text;
+					}
+				} else {
+					styled += parts[i];
+				}
+			}
+			this.term.writeln(styled);
+		} else {
+			this.term.writeln(message);
+		}
+	}
+	async displayError(message) {
+		this.term.writeln(`\x1b[31mERR: ${message}\x1b[0m`);
+	}
+	async loadHistory() {
+		try {
+			const username = await tb.user.username();
+			const historyPath = `/home/${username}/${HISTORY_FILE}`;
+			const data = await window.parent.tb.fs.promises.readFile(historyPath, "utf8");
+			this.commandHistory = data.split("\n").filter(cmd => cmd.trim() !== "");
+		} catch {}
+		this.historyIndex = this.commandHistory.length;
+	}
+	async saveToHistory(command) {
+		if (!command.trim()) return;
+		this.commandHistory.push(command);
+		if (this.commandHistory.length > HISTORY_LIMIT) this.commandHistory.shift();
+		this.historyIndex = this.commandHistory.length;
+		try {
+			const username = await tb.user.username();
+			const historyPath = `/home/${username}/${HISTORY_FILE}`;
+			await window.parent.tb.fs.promises.writeFile(historyPath, this.commandHistory.join("\n"));
+		} catch (error) {
+			console.error("Failed to save history", error);
+		}
+	}
+	async handleCommand(name, args) {
+		const appInfo = await getAppInfo();
+		if (name === "exit") {
+			closeSession(this.id);
+			return;
+		}
+		if (name === "help") {
+			const commands = appInfo ? appInfo.join(", ") : "No commands available";
+			this.displayOutput(`Available commands: exit, help, ${commands}`);
+			this.createNewCommandInput();
+			return;
+		}
+
+		// If this command is an interactive shell-like command, enter passthrough mode
+		const INTERACTIVE_CMDS = new Set(["node", "python", "bash", "sh", "nodejs", "jsh", "pwsh", "powershell"]);
+		if (INTERACTIVE_CMDS.has(name.toLowerCase())) {
+			this.enterPassthrough();
+		}
+
+		const scriptPaths = [`/fs/apps/system/terminal.tapp/scripts/${name.toLowerCase()}.js`, `/apps/terminal.tapp/scripts/${name.toLowerCase()}.js`];
+		if (appInfo === null) {
+			this.displayOutput("Failed to fetch app info, cannot execute command");
+			this.createNewCommandInput();
+			this.exitPassthrough();
+			return;
+		}
+		if (!appInfo.includes(name)) {
+			this.displayOutput(`Command '${name}' not found! Type 'help' for a list of commands.`);
+			this.createNewCommandInput();
+			this.exitPassthrough();
+			return;
+		}
+		let scriptRes;
+		try {
+			scriptRes = await fetch(scriptPaths[0]);
+		} catch {
+			try {
+				scriptRes = await fetch(scriptPaths[1]);
+			} catch (error) {
+				this.displayOutput(`Failed to fetch script: ${error.message}`);
+				this.createNewCommandInput();
+				this.exitPassthrough();
+				return;
+			}
+		}
+		try {
+			const script = await scriptRes.text();
+			const fn = new Function("args", "displayOutput", "createNewCommandInput", "displayError", "term", "path", "terbium", "buffer", "setTabTitle", "exitPassthrough", script);
+			fn(args, this.displayOutput.bind(this), this.createNewCommandInput.bind(this), this.displayError.bind(this), this.term, this.path, window.parent.tb, window.parent.tb.buffer, this.setName.bind(this), this.exitPassthrough.bind(this));
+		} catch (error) {
+			this.displayOutput(`Failed to execute command '${name}': ${error.message}`);
+			this.createNewCommandInput();
+			this.exitPassthrough();
+			return;
+		}
+	}
+	resize() {
+		try {
+			const charWidth = this.term._core._renderService.dimensions.css.cell.width;
+			const charHeight = this.term._core._renderService.dimensions.css.cell.height;
+			const cols = Math.floor(window.innerWidth / charWidth);
+			const rows = Math.floor(window.innerHeight / charHeight);
+			this.term.resize(cols, rows);
+		} catch (e) {}
+	}
+	focus() {
+		try {
+			this.term.focus();
+			window.term = this.term;
+		} catch (e) {}
+	}
+	enterPassthrough() {
+		this.isProcessingCommands = false;
+		this.localEcho = false;
+	}
+	exitPassthrough() {
+		this.isProcessingCommands = true;
+		this.localEcho = true;
+		// show a new prompt after exiting passthrough
+		try {
+			this.createNewCommandInput();
+		} catch (e) {}
+	}
+	setName(newName) {
+		this.name = newName;
+		const win = getWinRoot();
+		if (win) {
+			const tab = win.querySelector(`.term-tab[data-sid="${this.id}"]`);
+			if (tab) {
+				tab.querySelector(".label").textContent = newName;
+			}
+		}
+	}
+	destroy() {
+		try {
+			this.term.dispose();
+		} catch {}
+		try {
+			this.container.remove();
+		} catch {}
+	}
+}
+
+const sessions = [];
+let activeSession = null;
+// Guard to prevent duplicate rapid-close actions (e.g., a single keypress being handled by two handlers)
+let _lastCloseTime = 0;
+function getWinRoot() {
+	try {
+		return window.frameElement?.closest("[pid]");
+	} catch {
+		return null;
+	}
+}
+function addTabToTitle(session) {
+	const win = getWinRoot();
+	if (!win) return;
+	const tabList = win.querySelector(".term-tab-list");
+	if (!tabList) return;
+	const btn = document.createElement("button");
+	btn.className = "term-tab";
+	btn.dataset.sid = session.id;
+	btn.innerHTML = `<span class=\"label\">${session.name}</span><span class=\"close\">×</span>`;
+	tabList.appendChild(btn);
+	btn.addEventListener("click", e => {
+		if (e.target && e.target.classList && e.target.classList.contains("close")) {
+			closeSession(session.id);
+		} else {
+			switchSession(session.id);
+		}
 	});
-	term.focus();
+	const add = win.querySelector(".term-add");
+	if (add && !add.dataset.bound) {
+		add.dataset.bound = "1";
+		add.addEventListener("click", () => createSession("Terbium TSH"));
+	}
+	setActiveTabInTitle();
+}
+function removeTabFromTitle(id) {
+	const win = getWinRoot();
+	if (!win) return;
+	const tab = win.querySelector(`.term-tab[data-sid="${id}"]`);
+	if (tab) tab.remove();
+	setActiveTabInTitle();
+}
+function setActiveTabInTitle() {
+	const win = getWinRoot();
+	if (!win) return;
+	win.querySelectorAll(".term-tab").forEach(t => t.classList.remove("active"));
+	if (!activeSession) return;
+	const sel = win.querySelector(`.term-tab[data-sid="${activeSession.id}"]`);
+	if (sel) sel.classList.add("active");
+}
+function createSession(name = "Terbium TSH") {
+	const isFirst = sessions.length === 0;
+	const s = new TerminalSession(name);
+	sessions.push(s);
+	if (isFirst) {
+		try {
+			s.term.writeln(`TerbiumOS [Version: ${tb.system.version()}]`);
+			s.term.writeln(`Type 'help' for a list of commands.`);
+		} catch (e) {
+			console.error("Failed to display welcome message", e);
+		}
+	}
+	sessions.forEach(se => {
+		se.container.style.display = se === s ? "flex" : "none";
+	});
+	activeSession = s;
+	addTabToTitle(s);
+	setActiveTabInTitle();
+	return s;
+}
+function switchSession(id) {
+	const s = sessions.find(x => x.id === id);
+	if (!s) return;
+	sessions.forEach(se => (se.container.style.display = se === s ? "flex" : "none"));
+	activeSession = s;
+	s.focus();
+	setActiveTabInTitle();
+}
+function switchSessionNext() {
+	if (sessions.length <= 1) return;
+	const idx = sessions.indexOf(activeSession);
+	const next = sessions[(idx + 1) % sessions.length];
+	switchSession(next.id);
+}
+function closeSession(id) {
+	const now = Date.now();
+	if (now - _lastCloseTime < 250) return;
+	_lastCloseTime = now;
+	const idx = sessions.findIndex(s => s.id === id);
+	if (idx < 0) return;
+	const wasActive = sessions[idx] === activeSession;
+	sessions[idx].destroy();
+	removeTabFromTitle(id);
+	sessions.splice(idx, 1);
+	if (wasActive) {
+		if (sessions.length) {
+			switchSession(sessions[Math.max(0, idx - 1)].id);
+		} else {
+			activeSession = null;
+		}
+	}
+	if (sessions.length === 0) {
+		window.parent.tb.window.close();
+	}
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+	createSession("Terbium TSH");
+	window.addEventListener("resize", () => {
+		sessions.forEach(s => s.resize());
+	});
+});
+window.handleCommand = (...args) => (activeSession ? activeSession.handleCommand(...args) : handleCommand(...args));
+window.addEventListener("updPath", e => {
+	if (activeSession) activeSession.path = e.detail;
 });
 
 /**
- * Resizes the terminal to fit the window
+ * Resizes the active session terminal to fit the window
  * @returns {void}
  */
 function resizeTerm() {
-	const charWidth = term._core._renderService.dimensions.css.cell.width;
-	const charHeight = term._core._renderService.dimensions.css.cell.height;
-	const cols = Math.floor(window.innerWidth / charWidth);
-	const rows = Math.floor(window.innerHeight / charHeight);
-	term.resize(cols, rows);
+	try {
+		if (activeSession && activeSession.term && activeSession.term._core) {
+			const charWidth = activeSession.term._core._renderService.dimensions.css.cell.width;
+			const charHeight = activeSession.term._core._renderService.dimensions.css.cell.height;
+			const cols = Math.floor(window.innerWidth / charWidth);
+			const rows = Math.floor(window.innerHeight / charHeight);
+			activeSession.term.resize(cols, rows);
+		}
+	} catch (e) {
+		/* ignore */
+	}
 }
 setTimeout(resizeTerm, 50);
 window.addEventListener("resize", resizeTerm);
@@ -324,29 +588,25 @@ window.addEventListener("resize", resizeTerm);
  * @returns {Promise<void>}
  */
 async function handleCommand(name, args) {
-	/**
-	 * The URLs to try to fetch the scripts from
-	 * @type {string[]}
-	 */
+	// Prefer activeSession handling if available
+	if (typeof activeSession !== "undefined" && activeSession) {
+		return activeSession.handleCommand(name, args);
+	}
+	if (name === "exit") {
+		window.parent.tb.window.close();
+		return;
+	}
+	// If no active session, attempt minimal fallback: try to run script but without a term
 	const scriptPaths = [`/fs/apps/system/terminal.tapp/scripts/${name.toLowerCase()}.js`, `/apps/terminal.tapp/scripts/${name.toLowerCase()}.js`];
-	/**
-	 * @type {appInfo}
-	 */
 	const appInfo = await getAppInfo();
 	if (appInfo === null) {
-		displayError("Failed to fetch app info, cannot execute command");
-		createNewCommandInput();
+		console.error("Failed to fetch app info, cannot execute command");
 		return;
 	}
-	// A sanity check to ensure the command exists and is defined properly
 	if (!appInfo.includes(name)) {
-		displayError(`Command '${name}' not found! Type 'help' for a list of commands.`);
-		createNewCommandInput();
+		console.error(`Command '${name}' not found!`);
 		return;
 	}
-	/**
-	 * @type {Response}
-	 */
 	let scriptRes;
 	try {
 		scriptRes = await fetch(scriptPaths[0]);
@@ -354,23 +614,34 @@ async function handleCommand(name, args) {
 		try {
 			scriptRes = await fetch(scriptPaths[1]);
 		} catch (error) {
-			displayError(`Failed to fetch script: ${error.message}`);
-			createNewCommandInput();
+			console.error(`Failed to fetch script: ${error.message}`);
 			return;
 		}
 	}
 	try {
 		const script = await scriptRes.text();
 		const fn = new Function("args", "displayOutput", "createNewCommandInput", "displayError", "term", "path", "terbium", "buffer", script);
-		fn(args, displayOutput, createNewCommandInput, displayError, term, path, window.parent.tb, window.parent.tb.buffer);
+		fn(
+			args,
+			(m, ...s) => console.log(m),
+			() => {},
+			e => console.error(e),
+			undefined,
+			path,
+			window.parent.tb,
+			window.parent.tb.buffer,
+		);
 	} catch (error) {
-		displayError(`Failed to execute command '${name}': ${error.message}`);
-		createNewCommandInput();
+		console.error(`Failed to execute command '${name}': ${error.message}`);
 		return;
 	}
 }
 
-window.handleCommand = handleCommand;
+// Expose a delegating handler so other frames can always call it
+window.handleCommand = (...args) => {
+	if (typeof activeSession !== "undefined" && activeSession) return activeSession.handleCommand(...args);
+	return handleCommand(...args);
+};
 
 window.addEventListener("updPath", e => {
 	path = e.detail;
@@ -418,55 +689,25 @@ async function getAppInfo(justNames = true) {
  * @returns {Promise<void>}
  */
 async function displayOutput(message, ...styles) {
-	if (message.includes("%c")) {
-		const parts = message.split(/(%c)/);
-		let styled = "";
-		let styleIndex = 0;
-		for (let i = 0; i < parts.length; i++) {
-			if (parts[i] === "%c") {
-				const text = parts[++i] || "";
-				const style = styles[styleIndex++] || "";
-				const colorMatch = style.match(/color:\s*(#[0-9a-fA-F]{3,6})/);
-				if (colorMatch) {
-					const rgb = await htorgb(colorMatch[1]);
-					if (rgb) {
-						styled += `\x1b[38;2;${rgb.r};${rgb.g};${rgb.b}m${text}\x1b[0m`;
-					} else {
-						styled += text;
-					}
-				} else {
-					styled += text;
-				}
-			} else {
-				styled += parts[i];
-			}
-		}
-		term.writeln(styled);
-	} else {
-		term.writeln(message);
-	}
+	if (typeof activeSession !== "undefined" && activeSession) return activeSession.displayOutput(message, ...styles);
+	if (message.includes("%c")) console.log(message.replace(/%c/g, ""));
+	else console.log(message);
 }
 /**
  * Writes the powerline prompt to the terminal
  * @returns {Promise<void>}
  */
 async function writePowerline() {
-	const username = await tb.user.username();
-	const userSettings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${username}/settings.json`, "utf8"));
-	const accent = await htorgb(userSettings.accent);
-	const hostname = JSON.parse(await window.parent.tb.fs.promises.readFile("//system/etc/terbium/settings.json"))["host-name"];
-
-	term.write(`\x1b[38;2;${accent.r};${accent.g};${accent.b}m${username}@${hostname}\x1b[39m ~ ${path}\x1b[0m: `);
+	if (typeof activeSession !== "undefined" && activeSession) return activeSession.writePowerline();
+	// fallback: no-op
 }
 /**
  * Creates new command line with a styled prompt
  * @returns {Promise<void>}
  */
 async function createNewCommandInput() {
-	term.write("\r\n");
-	await writePowerline();
-	// Reset history index for new command being prompted
-	historyIndex = commandHistory.length;
+	if (typeof activeSession !== "undefined" && activeSession) return activeSession.createNewCommandInput();
+	// fallback: no-op
 }
 
 /**
@@ -474,7 +715,8 @@ async function createNewCommandInput() {
  * @param {string} message The error message that will be displayed on the output
  */
 function displayError(message) {
-	term.writeln(`\x1b[31mERR: ${message}\x1b[0m`);
+	if (typeof activeSession !== "undefined" && activeSession) return activeSession.displayError(message);
+	console.error(message);
 }
 
 /**
@@ -482,13 +724,8 @@ function displayError(message) {
  * @returns {Promise<void>}
  */
 async function loadHistory() {
-	try {
-		const username = await tb.user.username();
-		const historyPath = `/home/${username}/${HISTORY_FILE}`;
-		const data = await window.parent.tb.fs.promises.readFile(historyPath, "utf8");
-		commandHistory = data.split("\n").filter(cmd => cmd.trim() !== "");
-	} catch {}
-	historyIndex = commandHistory.length;
+	if (typeof activeSession !== "undefined" && activeSession) return activeSession.loadHistory();
+	// fallback: no-op
 }
 /**
  * Saves a command to the bash history file
@@ -496,14 +733,11 @@ async function loadHistory() {
  * @returns {Promise<void>}
  */
 async function saveToHistory(command) {
+	if (typeof activeSession !== "undefined" && activeSession) return activeSession.saveToHistory(command);
 	if (!command.trim()) return;
-
 	commandHistory.push(command);
-	if (commandHistory.length > HISTORY_LIMIT) {
-		commandHistory.shift();
-	}
+	if (commandHistory.length > HISTORY_LIMIT) commandHistory.shift();
 	historyIndex = commandHistory.length;
-
 	try {
 		const username = await tb.user.username();
 		const historyPath = `/home/${username}/${HISTORY_FILE}`;
