@@ -1,4 +1,4 @@
 function exit() {
-    window.parent.tb.window.close();
+	window.parent.tb.window.close();
 }
 exit();
