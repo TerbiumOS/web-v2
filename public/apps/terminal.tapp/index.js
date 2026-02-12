@@ -592,10 +592,6 @@ async function handleCommand(name, args) {
 	if (typeof activeSession !== "undefined" && activeSession) {
 		return activeSession.handleCommand(name, args);
 	}
-	if (name === "exit") {
-		window.parent.tb.window.close();
-		return;
-	}
 	// If no active session, attempt minimal fallback: try to run script but without a term
 	const scriptPaths = [`/fs/apps/system/terminal.tapp/scripts/${name.toLowerCase()}.js`, `/apps/terminal.tapp/scripts/${name.toLowerCase()}.js`];
 	const appInfo = await getAppInfo();
