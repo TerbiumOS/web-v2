@@ -1138,7 +1138,7 @@ export default async function Api() {
 					window.tb.tauth.sync.isSyncing = true;
 					let settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
 					const davs = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/files/davs.json`, "utf8"));
-					if (!settings.wallpaper.startsWith("/assets/wallpapers")) {
+					if (!settings.wallpaper.startsWith("/assets/wallpapers") && !settings.wallpaper.startsWith("data:")) {
 						const res = await fetch(`/fs/${settings.wallpaper}`);
 						const blob = await res.blob();
 						const reader = new FileReader();
