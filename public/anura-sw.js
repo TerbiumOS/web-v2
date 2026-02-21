@@ -744,7 +744,9 @@ const uv = new UVServiceWorker();
 const methods = ["GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "PATCH"];
 
 function sanitizeDownloadFilename(filename) {
-	const sanitized = String(filename || "").replace(/[\\/:*?"<>|]/g, "_").trim();
+	const sanitized = String(filename || "")
+		.replace(/[\\/:*?"<>|]/g, "_")
+		.trim();
 	return sanitized || `download-${Date.now()}`;
 }
 
