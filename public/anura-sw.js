@@ -21,6 +21,9 @@ importScripts("/tfs/tfs.js");
 // Importing mime
 importScripts("/assets/libs/mime.iife.js");
 
+// Download handler
+importScripts("/assets/libs/dl-handler.min.js");
+
 // self.fs = new Filer.FileSystem({
 //     name: "anura-mainContext",
 //     provider: new Filer.FileSystem.providers.IndexedDB(),
@@ -451,7 +454,7 @@ async function serveFile(path, fsOverride, shOverride) {
 											.map(
 												entry => `
 												<tr class="dark:hover:bg-[#ffffff15] hover:bg-[#00000020] duration-150 ease-in-out select-none cursor-(--cursor-pointer)" ondblclick="window.location.href='/fs${path}/${entry.name}'">
-													<th class="flex text-left py-1.5 pl-2 pr-[100px] gap-2 select-none">
+													<th class="flex text-left py-1.5 pl-2 pr-25 gap-2 select-none">
 														${
 															entry.type === "DIRECTORY"
 																? `
@@ -740,6 +743,82 @@ const uv = new UVServiceWorker();
 
 const methods = ["GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "PATCH"];
 
+function sanitizeDownloadFilename(filename) {
+	const sanitized = String(filename || "").replace(/[\\/:*?"<>|]/g, "_").trim();
+	return sanitized || `download-${Date.now()}`;
+}
+
+function splitFilename(name) {
+	const lastDot = name.lastIndexOf(".");
+	if (lastDot <= 0 || lastDot === name.length - 1) {
+		return { base: name, ext: "" };
+	}
+	return {
+		base: name.slice(0, lastDot),
+		ext: name.slice(lastDot),
+	};
+}
+
+async function getUniqueDownloadPath(fsPromises, dirPath, filename) {
+	const { base, ext } = splitFilename(filename);
+	let attempt = 0;
+	while (true) {
+		const candidate = `${dirPath}/${attempt === 0 ? `${base}${ext}` : `${base} (${attempt})${ext}`}`;
+		try {
+			await fsPromises.stat(candidate);
+			attempt += 1;
+		} catch {
+			return candidate;
+		}
+	}
+}
+
+async function saveTO(initialFilename) {
+	const id = crypto.randomUUID();
+	const clients = (await self.clients.matchAll({ type: "window", includeUncontrolled: true })).filter(v => new URL(v.url).pathname === "/");
+	if (clients.length < 1) return null;
+	const client = clients[0];
+	client.postMessage({
+		anura_target: "anura.filepicker",
+		regex: sanitizeDownloadFilename(initialFilename || "download.bin"),
+		id,
+		type: "folder",
+	});
+	const resp = await new Promise(resolve => {
+		filepickerCallbacks[id] = resolve;
+	});
+	delete filepickerCallbacks[id];
+	if (!resp || resp.cancelled) return null;
+	const folder = Array.isArray(resp.folders) ? resp.folders[0] : null;
+	if (!folder || typeof folder !== "string") return null;
+	return folder.replace(/\/$/, "") || "/";
+}
+
+async function saveFP(response, request, proxyName) {
+	try {
+		const { fs } = await currentFs();
+		const downloadHelper = window.DownloadHandler;
+		if (!downloadHelper || !response || !request) return response;
+		if (response.status >= 300 && response.status < 400) return response;
+		if (!downloadHelper.isDownload(response.headers, request.destination || "")) return response;
+		const contentDisposition = response.headers.get("content-disposition");
+		const parsedName = downloadHelper.parseDownloadFilename(contentDisposition, request.url || response.url);
+		const filename = sanitizeDownloadFilename(parsedName || "download.bin");
+		const selectedDir = await saveTO(filename);
+		const path = await getUniqueDownloadPath(fs.promises, selectedDir, filename);
+		const buffer = await response.clone().arrayBuffer();
+		await fs.promises.writeFile(path, Buffer.from(buffer));
+		console.info(`[${proxyName}] Download saved to ${path}`);
+		return new Response(null, {
+			status: 204,
+			statusText: "No Content",
+		});
+	} catch (error) {
+		console.error(`[${proxyName}] Failed to save download`, error);
+		return response;
+	}
+}
+
 methods.forEach(method => {
 	workbox.routing.registerRoute(
 		/\/uv\/service\//,
@@ -748,7 +827,8 @@ methods.forEach(method => {
 			uv.on("request", event => {
 				event.data.headers["user-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Terbium-Browser/2.1.0";
 			});
-			return await uv.fetch(event);
+			const response = await uv.fetch(event);
+			return await saveFP(response, event.request, "UV");
 		},
 		method,
 	);
@@ -796,7 +876,8 @@ methods.forEach(method => {
 			console.log("Got SJ req");
 			await scramjet.loadConfig();
 			if (scramjet.route(event)) {
-				return scramjet.fetch(event);
+				const response = await scramjet.fetch(event);
+				return await saveFP(response, event.request, "Scramjet");
 			}
 			return fetch(event.request);
 		},
