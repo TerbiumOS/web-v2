@@ -829,7 +829,7 @@ methods.forEach(method => {
 			uv.on("request", event => {
 				event.data.headers["user-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0 Safari/537.36 Terbium-Browser/2.3.0";
 			});
-			return await uv.fetch(event)
+			return await uv.fetch(event);
 		},
 		method,
 	);
