@@ -35,14 +35,14 @@ export default function Weather() {
 				const locationResponse = await fetch(`https://api.weather.gov/points/${loc}`, {
 					method: "GET",
 					headers: {
-						"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0 Safari/537.36 Terbium-Browser/2.1.0",
+						"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0 Safari/537.36 Terbium-Browser/2.3.0",
 					},
 				});
 				const locationData: LocationData = await locationResponse.json();
 				const forecastResponse = await fetch(locationData.properties.forecast, {
 					method: "GET",
 					headers: {
-						"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0 Safari/537.36 Terbium-Browser/2.1.0",
+						"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0 Safari/537.36 Terbium-Browser/2.3.0",
 					},
 				});
 				const forecastData: ForecastData = await forecastResponse.json();

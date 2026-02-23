@@ -827,10 +827,9 @@ methods.forEach(method => {
 		async event => {
 			console.debug("Got UV req");
 			uv.on("request", event => {
-				event.data.headers["user-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Terbium-Browser/2.1.0";
+				event.data.headers["user-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0 Safari/537.36 Terbium-Browser/2.3.0";
 			});
-			const response = await uv.fetch(event);
-			return await saveFP(response, event.request, "UV");
+			return await uv.fetch(event)
 		},
 		method,
 	);
