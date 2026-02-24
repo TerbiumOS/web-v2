@@ -1266,23 +1266,7 @@ export default async function Api() {
 				}
 			},
 			list() {
-				const list = window.tb.process.procs;
-				const wins = useWindowStore.getState().windows;
-				for (let index = 0; index < wins.length; index++) {
-					const win = wins[index];
-					const winID = win.pid || `win-${index}`;
-					// @ts-expect-error
-					list[winID] = {
-						name: typeof win.title === "string" ? win.title : win.title.text,
-						wid: win.wid,
-						icon: win.icon,
-						pid: win.pid,
-						src: win.src,
-						size: win.size || { width: 800, height: 600 },
-						type: "window",
-					};
-				}
-				return list;
+				return window.tb.process.procs;
 			},
 			parse: {
 				build(src: string) {

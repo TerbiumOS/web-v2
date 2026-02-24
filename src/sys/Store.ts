@@ -138,6 +138,18 @@ const useWindowStore = create<WindowState>()(set => ({
 
 			window.dispatchEvent(new CustomEvent("selwin-upd", { detail: typeof config.title === "string" ? config.title : config.title?.text }));
 
+			window.tb.process.procs[config.pid as any] = {
+				name: typeof config.title === "string" ? config.title : config.title.text,
+				wid: config.wid,
+				icon: config.icon!,
+				// @ts-expect-error
+				pid: config.pid!,
+				src: config.src,
+				// @ts-expect-error
+				size: config.size || { width: 800, height: 600 },
+				type: "window",
+			}
+
 			return {
 				windows: [...state.windows, config],
 				matchedWindows: [...state.matchedWindows],
