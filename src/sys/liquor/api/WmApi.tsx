@@ -50,8 +50,8 @@ export class WMAPI {
 			icon: winInf.icon,
 			minheight: 40,
 			minwidth: 40,
-			width: winInf.size.width,
-			height: winInf.size.height,
+			width: winInf.size?.width ? winInf.size.width : "0px",
+			height: winInf.size?.height ? winInf.size.height : "0px",
 			allowMultipleInstance: false,
 		};
 		// Sorry, DOM has to be used here for cross compatability
@@ -65,8 +65,8 @@ export class WMAPI {
 			dragForceX: 0,
 			dragForceY: 0,
 			dragging: false,
-			height: winInf.size.height,
-			width: winInf.size.width,
+			height: winInf.size?.height ? winInf.size.height : 0,
+			width: winInf.size?.width ? winInf.size.width : 0,
 			pid: pid,
 			state: null,
 			maximized: false,

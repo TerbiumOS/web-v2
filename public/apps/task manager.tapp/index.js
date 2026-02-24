@@ -120,6 +120,7 @@ async function getTasks() {
 			currentIdsSet.delete(winID);
 			return;
 		}
+		const sysRegex = /^Terbium (Alexa Desktop Experience|Service Worker|Node\.js Runtime)$/;
 		const tr = document.createElement("tr");
 		tr.classList.add("hover:bg-[#ffffff18]", "duration-150", "ease-in-out", "px-2.5");
 		tr.setAttribute("win-id", winID);
@@ -138,6 +139,8 @@ async function getTasks() {
 		}
 		if (memEntry && typeof memEntry.bytes === "number") {
 			tdMemory.textContent = `${(memEntry.bytes / (1024 * 1024)).toFixed(2)} MB`;
+		} else if (sysRegex.test(win.name)) {
+			tdMemory.textContent = "System Process";
 		} else {
 			tdMemory.textContent = "N/A";
 		}
@@ -148,6 +151,8 @@ async function getTasks() {
 		const tdState = document.createElement("td");
 		const stateText = document.createElement("span");
 		if (win.pid === window.parent.tb.window.getId()) {
+			stateText.textContent = "Active";
+		} else if (sysRegex.test(win.name)) {
 			stateText.textContent = "Active";
 		} else {
 			stateText.textContent = "Idle";

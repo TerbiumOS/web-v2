@@ -388,6 +388,15 @@ export interface SysSettings {
 	defaultUser: string;
 }
 
+export interface ProcInf {
+	name: string;
+	size: { width: number | string; height: number | string };
+	icon: string;
+	pid: number;
+	src: string;
+	type: "window" | "runtime";
+}
+
 export interface COM {
 	registry: any;
 	sh: ShellType;
@@ -527,9 +536,10 @@ export interface COM {
 		getPlatform(): Promise<"desktop" | "mobile">;
 	};
 	process: {
+		procs: Record<number, ProcInf>;
 		kill(config: string | number | any): void;
-		list(): Record<number, { name: string; size: { width: number | string; height: number | string }; icon: string; pid: number; src: string }>;
-		create(): void;
+		list(): Record<number, ProcInf>;
+		create(type: "window" | "runtime", config: any): void;
 		parse: {
 			build(src: string): void;
 		};

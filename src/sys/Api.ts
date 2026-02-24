@@ -1222,29 +1222,66 @@ export default async function Api() {
 			},
 		},
 		process: {
-			kill(config: string | number) {
-				clearInfo();
-				if (typeof config === "number") {
-					useWindowStore.getState().killWindow(String(config));
-				} else {
-					useWindowStore.getState().killWindow(config);
+			procs: {
+				0: {
+					name: "Terbium Service Worker",
+					wid: null,
+					pid: 0,
+					src: null,
+					size: null,
+					icon: null,
+					type: "runtime",
+				},
+				1: {
+					name: "Terbium Alexa Desktop Experience",
+					wid: null,
+					pid: 1,
+					src: null,
+					size: null,
+					icon: null,
+					type: "runtime",
+				},
+			} as Record<number, any>,
+			kill(pid: string | number) {
+				const proc = Object.values(window.tb.process.list()).find((p: any) => {
+					if (typeof pid === "number") {
+						return p.pid === pid;
+					} else {
+						return p.name === pid;
+					}
+				});
+				if (proc) {
+					if (proc.type === "window") {
+						clearInfo();
+						useWindowStore.getState().killWindow(typeof pid === "number" ? String(pid) : pid);
+					} else if (proc.type === "runtime") {
+						delete window.tb.process.procs[proc.pid];
+						const sysRegex = /^Terbium (Alexa Desktop Experience|Service Worker)$/;
+						if (sysRegex.test(proc.name)) {
+							window.location.reload();
+						} else if (proc.name === "Terbium Node.js Runtime") {
+							window.tb.node.stop();
+						}
+					}
 				}
 			},
 			list() {
-				const list = {};
+				const list = window.tb.process.procs;
 				const wins = useWindowStore.getState().windows;
-				wins.forEach((win: WindowConfig, index: number) => {
+				for (let index = 0; index < wins.length; index++) {
+					const win = wins[index];
 					const winID = win.pid || `win-${index}`;
 					// @ts-expect-error
 					list[winID] = {
-						name: win.title,
+						name: typeof win.title === "string" ? win.title : win.title.text,
 						wid: win.wid,
 						icon: win.icon,
 						pid: win.pid,
 						src: win.src,
 						size: win.size || { width: 800, height: 600 },
+						type: "window",
 					};
-				});
+				}
 				return list;
 			},
 			parse: {
@@ -1252,13 +1289,19 @@ export default async function Api() {
 					parse.build(src);
 				},
 			},
-			create() {
-				createWindow({
-					title: {
-						text: "Generic Window",
-					},
-					src: "about:blank",
-				});
+			create(type: "window" | "runtime", config: any) {
+				if (type === "window") {
+					createWindow({
+						title: {
+							text: "Generic Window",
+						},
+						src: "about:blank",
+					});
+				} else {
+					const latestProcId = Math.max(...Object.keys(window.tb.process.procs).map(Number)) + 1;
+					window.tb.process.procs[latestProcId] = { ...config, pid: latestProcId, type: "runtime" };
+					return latestProcId;
+				}
 			},
 		},
 		screen: {

@@ -23,6 +23,13 @@ export async function initializeWebContainer(): Promise<WebContainer> {
 
 	console.info("[Node.js Subsystem] WebContainer has been initialized!");
 	window.tb.node.isReady = true;
+	window.tb.process.create("runtime", {
+		name: "Terbium Node.js Runtime",
+		wid: null,
+		src: null,
+		size: null,
+		icon: null,
+	});
 
 	return webContainer;
 }

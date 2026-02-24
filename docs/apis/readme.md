@@ -625,29 +625,44 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
 
 ### Process
   - **kill**
-    - Description: Kill a process with a PID
+    - Description: Kill a process. The argument may be a PID (number or numeric string) or any object that resolves to a process when compared by PID.
     - Parameters:
-      - `config: string | number` - The PID of the process to kill
+      - `config: string | number | any` - The PID of the process to terminate (or an object containing a `pid` property).
     - Example:
       ```javascript
-      tb.process.kill('69420');
+      // simple kill by PID
+      tb.process.kill(69420);
+
+      // you can also look up a process then kill it
+      const procs = tb.process.list();
+      const first = Object.values(procs)[0];
+      tb.process.kill(first.pid);
       ```
 
   - **list**
-    - Description: List all available processes
-    - Returns: `Object` - Object containing all windows with their details (name, wid, icon, pid, src, size)
+    - Description: Return the current process table.
+    - Returns: `Record<number, ProcInf>` - a map of PID to process information (see `ProcessInfo` type in `types.ts` for fields such as name, pid, parent, children, status, memory, cpu, etc.)
     - Example:
       ```javascript
       const processes = tb.process.list();
       console.log(processes);
       ```
 
-  - **create**
-    - Description: Creates a new Process (Can also be used to generate a generic window)
+  - **procs**
+    - Description: Public property exposing the live process record. It is equivalent to calling `tb.process.list()` but can be modified directly when spawning new entries.
     - Example:
       ```javascript
-      tb.process.create();
+      console.log(tb.process.procs); // same as tb.process.list()
       ```
+
+  - **create**
+    - Description: Creates a new process entry. This is primarily used by the runtime when spawning windows or background tasks, but you can call it manually for testing.
+    - Parameters:
+      - `type: "window" | "runtime"` – the kind of process to create.
+      - `config: any` – configuration object describing the process (window size, title, etc.).
+    - Example:
+      ```javascript
+      tb.process.create("runtime", { name: "my-task" });
 
   - **parse**
     - **build [🧪Experimental]**

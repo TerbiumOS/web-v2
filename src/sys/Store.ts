@@ -31,10 +31,27 @@ interface SearchMenuState {
 	searchMenuRef: React.RefObject<HTMLDivElement | null>;
 }
 
-let lastPID = 1;
+let lastPID: number = 0;
+
+function ensureLastPID() {
+	if (lastPID === 0) {
+		if (window.tb?.process?.list) {
+			try {
+				const list = window.tb.process.list();
+				lastPID = Math.max(...Object.keys(list).map(Number));
+			} catch (e) {
+				console.warn(e);
+				lastPID = 2;
+			}
+		} else {
+			lastPID = 2;
+		}
+	}
+}
 
 export const createPID = () => {
-	return (lastPID++).toString();
+	ensureLastPID();
+	return (lastPID + 1).toString();
 };
 
 export const createWID = () => {
