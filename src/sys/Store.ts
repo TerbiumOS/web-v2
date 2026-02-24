@@ -148,7 +148,7 @@ const useWindowStore = create<WindowState>()(set => ({
 				// @ts-expect-error
 				size: config.size || { width: 800, height: 600 },
 				type: "window",
-			}
+			};
 
 			return {
 				windows: [...state.windows, config],
