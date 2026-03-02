@@ -1235,7 +1235,7 @@ export default async function Api() {
 					onKill: async () => {
 						await window.tb.proxy.updateSWs();
 						window.location.reload();
-					}
+					},
 				},
 				1: {
 					name: "Terbium Alexa Desktop Experience",
@@ -1247,7 +1247,7 @@ export default async function Api() {
 					type: "runtime",
 					onKill: () => {
 						window.location.reload();
-					}
+					},
 				},
 			} as Record<number, any>,
 			kill(pid: string | number) {
