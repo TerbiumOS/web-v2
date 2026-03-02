@@ -437,6 +437,7 @@ export default async function Api() {
 				} else {
 					window.tb.libcurl.set_websocket(settings.wispServer);
 				}
+				return true;
 			},
 			async encode(url: string, encoder: string) {
 				if (encoder === "xor" || encoder === "XOR") {
@@ -1231,6 +1232,10 @@ export default async function Api() {
 					size: null,
 					icon: null,
 					type: "runtime",
+					onKill: async () => {
+						await window.tb.proxy.updateSWs();
+						window.location.reload();
+					}
 				},
 				1: {
 					name: "Terbium Alexa Desktop Experience",
@@ -1240,29 +1245,27 @@ export default async function Api() {
 					size: null,
 					icon: null,
 					type: "runtime",
+					onKill: () => {
+						window.location.reload();
+					}
 				},
 			} as Record<number, any>,
 			kill(pid: string | number) {
+				const pd = Number(pid);
 				const proc = Object.values(window.tb.process.list()).find((p: any) => {
-					if (typeof pid === "number") {
-						return p.pid === pid;
-					} else {
-						return p.name === pid;
-					}
+					return Number(p.pid) === pd;
 				});
 				if (proc) {
 					if (proc.type === "window") {
 						clearInfo();
-						useWindowStore.getState().killWindow(typeof pid === "number" ? String(pid) : pid);
+						useWindowStore.getState().killWindow(String(pd));
+						delete window.tb.process.procs[proc.pid];
 					} else if (proc.type === "runtime") {
 						delete window.tb.process.procs[proc.pid];
-						const sysRegex = /^Terbium (Alexa Desktop Experience|Service Worker)$/;
-						if (sysRegex.test(proc.name)) {
-							window.location.reload();
-						} else if (proc.name === "Terbium Node.js Runtime") {
-							window.tb.node.stop();
-						}
+						if (proc.onKill) proc.onKill();
 					}
+				} else {
+					throw new Error(`Process with PID ${pid} not found`);
 				}
 			},
 			list() {

@@ -51,7 +51,8 @@ function ensureLastPID() {
 
 export const createPID = () => {
 	ensureLastPID();
-	return (lastPID + 1).toString();
+	lastPID += 1;
+	return lastPID.toString();
 };
 
 export const createWID = () => {

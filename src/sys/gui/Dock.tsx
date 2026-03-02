@@ -562,6 +562,10 @@ const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onConte
 	const [currWID, setcurrWID] = useState(wid);
 	const [winfocused, setwinfocused] = useState(windowStore.windows.find((w: any) => w.wid === currWID)?.focused);
 	const mm = (e: MouseEvent) => {
+		const target = e.target;
+		if (target instanceof Element && target.closest("[data-win-preview='true']")) {
+			return;
+		}
 		const withinRadius = (e: MouseEvent) => {
 			if (!dockItemRef.current) return false;
 			const rect = dockItemRef.current.getBoundingClientRect();

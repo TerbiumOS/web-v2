@@ -395,6 +395,7 @@ export interface ProcInf {
 	pid: number;
 	src: string;
 	type: "window" | "runtime";
+	onKill?: () => void;
 }
 
 export interface COM {
@@ -467,7 +468,7 @@ export interface COM {
 	proxy: {
 		get(): Promise<"Ultraviolet" | "Scramjet">;
 		set(proxy: string): Promise<boolean>;
-		updateSWs(): Promise<void>;
+		updateSWs(): Promise<boolean>;
 		encode(url: string, encoder: string): Promise<string>;
 		decode(url: string, decoder: string): Promise<string>;
 	};

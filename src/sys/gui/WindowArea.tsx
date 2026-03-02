@@ -595,6 +595,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			// @ts-ignore
 			pid={config.pid}
 			className={`
+            window-element
             ${className ? className : ""}
             absolute
             bg-[${accent}]
@@ -1009,6 +1010,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					key={config.src}
 					ref={srcRef}
 					src={src}
+					id={`proc-${config.pid}`}
 					loading={optimizationsEnabled && minimized ? "lazy" : "eager"}
 					onLoad={() => {
 						if (config.message) {
@@ -1202,7 +1204,7 @@ const DesktopItems = () => {
 	}, []);
 
 	const onMouseDown = (e: React.MouseEvent<HTMLDivElement>, index: number) => {
-		let holdTimeout: NodeJS.Timeout | null = null;
+		let holdTimeout: any | null = null;
 		let renamingIndex: number | null = null;
 		const startDragging = () => {
 			setDragradius(true);

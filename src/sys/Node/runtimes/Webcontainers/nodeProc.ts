@@ -29,6 +29,9 @@ export async function initializeWebContainer(): Promise<WebContainer> {
 		src: null,
 		size: null,
 		icon: null,
+		onKill: () => {
+			window.tb.node.stop();
+		}
 	});
 
 	return webContainer;
