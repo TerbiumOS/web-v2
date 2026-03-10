@@ -7,7 +7,8 @@
 	padding: 2.25rem;
 	opacity: 0;
 	pointer-events: none;
-	backdrop-filter: blur(6px);
+	backdrop-filter: blur(8px);
+	background: rgba(10, 10, 10, 0.18);
 	transition: opacity 120ms ease-in;
 	z-index: 999999999;
 }
@@ -26,11 +27,12 @@
 	overflow-y: auto;
 	padding: 0.95rem;
 	border-radius: 0.95rem;
-	background: #ffffff32;
-	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: #2020208c;
+	background-image: url("/assets/img/grain.png");
+	border: 1px solid rgba(255, 255, 255, 0.08);
 	box-shadow:
-		0 18px 62px rgba(0, 0, 0, 0.55),
-		inset 0 1px 0 rgba(255, 255, 255, 0.24);
+		0 22px 62px rgba(0, 0, 0, 0.56),
+		inset 0 1px 0 rgba(255, 255, 255, 0.12);
 	transform: translateY(10px) scale(0.992);
 	transition: transform 120ms ease-in;
 }
@@ -43,11 +45,11 @@
 	position: relative;
 	display: flex;
 	flex-direction: column;
-	gap: 0.55rem;
+	gap: 0.45rem;
 	padding: 0.45rem;
-	border-radius: 0.7rem;
-	background: #00000032;
-	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 0.5rem;
+	background: #0f0f0fa8;
+	border: 1px solid rgba(255, 255, 255, 0.1);
 	color: #ffffff;
 	text-align: left;
 	cursor: var(--cursor-pointer);
@@ -60,26 +62,27 @@
 
 .win-switcher-item:hover {
 	transform: translateY(-1px);
-	background: #32ae6232;
+	background: color-mix(in srgb, #32ae62 22%, #0f0f0fa8);
+	border-color: color-mix(in srgb, #32ae62 46%, rgba(255, 255, 255, 0.08));
 }
 
 .win-switcher-item.active {
-	background: #32ae6236;
+	background: color-mix(in srgb, #32ae62 30%, #0f0f0fa8);
 	border-color: #32ae6294;
 	box-shadow:
 		0 0 0 1px #32ae6232,
-		0 0 22px #32ae6245;
+		0 0 22px #32ae6248;
 	transform: translateY(-2px);
 }
 
 .thumb-frame {
 	position: relative;
 	width: 100%;
-	height: 150px;
+	height: 128px;
 	border-radius: 0.5rem;
 	overflow: hidden;
-	background: #0e131b;
-	border: 1px solid rgba(255, 255, 255, 0.2);
+	background: #1f1f1f;
+	border: 1px solid rgba(255, 255, 255, 0.13);
 }
 
 .thumb-image,
@@ -93,7 +96,7 @@
 }
 
 .thumb-fallback {
-	background: linear-gradient(165deg, #121925, #1d2d43);
+	background: #1f1f1f;
 }
 
 .thumb-fallback-icon {
@@ -125,6 +128,7 @@
 	gap: 0.45rem;
 	min-width: 0;
 	padding-inline: 0.15rem;
+	padding-block: 0.15rem 0.1rem;
 }
 
 .item-icon {
@@ -135,9 +139,10 @@
 }
 
 .item-title {
-	font-size: 0.82rem;
-	font-weight: 600;
+	font-size: 0.7rem;
+	font-weight: 500;
 	line-height: 1.2;
+	color: rgba(255, 255, 255, 0.9);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -178,6 +183,6 @@
 	}
 
 	.thumb-frame {
-		height: 110px;
+		height: 112px;
 	}
 }

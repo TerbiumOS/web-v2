@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles/win_switcher.css";
 import { useWindowStore } from "../Store";
-import { WindowConfig } from "../types";
+import { UserSettings, WindowConfig } from "../types";
 import { domToCanvas } from "modern-screenshot";
 
 type ThumbnailMap = Record<string, string>;
@@ -68,6 +68,7 @@ const WinSwitcher: React.FC = () => {
 	const [thumbnails, setThumbnails] = useState<ThumbnailMap>({});
 	const [thumbnailErrors, setThumbnailErrors] = useState<Set<string>>(new Set());
 	const [loadingThumbs, setLoadingThumbs] = useState<Set<string>>(new Set());
+	const [windowOptimizationsEnabled, setWindowOptimizationsEnabled] = useState<boolean>(false);
 	const isVisibleRef = useRef<boolean>(false);
 	const activeIndexRef = useRef<number>(0);
 	const windowsRef = useRef<WindowConfig[]>([]);
@@ -136,6 +137,14 @@ const WinSwitcher: React.FC = () => {
 	const captureForWindow = async (windowConfig: WindowConfig) => {
 		if (!windowConfig.wid) return;
 		if (thumbnails[windowConfig.wid] || thumbnailErrors.has(windowConfig.wid) || isCapturingRef.current.has(windowConfig.wid)) return;
+		if (windowOptimizationsEnabled) {
+			setThumbnailErrors(prev => {
+				const next = new Set(prev);
+				next.add(windowConfig.wid as string);
+				return next;
+			});
+			return;
+		}
 		isCapturingRef.current.add(windowConfig.wid);
 		setLoadingThumbs(prev => {
 			const next = new Set(prev);
@@ -159,6 +168,32 @@ const WinSwitcher: React.FC = () => {
 		});
 		isCapturingRef.current.delete(windowConfig.wid);
 	};
+	useEffect(() => {
+		const updateWindowOptimizations = async () => {
+			try {
+				const settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8")) as UserSettings;
+				setWindowOptimizationsEnabled(settings.windowOptimizations ?? false);
+			} catch {
+				setWindowOptimizationsEnabled(false);
+			}
+		};
+		updateWindowOptimizations();
+		window.addEventListener("tfsready", updateWindowOptimizations);
+		window.addEventListener("load", updateWindowOptimizations);
+		window.addEventListener("updWallpaper", updateWindowOptimizations);
+		return () => {
+			window.removeEventListener("tfsready", updateWindowOptimizations);
+			window.removeEventListener("load", updateWindowOptimizations);
+			window.removeEventListener("updWallpaper", updateWindowOptimizations);
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!windowOptimizationsEnabled) {
+			setThumbnailErrors(new Set());
+		}
+	}, [windowOptimizationsEnabled]);
+
 	useEffect(() => {
 		const onDown = (e: KeyboardEvent) => {
 			if (e.key === "Tab" && e.altKey) {
@@ -214,10 +249,11 @@ const WinSwitcher: React.FC = () => {
 	}, []);
 	useEffect(() => {
 		if (!isVisible) return;
+		if (windowOptimizationsEnabled) return;
 		orderedWindows.forEach(windowConfig => {
 			captureForWindow(windowConfig);
 		});
-	}, [isVisible, orderedWindows]);
+	}, [isVisible, orderedWindows, windowOptimizationsEnabled]);
 	if (orderedWindows.length === 0) return null;
 	return (
 		<div className={`win-switcher-backdrop ${isVisible ? "visible" : ""}`}>
@@ -225,7 +261,7 @@ const WinSwitcher: React.FC = () => {
 				{orderedWindows.map((windowConfig: WindowConfig, index: number) => {
 					const text = titleText(windowConfig);
 					const thumbSrc = windowConfig.wid ? thumbnails[windowConfig.wid] : null;
-					const showFallback = (windowConfig.wid && thumbnailErrors.has(windowConfig.wid)) || !thumbSrc;
+					const showFallback = windowOptimizationsEnabled || (windowConfig.wid && thumbnailErrors.has(windowConfig.wid)) || !thumbSrc;
 					const isLoading = !!windowConfig.wid && loadingThumbs.has(windowConfig.wid);
 					const spinnerId = `a12-switch-${windowConfig.wid ?? index}`;
 					return (
