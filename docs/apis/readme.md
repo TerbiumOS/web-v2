@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">API Docs</span>
 
-**Last Updated**: v2.3.0-dev - 03/31/2026
+**Last Updated**: v2.3.0 - 03/31/2026
 
 So you're looking to use Terbium APIs. Well, you're in the right place! Terbium has a decent amount of components which I will break down below. The pages will include a description of the functions and code examples.
 
