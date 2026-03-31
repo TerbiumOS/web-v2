@@ -7,7 +7,7 @@ import { hash } from "../hash.json";
 import pwd from "./apis/Crypto";
 import { setDialogFn } from "./apis/Dialogs";
 import { hideFn, isExistingFn, setMusicFn, setVideoFn } from "./apis/Mediaisland";
-import { setNotifFn } from "./apis/Notifications";
+import { dismissNotifFn, setNotifFn } from "./apis/Notifications";
 import { registry } from "./apis/Registry";
 import { System } from "./apis/System";
 import { XOR } from "./apis/Xor";
@@ -463,8 +463,38 @@ export default async function Api() {
 			Toast(props: NotificationProps) {
 				setNotifFn("toast", props);
 			},
-			Installing(props: NotificationProps) {
-				setNotifFn("installing", props);
+			Installing<T>(props: NotificationProps, task?: Promise<T> | (() => Promise<T>), doneToast?: Partial<NotificationProps> | null, failToast?: Partial<NotificationProps> | null) {
+				if (!task) {
+					setNotifFn("installing", props);
+					return;
+				}
+				const notifId = setNotifFn("installing", props);
+				const runTask = typeof task === "function" ? task() : task;
+				return Promise.resolve(runTask)
+					.then(result => {
+						dismissNotifFn(notifId);
+						if (doneToast !== null) {
+							setNotifFn("toast", {
+								application: doneToast?.application || props.application,
+								iconSrc: doneToast?.iconSrc || props.iconSrc,
+								message: doneToast?.message || `${props.message} complete`,
+								time: doneToast?.time,
+							});
+						}
+						return result;
+					})
+					.catch(error => {
+						dismissNotifFn(notifId);
+						if (failToast !== null) {
+							setNotifFn("toast", {
+								application: failToast?.application || props.application,
+								iconSrc: failToast?.iconSrc || props.iconSrc,
+								message: failToast?.message || `${props.message} failed`,
+								time: failToast?.time,
+							});
+						}
+						throw error;
+					});
 			},
 		},
 		dialog: {

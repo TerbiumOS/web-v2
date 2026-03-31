@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">API Docs</span>
 
-**Last Updated**: v2.3.0-dev - 02/09/2026
+**Last Updated**: v2.3.0-dev - 03/31/2026
 
 So you're looking to use Terbium APIs. Well, you're in the right place! Terbium has a decent amount of components which I will break down below. The pages will include a description of the functions and code examples.
 
@@ -61,10 +61,10 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
     - Description: Adds an app to the app launcher.
     - Parameters:
       - `props: { name: string, icon: string, src: string, etc }`
-    - Returns: `Promise<fullfilled>`
+    - Returns: `Promise<boolean>`
     - Example:
       ```javascript
-      const wasadded = await tb.launcher.addAdd({
+      const wasadded = await tb.launcher.addApp({
         name: "Example App",
         icon: "/home/icon.png",
       });
@@ -74,7 +74,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **removeApp**
     - Description: Removes an app from the app launcher.
     - Parameters:
-      - `appname: string` - The app id of the app to be removed.
+      - `name: string` - The app name to remove.
     - Returns: `Promise<boolean>`
     - Example:
       ```js
@@ -90,7 +90,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   > <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> The Theme API is deprecated and remains as a stub for legacy applications
   - **get**
     - Description: Gets the current theme settings.
-    - Returns: `Promise<object>` - Theme settings.
+    - Returns: `Promise<string>` - Theme value.
     - Example:
       ```javascript
       const themeSettings = await tb.theme.get();
@@ -100,11 +100,11 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **set**
     - Description: Sets the theme settings.
     - Parameters:
-      - `data: { color: string, font: string }` - New theme settings.
+      - `data: string` - New theme value.
     - Returns: `Promise<boolean>` - `true` if successful.
     - Example:
       ```javascript
-      await tb.theme.set({ color: "#ffffff", font: "Roboto" });
+      await tb.theme.set("#ffffff");
       console.log("Theme set successfully");
       ```
 
@@ -153,7 +153,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
         - `path: string` - The file path of the wallpaper image.
       - Example:
         ```javascript
-        await tb.wallpaper.set("/path/to/wallpaper.jpg");
+        await tb.desktop.wallpaper.set("/path/to/wallpaper.jpg");
         console.log("Wallpaper set successfully");
         ```
 
@@ -161,7 +161,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Description: Sets the wallpaper mode to "contain".
       - Example:
         ```javascript
-        await tb.wallpaper.contain();
+        await tb.desktop.wallpaper.contain();
         console.log("Wallpaper mode set to contain");
         ```
 
@@ -169,7 +169,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Description: Sets the wallpaper mode to "stretch".
       - Example:
         ```javascript
-        await tb.wallpaper.stretch();
+        await tb.desktop.wallpaper.stretch();
         console.log("Wallpaper mode set to stretch");
         ```
 
@@ -177,7 +177,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Description: Sets the wallpaper mode to "cover".
       - Example:
         ```javascript
-        await tb.wallpaper.cover();
+        await tb.desktop.wallpaper.cover();
         console.log("Wallpaper mode set to cover");
         ```
 
@@ -186,7 +186,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Returns: `Promise<string>` - The current wallpaper mode.
       - Example:
         ```javascript
-        const currentMode = await tb.wallpaper.fillMode();
+        const currentMode = await tb.desktop.wallpaper.fillMode();
         console.log("Current wallpaper mode:", currentMode);
         ```
 
@@ -198,7 +198,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Returns: `Promise<string>` - Returns 'Success' if the app was pinned successfully.
       - Example:
         ```javascript
-        await tb.dock.pin({ title: "MyApp", path: "/path/to/myapp" });
+        await tb.desktop.dock.pin({ title: "MyApp", path: "/path/to/myapp" });
         console.log("Application pinned successfully");
         ```
 
@@ -209,11 +209,23 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Returns: `Promise<string>` - Returns 'Success' if the app was unpinned successfully.
       - Example:
         ```javascript
-        await tb.dock.unpin("MyApp");
+        await tb.desktop.dock.unpin("MyApp");
         console.log("Application unpinned successfully");
         ```
 
 ### Window
+  - **create**
+    - Description: Creates a new window using window configuration.
+    - Parameters:
+      - `props: any` - Window configuration object.
+    - Example:
+      ```javascript
+      tb.window.create({
+        title: "My Window",
+        src: "/fs/apps/system/about.tapp/index.html"
+      });
+      ```
+
   - **close**
     - Description: closes the active window.
     - Example:
@@ -246,7 +258,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       ```
   - **getId**
     - Description: Gets the ID of the currently active window.
-    - Returns: `Promise<string>` - Window ID.
+    - Returns: `number` - Window ID.
     - Example:
       ```javascript
       const windowId = tb.window.getId();
@@ -301,11 +313,11 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       ```
     - **removeControl**
       - Description: Removes a control from the TB App Island
+      - Parameters:
+        - `control_id: string` - The ID used when adding the control.
       - Example:
       ```javascript
-      tb.window.island.removeControl({
-        id: "<idfromthatyouusedforaddingit>",
-      })
+      tb.window.island.removeControl("<idfromthatyouusedforaddingit>")
       ```
 
 ### ContextMenu
@@ -428,6 +440,28 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
         iconSrc: "/assets/img/logo.png", 
         time: 10000 
       });
+      ```
+
+  - **Installing**
+    - Description: An installing/progress style notification. If you pass a task Promise (or async function), the notification stays visible until the task finishes, then it automatically shows a completion toast (or failure toast if it throws).
+    - Parameters:
+      - `props: { message: string, application: string, iconSrc: string, time?: number }` - Installing notification properties.
+      - `task?: Promise<T> | (() => Promise<T>)` - Optional async task to track.
+      - `doneToast?: Partial<NotificationProps>` - Optional completion toast overrides.
+      - `failToast?: Partial<NotificationProps>` - Optional failure toast overrides.
+    - Returns: `Promise<T> | void` - Returns the task result when a task is passed.
+    - Example:
+      ```javascript
+      await tb.notification.Installing(
+        {
+          message: "Extracting archive...",
+          application: "Files",
+          iconSrc: "/assets/img/logo.png"
+        },
+        async () => await unzip("pathtoalargezipfolder.zip", "/home/user/documents"),
+        { message: "Archive extracted successfully" },
+        { message: "Archive extraction failed" }
+      );
       ```
 
 ### Dialog
@@ -663,6 +697,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
     - Example:
       ```javascript
       tb.process.create("runtime", { name: "my-task" });
+      ```
 
   - **parse**
     - **build [🧪Experimental]**
@@ -1136,12 +1171,12 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       ```
 
   - **sync**
-    - **retrieve**
+    - **retreive**
       - Description: Retrieves synced data from Terbium Cloud (settings, WebDAV servers, etc.)
       - Returns: `Promise<void>`
       - Example:
         ```javascript
-        await tb.tauth.sync.retrieve();
+        await tb.tauth.sync.retreive();
         console.log("Settings synced from cloud");
         ```
 
@@ -1252,6 +1287,39 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Example:
         ```javascript
         await tb.file.handler.removeHandler("swf");
+        ```
+
+  - **icons**
+    - **get**
+      - Description: Gets icon path for a file extension.
+      - Parameters:
+        - `ext: string` - File extension.
+      - Returns: `Promise<string>` - Icon path.
+      - Example:
+        ```javascript
+        const icon = await tb.file.icons.get("png");
+        console.log(icon);
+        ```
+
+    - **set**
+      - Description: Sets icon path for a file extension.
+      - Parameters:
+        - `ext: string` - File extension.
+        - `iconPath: string` - Path to icon.
+      - Returns: `Promise<boolean>`
+      - Example:
+        ```javascript
+        await tb.file.icons.set("log", "/assets/img/file-log.png");
+        ```
+
+    - **remove**
+      - Description: Removes custom icon mapping for a file extension.
+      - Parameters:
+        - `ext: string` - File extension.
+      - Returns: `Promise<boolean>`
+      - Example:
+        ```javascript
+        await tb.file.icons.remove("log");
         ```
 
 ### Additional Libraries

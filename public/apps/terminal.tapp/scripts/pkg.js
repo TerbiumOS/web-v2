@@ -436,48 +436,71 @@ async function installApp(app, type) {
 }
 
 async function unzip(path, target) {
-	const response = await fetch("/fs/" + path);
-	const zipFileContent = await response.arrayBuffer();
-	if (!(await dirExists(target))) {
-		await window.parent.tb.fs.promises.mkdir(target, { recursive: true });
-	}
-	const compressedFiles = window.parent.tb.fflate.unzipSync(new Uint8Array(zipFileContent));
-	for (const [relativePath, content] of Object.entries(compressedFiles)) {
-		const fullPath = `${target}/${relativePath}`;
-		const pathParts = fullPath.split("/");
-		let currentPath = "";
-		for (let i = 0; i < pathParts.length; i++) {
-			currentPath += pathParts[i] + "/";
-			if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
-				try {
-					console.log(`touch ${currentPath.slice(0, -1)}`);
-					displayOutput(`touch ${currentPath.slice(0, -1)}`);
-					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), Filer.Buffer.from(content));
-				} catch {
-					displayOutput(`Cant make ${currentPath.slice(0, -1)}`);
-					console.log(`Cant make ${currentPath.slice(0, -1)}`);
+	const runUnzip = async () => {
+		const response = await fetch("/fs/" + path);
+		const zipFileContent = await response.arrayBuffer();
+		if (!(await dirExists(target))) {
+			await window.parent.tb.fs.promises.mkdir(target, { recursive: true });
+		}
+		const compressedFiles = window.parent.tb.fflate.unzipSync(new Uint8Array(zipFileContent));
+		for (const [relativePath, content] of Object.entries(compressedFiles)) {
+			const fullPath = `${target}/${relativePath}`;
+			const pathParts = fullPath.split("/");
+			let currentPath = "";
+			for (let i = 0; i < pathParts.length; i++) {
+				currentPath += pathParts[i] + "/";
+				if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
+					try {
+						console.log(`touch ${currentPath.slice(0, -1)}`);
+						displayOutput(`touch ${currentPath.slice(0, -1)}`);
+						await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), Filer.Buffer.from(content));
+					} catch {
+						displayOutput(`Cant make ${currentPath.slice(0, -1)}`);
+						console.log(`Cant make ${currentPath.slice(0, -1)}`);
+					}
+				} else if (!(await dirExists(currentPath))) {
+					try {
+						console.log(`mkdir ${currentPath}`);
+						displayOutput(`mkdir ${currentPath}`);
+						await window.parent.tb.fs.promises.mkdir(currentPath);
+					} catch {
+						console.log(`Cant make ${currentPath}`);
+						displayOutput(`Cant make ${currentPath}`);
+					}
 				}
-			} else if (!(await dirExists(currentPath))) {
+			}
+			if (relativePath.endsWith("/")) {
 				try {
-					console.log(`mkdir ${currentPath}`);
-					displayOutput(`mkdir ${currentPath}`);
-					await window.parent.tb.fs.promises.mkdir(currentPath);
+					console.log(`mkdir fp ${fullPath}`);
+					await window.parent.tb.fs.promises.mkdir(fullPath);
 				} catch {
-					console.log(`Cant make ${currentPath}`);
-					displayOutput(`Cant make ${currentPath}`);
+					console.log(`Cant make ${fullPath}`);
 				}
 			}
 		}
-		if (relativePath.endsWith("/")) {
-			try {
-				console.log(`mkdir fp ${fullPath}`);
-				await window.parent.tb.fs.promises.mkdir(fullPath);
-			} catch {
-				console.log(`Cant make ${fullPath}`);
-			}
-		}
-	}
-	return "Done!";
+		return "Done!";
+	};
+
+	return window.parent.tb.notification.Installing(
+		{
+			message: "Installing package files...",
+			application: "Terminal",
+			iconSrc: "/fs/apps/system/terminal.tapp/icon.svg",
+		},
+		runUnzip(),
+		{
+			message: "Finished extracting package",
+			application: "Terminal",
+			iconSrc: "/fs/apps/system/terminal.tapp/icon.svg",
+			time: 3200,
+		},
+		{
+			message: "Failed to extract package",
+			application: "Terminal",
+			iconSrc: "/fs/apps/system/terminal.tapp/icon.svg",
+			time: 2500,
+		},
+	);
 }
 
 const dirExists = async path => {

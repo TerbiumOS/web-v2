@@ -2151,60 +2151,71 @@ self.openPath = openPath;
 self.emptyTrash = emptyTrash;
 
 async function unzip(path, target, app) {
-	const response = await fetch("/fs/" + path);
-	if (!app) {
-		window.parent.tb.notification.Installing({
-			message: `Unzipping...`,
-			application: "Files",
-			iconSrc: "/fs/apps/system/files.tapp/icon.svg",
-			time: 500,
-		});
-	}
-	const zipFileContent = await response.arrayBuffer();
-	if (!(await dirExists(target))) {
-		await window.parent.tb.fs.promises.mkdir(target, { recursive: true });
-	}
-	const compressedFiles = window.parent.tb.fflate.unzipSync(new Uint8Array(zipFileContent));
-	for (const [relativePath, content] of Object.entries(compressedFiles)) {
-		const fullPath = `${target}/${relativePath}`;
-		const pathParts = fullPath.split("/");
-		let currentPath = "";
-		for (let i = 0; i < pathParts.length; i++) {
-			currentPath += pathParts[i] + "/";
-			if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
-				try {
-					console.log(`touch ${currentPath.slice(0, -1)}`);
-					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.parent.tb.buffer.from(content), "arraybuffer");
-				} catch {
-					console.log(`Cant make ${currentPath.slice(0, -1)}`);
+	const runUnzip = async () => {
+		const response = await fetch("/fs/" + path);
+		const zipFileContent = await response.arrayBuffer();
+		if (!(await dirExists(target))) {
+			await window.parent.tb.fs.promises.mkdir(target, { recursive: true });
+		}
+		const compressedFiles = window.parent.tb.fflate.unzipSync(new Uint8Array(zipFileContent));
+		for (const [relativePath, content] of Object.entries(compressedFiles)) {
+			const fullPath = `${target}/${relativePath}`;
+			const pathParts = fullPath.split("/");
+			let currentPath = "";
+			for (let i = 0; i < pathParts.length; i++) {
+				currentPath += pathParts[i] + "/";
+				if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
+					try {
+						console.log(`touch ${currentPath.slice(0, -1)}`);
+						await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.parent.tb.buffer.from(content), "arraybuffer");
+					} catch {
+						console.log(`Cant make ${currentPath.slice(0, -1)}`);
+					}
+				} else if (!(await dirExists(currentPath))) {
+					try {
+						console.log(`mkdir ${currentPath}`);
+						await window.parent.tb.fs.promises.mkdir(currentPath);
+					} catch {
+						console.log(`Cant make ${currentPath}`);
+					}
 				}
-			} else if (!(await dirExists(currentPath))) {
+			}
+			if (relativePath.endsWith("/")) {
 				try {
-					console.log(`mkdir ${currentPath}`);
-					await window.parent.tb.fs.promises.mkdir(currentPath);
+					console.log(`mkdir fp ${fullPath}`);
+					await window.parent.tb.fs.promises.mkdir(fullPath);
 				} catch {
-					console.log(`Cant make ${currentPath}`);
+					console.log(`Cant make ${fullPath}`);
 				}
 			}
 		}
-		if (relativePath.endsWith("/")) {
-			try {
-				console.log(`mkdir fp ${fullPath}`);
-				await window.parent.tb.fs.promises.mkdir(fullPath);
-			} catch {
-				console.log(`Cant make ${fullPath}`);
-			}
-		}
-	}
+		return "Done!";
+	};
+
 	if (!app) {
-		window.parent.tb.notification.Toast({
-			message: `Finished unzipping ${path}`,
-			application: "Files",
-			iconSrc: "/fs/apps/system/files.tapp/icon.svg",
-			time: 500,
-		});
+		return window.parent.tb.notification.Installing(
+			{
+				message: "Unzipping...",
+				application: "Files",
+				iconSrc: "/fs/apps/system/files.tapp/icon.svg",
+			},
+			runUnzip(),
+			{
+				message: `Finished unzipping ${path}`,
+				application: "Files",
+				iconSrc: "/fs/apps/system/files.tapp/icon.svg",
+				time: 3500,
+			},
+			{
+				message: `Failed to unzip ${path}`,
+				application: "Files",
+				iconSrc: "/fs/apps/system/files.tapp/icon.svg",
+				time: 2500,
+			},
+		);
 	}
-	return "Done!";
+
+	return runUnzip();
 }
 
 const dirExists = async path => {

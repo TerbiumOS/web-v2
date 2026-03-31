@@ -475,7 +475,7 @@ export interface COM {
 	notification: {
 		Message(props: NotificationProps): void;
 		Toast(props: NotificationProps): void;
-		Installing(props: NotificationProps): void;
+		Installing<T>(props: NotificationProps, task?: Promise<T> | (() => Promise<T>), doneToast?: Partial<NotificationProps> | null, failToast?: Partial<NotificationProps> | null): Promise<T> | void;
 	};
 	dialog: {
 		Alert(props: dialogProps): void;
