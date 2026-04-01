@@ -84,6 +84,46 @@ window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/setting
 	document.querySelector(`[action-for="24h-12h"]`).querySelector(".select-title .text").innerText = twentyFourHour === "24h" ? "Yes" : "No";
 	document.querySelector(`[action-for="wmx"]`).querySelector(".select-title .text").innerText = data["window"]["alwaysMaximized"] ? "Yes" : "No";
 	document.querySelector(`[action-for="wfs"]`).querySelector(".select-title .text").innerText = data["window"]["alwaysFullscreen"] ? "Yes" : "No";
+	try {
+		const wallpaperVal = data["wallpaper"];
+		const isb64 = val => {
+			if (!val || typeof val !== "string") return false;
+			if (val.startsWith("data:")) return true;
+			const stripped = val.replace(/\s+/g, "");
+			return /^[A-Za-z0-9+/=]+$/.test(stripped) && stripped.length > 200;
+		};
+		if (isb64(wallpaperVal)) {
+			const wallpaperContainer = document.querySelector(".wallpapers");
+			if (wallpaperContainer) {
+				const container = document.createElement("div");
+				container.classList.add("wallpaper-container");
+				container.style.position = "relative";
+				const img = document.createElement("img");
+				img.classList.add("wallpaper-option");
+				img.src = wallpaperVal.startsWith("data:") ? wallpaperVal : `data:image/png;base64,${wallpaperVal}`;
+				img.alt = "Synced Wallpaper";
+				img.style.objectFit = "cover";
+				img.addEventListener("click", async () => {
+					tb_wallpaper.set(img.src);
+				});
+				const label = document.createElement("div");
+				label.innerText = "Synced Wallpaper";
+				label.style.position = "absolute";
+				label.style.bottom = "6px";
+				label.style.left = "6px";
+				label.style.background = "rgba(0,0,0,0.45)";
+				label.style.padding = "2px 6px";
+				label.style.borderRadius = "6px";
+				label.style.color = "#ffffff";
+				label.style.fontSize = "12px";
+				container.appendChild(img);
+				container.appendChild(label);
+				wallpaperContainer.prepend(container);
+			}
+		}
+	} catch (e) {
+		console.warn("Unable to show synced wallpaper label:", e);
+	}
 });
 
 window.parent.tb.fs.readFile("/system/etc/terbium/settings.json", "utf8", (err, data) => {
@@ -855,17 +895,31 @@ render(true);
 range.addEventListener("input", () => render(false));
 
 const winAccent = document.querySelector(".winaccent-preview");
-const winAccentPrev = async () => {
+const initWinAccent = async () => {
 	const defaultAccent = "#ffffff";
-	accentPreview.classList.remove("group", "cursor-pointer");
-	accentPreview.style.setProperty("--accent", defaultAccent);
-	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-	settings.window.winAccent = defaultAccent;
-	window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
-	winAccent.removeEventListener("mousedown", winAccentPrev);
-	window.parent.dispatchEvent(new Event("upd-accent"));
+	try {
+		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
+		const current = settings.window && settings.window.winAccent ? settings.window.winAccent : defaultAccent;
+		winAccent.style.setProperty("--accent", current);
+		if (current !== defaultAccent) {
+			winAccent.classList.add("group", "cursor-pointer");
+			const resetHandler = async () => {
+				let s = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
+				s.window = s.window || {};
+				s.window.winAccent = defaultAccent;
+				await window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(s));
+				winAccent.style.setProperty("--accent", defaultAccent);
+				winAccent.classList.remove("group", "cursor-pointer");
+				winAccent.removeEventListener("mousedown", resetHandler);
+				window.parent.dispatchEvent(new Event("upd-accent"));
+			};
+			winAccent.addEventListener("mousedown", resetHandler);
+		}
+	} catch (err) {
+		winAccent.style.setProperty("--accent", defaultAccent);
+	}
 };
-winAccentPrev();
+initWinAccent();
 
 const custom_waccent = document.querySelector(".custom-waccent");
 custom_waccent.addEventListener("click", e => {
@@ -953,30 +1007,35 @@ const windowOptimizationsCheckbox = document.querySelector(".window-optimization
 const setupWindowOptimizations = async () => {
 	const realCheckbox = windowOptimizationsCheckbox.querySelector("input[type='checkbox']");
 	const checkIcon = windowOptimizationsCheckbox.querySelector(".checkIcon");
-
-	const setState = async enabled => {
+	const setState = async (enabled, forceWrite = false) => {
 		realCheckbox.checked = enabled;
 		if (enabled) {
 			checkIcon.classList.remove("opacity-0", "scale-85");
 		} else {
 			checkIcon.classList.add("opacity-0", "scale-85");
 		}
-
-		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-		settings.windowOptimizations = enabled;
-		await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
+		try {
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+			if (forceWrite || settings.windowOptimizations !== enabled) {
+				settings.windowOptimizations = enabled;
+				await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
+			}
+		} catch (err) {
+			if (forceWrite) {
+				const base = { windowOptimizations: enabled };
+				await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(base, null, 2), "utf8");
+			}
+		}
 	};
-
 	try {
 		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-		setState(settings.windowOptimizations ?? true);
+		setState(settings.windowOptimizations ?? true, false);
 	} catch (err) {
 		console.error("Failed to load window optimization settings:", err);
-		setState(true);
+		setState(true, false);
 	}
-
 	windowOptimizationsCheckbox.addEventListener("mousedown", async () => {
-		await setState(!realCheckbox.checked);
+		await setState(!realCheckbox.checked, true);
 	});
 };
 setupWindowOptimizations();
@@ -985,32 +1044,38 @@ const fpsCounterCheckbox = document.querySelector(".fps-counter-check");
 const setupFPSCounter = async () => {
 	const realCheckbox = fpsCounterCheckbox.querySelector("input[type='checkbox']");
 	const checkIcon = fpsCounterCheckbox.querySelector(".checkIcon");
-
-	const setState = async enabled => {
+	const setState = async (enabled, forceWrite = false) => {
 		realCheckbox.checked = enabled;
 		if (enabled) {
 			checkIcon.classList.remove("opacity-0", "scale-85");
 		} else {
 			checkIcon.classList.add("opacity-0", "scale-85");
 		}
-
-		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-		settings.showFPS = enabled;
-		await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
-
+		try {
+			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
+			if (forceWrite || settings.showFPS !== enabled) {
+				settings.showFPS = enabled;
+				await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
+			}
+		} catch (err) {
+			if (forceWrite) {
+				const base = { showFPS: enabled };
+				await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(base, null, 2), "utf8");
+			}
+		}
 		window.parent.dispatchEvent(new CustomEvent("settings-changed", { detail: { showFPS: enabled } }));
 	};
 
 	try {
 		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-		setState(settings.showFPS ?? false);
+		setState(settings.showFPS ?? false, false);
 	} catch (err) {
 		console.error("Failed to load FPS counter settings:", err);
-		setState(false);
+		setState(false, false);
 	}
 
 	fpsCounterCheckbox.addEventListener("mousedown", async () => {
-		await setState(!realCheckbox.checked);
+		await setState(!realCheckbox.checked, true);
 	});
 };
 setupFPSCounter();

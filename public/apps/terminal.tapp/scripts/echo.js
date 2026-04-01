@@ -1,6 +1,5 @@
 function echo(args) {
-	const message = args.join(" ");
-	displayOutput(message);
+	displayOutput(args);
 	createNewCommandInput();
 }
 

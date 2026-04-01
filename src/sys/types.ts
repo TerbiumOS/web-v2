@@ -300,6 +300,7 @@ export interface cmprops {
 		color?: string;
 		click: () => void;
 	}[];
+	iframe?: boolean;
 }
 
 export interface AppData {
@@ -337,6 +338,7 @@ export interface MediaProps {
 	background?: string;
 	endtime: number;
 	onPausePlay: void;
+	onSeek?: void;
 	onNext?: void;
 	onBack?: void;
 }
@@ -384,6 +386,16 @@ export interface SysSettings {
 	"host-name": string;
 	setup: boolean;
 	defaultUser: string;
+}
+
+export interface ProcInf {
+	name: string;
+	size: { width: number | string; height: number | string };
+	icon: string;
+	pid: number;
+	src: string;
+	type: "window" | "runtime";
+	onKill?: () => void;
 }
 
 export interface COM {
@@ -456,14 +468,14 @@ export interface COM {
 	proxy: {
 		get(): Promise<"Ultraviolet" | "Scramjet">;
 		set(proxy: string): Promise<boolean>;
-		updateSWs(): Promise<void>;
+		updateSWs(): Promise<boolean>;
 		encode(url: string, encoder: string): Promise<string>;
 		decode(url: string, decoder: string): Promise<string>;
 	};
 	notification: {
 		Message(props: NotificationProps): void;
 		Toast(props: NotificationProps): void;
-		Installing(props: NotificationProps): void;
+		Installing<T>(props: NotificationProps, task?: Promise<T> | (() => Promise<T>), doneToast?: Partial<NotificationProps> | null, failToast?: Partial<NotificationProps> | null): Promise<T> | void;
 	};
 	dialog: {
 		Alert(props: dialogProps): void;
@@ -494,6 +506,13 @@ export interface COM {
 			addEntry(name: string, file: string): void;
 			removeEntry(name: string): void;
 		};
+		startup: {
+			addProc(apporname: string, target: "System" | "User", cmd?: string): Promise<void>;
+			removeProc(apporname: string, target: "System" | "User"): Promise<void>;
+			enable(apporname: string, target: "System" | "User"): Promise<void>;
+			disable(apporname: string, target: "System" | "User"): Promise<void>;
+			list(): Promise<string[]>;
+		};
 	};
 	libcurl: typeof libcurl;
 	fflate: typeof fflate;
@@ -505,6 +524,7 @@ export interface COM {
 		signOut(): Promise<void>;
 		isTACC(username?: string): Promise<boolean>;
 		updateInfo(data: any): Promise<void>;
+		reauth(): Promise<void>;
 		sync: {
 			retreive: () => Promise<void>;
 			upload: () => Promise<void>;
@@ -517,9 +537,10 @@ export interface COM {
 		getPlatform(): Promise<"desktop" | "mobile">;
 	};
 	process: {
+		procs: Record<number, ProcInf>;
 		kill(config: string | number | any): void;
-		list(): Record<number, { name: string; size: { width: number | string; height: number | string }; icon: string; pid: number; src: string }>;
-		create(): void;
+		list(): Record<number, ProcInf>;
+		create(type: "window" | "runtime", config: any): void;
 		parse: {
 			build(src: string): void;
 		};
@@ -539,6 +560,11 @@ export interface COM {
 			openFile(path: string, type: string): void;
 			addHandler(app: string, ext: string): void;
 			removeHandler(ext: string): void;
+		};
+		icons: {
+			get(ext: string): Promise<string>;
+			set(ext: string, iconPath: string): Promise<boolean>;
+			remove(ext: string): Promise<boolean>;
 		};
 	};
 	node: {

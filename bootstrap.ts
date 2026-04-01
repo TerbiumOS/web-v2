@@ -12,6 +12,10 @@ consola.info("Bootstrapping TerbiumOS [v" + version + "]");
 
 export default async function Bootstrap() {
 	const args = process.argv;
+	const nodever = fs.readFileSync(".node_version", "utf-8").trim();
+	if (process.version < nodever) {
+		consola.warn("Your version of Node.JS is not supported. Please update node to use Terbium. (Current version: " + process.version + ", Required version: " + nodever + " or higher)");
+	}
 	await BuildApps();
 	await CreateAppsPaths();
 	if (!fs.existsSync(".env")) await CreateEnv();

@@ -7,7 +7,7 @@ export default function CustomOS() {
 		const rep = (content: string) => {
 			const parser = new DOMParser();
 			const doc = parser.parseFromString(content, "text/html");
-			console.log(`Terbium Bootloader v2.1.0 is now loading: ${sessionStorage.getItem("bootfile")}`);
+			console.log(`Terbium Bootloader v2.3.0 is now loading: ${sessionStorage.getItem("bootfile")}`);
 			if (doc.body && doc.head) {
 				const b = document.createElement("base");
 				b.href = `/fs/${sessionStorage.getItem("bootfile")!.replace(/\/?[^\/]+\.html$/, "")}/`;

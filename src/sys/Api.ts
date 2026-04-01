@@ -7,7 +7,7 @@ import { hash } from "../hash.json";
 import pwd from "./apis/Crypto";
 import { setDialogFn } from "./apis/Dialogs";
 import { hideFn, isExistingFn, setMusicFn, setVideoFn } from "./apis/Mediaisland";
-import { setNotifFn } from "./apis/Notifications";
+import { dismissNotifFn, setNotifFn } from "./apis/Notifications";
 import { registry } from "./apis/Registry";
 import { System } from "./apis/System";
 import { XOR } from "./apis/Xor";
@@ -27,6 +27,7 @@ import { useWindowStore } from "./Store";
 import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
 import { vFS } from "./vFS";
 import { auth, getinfo, setinfo } from "./apis/utils/tauth";
+import { launchProcs, addStartupProc, removeStartupProc, enableProc, disableProc } from "./apis/utils/startupHandler";
 
 const system = new System();
 const pw = new pwd();
@@ -286,13 +287,56 @@ export default async function Api() {
 		},
 		contextmenu: {
 			create(props: cmprops) {
+				let adjustedX = props.x;
+				let adjustedY = props.y;
+				let shouldAdjust = false;
+				if (props.iframe === true) {
+					shouldAdjust = true;
+				} else if (props.iframe === false) {
+					shouldAdjust = false;
+				} else {
+					try {
+						const stack = new Error().stack || "";
+						const isCalledFromIframe =
+							stack.includes("about:srcdoc") ||
+							/at\s+.*?\/apps\/.*?\.tapp\//.test(stack) ||
+							stack.split("\n").some(line => {
+								return line.includes("blob:") || line.includes("/apps/");
+							});
+						shouldAdjust = isCalledFromIframe;
+					} catch (err) {
+						console.warn("Could not detect iframe context for context menu:", err);
+					}
+				}
+				if (shouldAdjust) {
+					try {
+						const currentPID = useWindowStore.getState().currentPID;
+						const windows = useWindowStore.getState().windows;
+						if (currentPID && windows) {
+							const windowConfig = windows.find((w: any) => w.pid === currentPID);
+							if (windowConfig?.wid && windowConfig?.src) {
+								const windowElement = document.getElementById(windowConfig.wid);
+								if (windowElement) {
+									const iframe = windowElement.querySelector("iframe");
+									if (iframe) {
+										const rect = iframe.getBoundingClientRect();
+										adjustedX = props.x + rect.left;
+										adjustedY = props.y + rect.top;
+									}
+								}
+							}
+						}
+					} catch (err) {
+						console.warn("Could not calculate iframe offset for context menu:", err);
+					}
+				}
 				window.dispatchEvent(
 					new CustomEvent("ctxm", {
 						detail: {
 							props: {
 								titlebar: props.titlebar || false,
-								x: props.x,
-								y: props.y,
+								x: adjustedX,
+								y: adjustedY,
 								options: props.options,
 							},
 						},
@@ -393,6 +437,7 @@ export default async function Api() {
 				} else {
 					window.tb.libcurl.set_websocket(settings.wispServer);
 				}
+				return true;
 			},
 			async encode(url: string, encoder: string) {
 				if (encoder === "xor" || encoder === "XOR") {
@@ -418,8 +463,38 @@ export default async function Api() {
 			Toast(props: NotificationProps) {
 				setNotifFn("toast", props);
 			},
-			Installing(props: NotificationProps) {
-				setNotifFn("installing", props);
+			Installing<T>(props: NotificationProps, task?: Promise<T> | (() => Promise<T>), doneToast?: Partial<NotificationProps> | null, failToast?: Partial<NotificationProps> | null) {
+				if (!task) {
+					setNotifFn("installing", props);
+					return;
+				}
+				const notifId = setNotifFn("installing", props);
+				const runTask = typeof task === "function" ? task() : task;
+				return Promise.resolve(runTask)
+					.then(result => {
+						dismissNotifFn(notifId);
+						if (doneToast !== null) {
+							setNotifFn("toast", {
+								application: doneToast?.application || props.application,
+								iconSrc: doneToast?.iconSrc || props.iconSrc,
+								message: doneToast?.message || `${props.message} complete`,
+								time: doneToast?.time,
+							});
+						}
+						return result;
+					})
+					.catch(error => {
+						dismissNotifFn(notifId);
+						if (failToast !== null) {
+							setNotifFn("toast", {
+								application: failToast?.application || props.application,
+								iconSrc: failToast?.iconSrc || props.iconSrc,
+								message: failToast?.message || `${props.message} failed`,
+								time: failToast?.time,
+							});
+						}
+						throw error;
+					});
 			},
 		},
 		dialog: {
@@ -875,6 +950,24 @@ export default async function Api() {
 					await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify(dat, null, 2));
 				},
 			},
+			startup: {
+				async addProc(pkgorname: string, target: "System" | "User", cmd?: string) {
+					await addStartupProc(pkgorname, target, cmd);
+				},
+				async removeProc(pkgorname: string, target: "System" | "User") {
+					await removeStartupProc(pkgorname, target);
+				},
+				async enable(pkgorname: string, target: "System" | "User") {
+					await enableProc(pkgorname, target);
+				},
+				async disable(pkgorname: string, target: "System" | "User") {
+					await disableProc(pkgorname, target);
+				},
+				async list() {
+					const procs = JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/startup.json", "utf8"));
+					return procs;
+				},
+			},
 		},
 		libcurl: libcurl,
 		fflate: fflate,
@@ -891,6 +984,7 @@ export default async function Api() {
 							await window.tb.tauth.client.signIn.email({
 								email: username,
 								password: password,
+								rememberMe: true,
 								fetchOptions: {
 									onSuccess: async response => {
 										const exists = await window.tb.fs.promises.exists("/system/etc/terbium/taccs.json");
@@ -1027,6 +1121,33 @@ export default async function Api() {
 					}
 				}
 			},
+			reauth: async () => {
+				return new Promise<any>((resolve, reject) => {
+					window.tb.dialog.WebAuth({
+						title: "Verify Identity",
+						message: "Please sign in to your Terbium Cloud Account to verify it's you.",
+						onOk: async (username: string, password: string) => {
+							await window.tb.tauth.client.signIn.email({
+								email: username,
+								password: password,
+								rememberMe: true,
+								fetchOptions: {
+									onSuccess: async () => {
+										await window.tb.tauth.sync.retreive();
+										resolve(true);
+									},
+									onError: error => {
+										reject(new Error(error.error.message));
+									},
+								},
+							});
+						},
+						onCancel: () => {
+							reject(new Error("User cancelled the sign-in process"));
+						},
+					});
+				});
+			},
 			sync: {
 				retreive: async () => {
 					const info = await window.tb.tauth.getInfo();
@@ -1046,8 +1167,27 @@ export default async function Api() {
 					const info = await window.tb.tauth.getInfo();
 					if (!info) throw new Error("No TACC info found");
 					window.tb.tauth.sync.isSyncing = true;
-					const settings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
+					let settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
 					const davs = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/files/davs.json`, "utf8"));
+					if (!settings.wallpaper.startsWith("/assets/wallpapers") && !settings.wallpaper.startsWith("data:")) {
+						const res = await fetch(`/fs/${settings.wallpaper}`);
+						const blob = await res.blob();
+						const reader = new FileReader();
+						const dataURL: Promise<string> = new Promise((resolve, reject) => {
+							reader.onloadend = () => {
+								if (typeof reader.result === "string") {
+									resolve(reader.result);
+								} else {
+									reject(new Error("Failed to convert wallpaper to data URL"));
+								}
+							};
+							reader.onerror = () => {
+								reject(new Error("Failed to read wallpaper blob"));
+							};
+						});
+						reader.readAsDataURL(blob);
+						settings.wallpaper = await dataURL;
+					}
 					const toupload = [
 						{
 							settings: settings,
@@ -1113,43 +1253,72 @@ export default async function Api() {
 			},
 		},
 		process: {
-			kill(config: string | number) {
-				clearInfo();
-				if (typeof config === "number") {
-					useWindowStore.getState().killWindow(String(config));
+			procs: {
+				0: {
+					name: "Terbium Service Worker",
+					wid: null,
+					pid: 0,
+					src: null,
+					size: null,
+					icon: null,
+					type: "runtime",
+					onKill: async () => {
+						await window.tb.proxy.updateSWs();
+						window.location.reload();
+					},
+				},
+				1: {
+					name: "Terbium Alexa Desktop Experience",
+					wid: null,
+					pid: 1,
+					src: null,
+					size: null,
+					icon: null,
+					type: "runtime",
+					onKill: () => {
+						window.location.reload();
+					},
+				},
+			} as Record<number, any>,
+			kill(pid: string | number) {
+				const pd = Number(pid);
+				const proc = Object.values(window.tb.process.list()).find((p: any) => {
+					return Number(p.pid) === pd;
+				});
+				if (proc) {
+					if (proc.type === "window") {
+						clearInfo();
+						useWindowStore.getState().killWindow(String(pd));
+						delete window.tb.process.procs[proc.pid];
+					} else if (proc.type === "runtime") {
+						delete window.tb.process.procs[proc.pid];
+						if (proc.onKill) proc.onKill();
+					}
 				} else {
-					useWindowStore.getState().killWindow(config);
+					throw new Error(`Process with PID ${pid} not found`);
 				}
 			},
 			list() {
-				const list = {};
-				const wins = useWindowStore.getState().windows;
-				wins.forEach((win: WindowConfig, index: number) => {
-					const winID = win.pid || `win-${index}`;
-					// @ts-expect-error
-					list[winID] = {
-						name: win.title,
-						wid: win.wid,
-						icon: win.icon,
-						pid: win.pid,
-						src: win.src,
-						size: win.size || { width: 800, height: 600 },
-					};
-				});
-				return list;
+				return window.tb.process.procs;
 			},
 			parse: {
 				build(src: string) {
 					parse.build(src);
 				},
 			},
-			create() {
-				createWindow({
-					title: {
-						text: "Generic Window",
-					},
-					src: "about:blank",
-				});
+			create(type: "window" | "runtime", config: any) {
+				if (type === "window") {
+					createWindow({
+						title: {
+							text: "Generic Window",
+						},
+						src: "about:blank",
+					});
+				} else {
+					const latestProcId = Math.max(...Object.keys(window.tb.process.procs).map(Number)) + 1;
+					window.tb.process.procs[latestProcId] = { ...config, pid: latestProcId, type: "runtime" };
+					return latestProcId;
+				}
 			},
 		},
 		screen: {
@@ -1214,83 +1383,90 @@ export default async function Api() {
 		file: {
 			handler: {
 				openFile: async (path: string, type: string) => {
+					const message = { type: "process", path: path };
 					const settings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
 					const fApps = settings["fileAssociatedApps"];
-					const app = fApps[type];
-					try {
-						let appInfo;
-						if (await fileExists(`/apps/system/${app}/.tbconfig`)) {
-							appInfo = JSON.parse(await window.tb.fs.promises.readFile(`/apps/system/${app}/.tbconfig`, "utf8"));
-						} else if (await fileExists(`/apps/user/${await window.tb.user.username()}/${app}/.tbconfig`)) {
-							appInfo = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${await window.tb.user.username()}/${app}/.tbconfig`, "utf8"));
-						} else {
-							appInfo = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${await window.tb.user.username()}/${app}/index.json`, "utf8"));
-						}
-						const message = { type: "process", path: path };
-						createWindow({
-							title: appInfo.name,
-							src: appInfo.src,
-							size: {
-								width: 460,
-								height: 460,
-								minWidth: 160,
-								minHeight: 160,
-							},
-							icon: appInfo.icon,
-							message: JSON.stringify(message),
-						});
-					} catch (err: any) {
-						if (err.code === "ENOENT") {
-							const message = { type: "process", path: path };
-							switch (type) {
-								case "text":
-									createWindow({
-										title: "Text Editor",
-										src: "/fs/apps/system/text editor.tapp/index.html",
-										size: {
-											width: 460,
-											height: 460,
-											minWidth: 160,
-											minHeight: 160,
-										},
-										icon: "/fs/apps/system/text editor.tapp/icon.svg",
-										message: JSON.stringify(message),
-									});
-									break;
-								case "image":
-								case "video":
-								case "audio":
-								case "pdf":
-									createWindow({
-										title: "Media Viewer",
-										src: "/fs/apps/system/media viewer.tapp/index.html",
-										size: {
-											width: 460,
-											height: 460,
-											minWidth: 160,
-											minHeight: 160,
-										},
-										icon: "/fs/apps/system/media viewer.tapp/icon.svg",
-										message: JSON.stringify(message),
-									});
-									break;
-								case "webpage":
-									createWindow({
-										title: "Terbium Webview",
-										src: `/fs/${path}`,
-										size: {
-											width: 460,
-											height: 460,
-											minWidth: 160,
-											minHeight: 160,
-										},
-										icon: "/apps/browser.tapp/icon.svg",
-									});
-									break;
+					const customHandler = fApps?.[type];
+					if (customHandler) {
+						try {
+							const installed = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
+							let appInfo = installed.find((a: any) => a.name.toLowerCase() === customHandler.toLowerCase());
+							if (!appInfo) {
+								try {
+									const altAppInfo = installed.find((a: any) => a.name.toLowerCase() === `${customHandler.toLowerCase()}.tapp`);
+									if (altAppInfo) {
+										appInfo = altAppInfo;
+									}
+								} catch {
+									console.error(`App "${customHandler}" not found in installed apps`);
+								}
 							}
-						} else {
-							throw err;
-						}
+							if (appInfo.user === "System") return;
+							const appConfigRaw = JSON.parse(await window.tb.fs.promises.readFile(appInfo.config, "utf8"));
+							let windowConfig;
+							if (appConfigRaw.wmArgs) {
+								windowConfig = { ...appConfigRaw.wmArgs };
+								const configDir = appInfo.config.replace(/\/(\.tbconfig|index\.json)$/, "");
+								if (windowConfig.src && !windowConfig.src.startsWith("/")) {
+									windowConfig.src = `/fs/${configDir}/${windowConfig.src}`;
+								}
+								if (windowConfig.icon && !windowConfig.icon.startsWith("/")) {
+									windowConfig.icon = `/fs/${configDir}/${windowConfig.icon}`;
+								}
+							}
+
+							createWindow({
+								...windowConfig,
+								message: JSON.stringify(message),
+							});
+							return;
+						} catch {}
+					}
+					switch (type) {
+						case "text":
+							createWindow({
+								title: "Text Editor",
+								src: "/fs/apps/system/text editor.tapp/index.html",
+								size: {
+									width: 460,
+									height: 460,
+									minWidth: 160,
+									minHeight: 160,
+								},
+								icon: "/fs/apps/system/text editor.tapp/icon.svg",
+								message: JSON.stringify(message),
+							});
+							break;
+						case "image":
+						case "video":
+						case "audio":
+						case "pdf":
+							createWindow({
+								title: "Media Viewer",
+								src: "/fs/apps/system/media viewer.tapp/index.html",
+								size: {
+									width: 460,
+									height: 460,
+									minWidth: 160,
+									minHeight: 160,
+								},
+								icon: "/fs/apps/system/media viewer.tapp/icon.svg",
+								message: JSON.stringify(message),
+							});
+							break;
+						case "webpage":
+							createWindow({
+								title: "Terbium Webview",
+								src: `/fs/${path}`,
+								size: {
+									width: 460,
+									height: 460,
+									minWidth: 160,
+									minHeight: 160,
+								},
+								icon: "/apps/browser.tapp/icon.svg",
+							});
+							break;
 					}
 				},
 				addHandler: async (app: string, ext: string) => {
@@ -1303,6 +1479,36 @@ export default async function Api() {
 					const settings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
 					delete (settings.fileAssociatedApps as Record<string, string>)[ext];
 					await window.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(settings, null, 2), "utf8");
+					return true;
+				},
+			},
+			icons: {
+				get: async (ext: string) => {
+					const fileExts = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/file-icons.json", "utf8"));
+					const extName = fileExts["ext-to-name"][ext.toLowerCase()];
+					if (extName && fileExts["name-to-path"][extName]) {
+						return fileExts["name-to-path"][extName];
+					}
+					return fileExts["name-to-path"]["Unknown"];
+				},
+				set: async (ext: string, iconPath: string) => {
+					const fileExts = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/file-icons.json", "utf8"));
+					const normalizedExt = ext.toLowerCase().replace(/^\./, "");
+					const extName = normalizedExt.charAt(0).toUpperCase() + normalizedExt.slice(1);
+					fileExts["ext-to-name"][normalizedExt] = extName;
+					fileExts["name-to-path"][extName] = iconPath;
+					await window.tb.fs.promises.writeFile("/system/etc/terbium/file-icons.json", JSON.stringify(fileExts, null, 2), "utf8");
+					return true;
+				},
+				remove: async (ext: string) => {
+					const fileExts = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/file-icons.json", "utf8"));
+					const normalizedExt = ext.toLowerCase().replace(/^\./, "");
+					const extName = fileExts["ext-to-name"][normalizedExt];
+					if (extName) {
+						delete fileExts["ext-to-name"][normalizedExt];
+						delete fileExts["name-to-path"][extName];
+						await window.tb.fs.promises.writeFile("/system/etc/terbium/file-icons.json", JSON.stringify(fileExts, null, 2), "utf8");
+					}
 					return true;
 				},
 			},
@@ -1508,6 +1714,7 @@ export default async function Api() {
 			}
 		});
 	}
+	launchProcs();
 	document.addEventListener("libcurl_load", wsld);
 	window.tb.node.webContainer = await initializeWebContainer();
 }

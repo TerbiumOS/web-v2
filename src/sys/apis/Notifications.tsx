@@ -2,7 +2,8 @@ import { NotificationProps } from "../types";
 import { useState, useEffect } from "react";
 import "../gui/styles/notification.css";
 
-export let setNotifFn: (type: "message" | "toast" | "installing", props: NotificationProps) => void;
+export let setNotifFn: (type: "message" | "toast" | "installing", props: NotificationProps) => number;
+export let dismissNotifFn: (id: number) => void;
 let notificationId = 0;
 let notificationCount = 0;
 
@@ -12,8 +13,10 @@ export default function NotificationContainer() {
 		setNotifications(prev => prev.filter(notif => notif.id !== id));
 	};
 	const setNotif = (type: "message" | "toast" | "installing", props: NotificationProps) => {
-		const newNotification = { id: notificationId++, type, props };
+		const id = notificationId++;
+		const newNotification = { id, type, props };
 		setNotifications(prev => [...prev, newNotification]);
+		return id;
 	};
 	/**
 	 * @returns Components for COM
@@ -21,6 +24,7 @@ export default function NotificationContainer() {
 	 */
 	useEffect(() => {
 		setNotifFn = setNotif;
+		dismissNotifFn = remove;
 	}, []);
 	return (
 		<div className="absolute grid grid-cols-1 h-max max-h-[calc(100%-calc(60px+1.5rem))] w-[380px] top-[60px] right-1.5 z-9999 gap-2">
@@ -183,9 +187,10 @@ export function Installing({ iconSrc, application, message, time, onOk, remove }
 	const [currentAnimation, setCurrentAnimation] = useState<number>(0);
 
 	useEffect(() => {
+		if (typeof time !== "number" || time <= 0) return;
 		const tID = setTimeout(() => {
 			OK();
-		}, time || 10000);
+		}, time);
 		return () => {
 			clearTimeout(tID);
 		};

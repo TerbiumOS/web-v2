@@ -14,6 +14,7 @@ tb_island.addControl({
 		tb.contextmenu.create({
 			x: 112,
 			y: appisland,
+			iframe: false,
 			options: [
 				{
 					text: "Open",
@@ -61,6 +62,7 @@ tb_island.addControl({
 		tb.contextmenu.create({
 			x: 156,
 			y: appisland,
+			iframe: false,
 			options: [
 				{
 					text: "Open",

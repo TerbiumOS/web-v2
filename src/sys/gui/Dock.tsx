@@ -562,6 +562,10 @@ const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onConte
 	const [currWID, setcurrWID] = useState(wid);
 	const [winfocused, setwinfocused] = useState(windowStore.windows.find((w: any) => w.wid === currWID)?.focused);
 	const mm = (e: MouseEvent) => {
+		const target = e.target;
+		if (target instanceof Element && target.closest("[data-win-preview='true']")) {
+			return;
+		}
 		const withinRadius = (e: MouseEvent) => {
 			if (!dockItemRef.current) return false;
 			const rect = dockItemRef.current.getBoundingClientRect();
@@ -765,7 +769,7 @@ export const StartItem: FC<TStartItem> = ({ icon, title, onClick, inPins, classN
 	// @ts-expect-error
 	const chars = typeof title === "string" ? title.split("") : title?.text.split("");
 	const [resolvedIcon, setResolvedIcon] = useState<string | boolean | undefined>(false);
-	let sysapps = [{ title: "Terminal" }, { title: "Files" }, { title: "Settings" }, { title: { text: "App Store" } }, { title: "Browser" }, { title: "Calculator" }, { title: "Feedback" }, { title: "About" }, { title: "Text Editor" }, { title: "Task Manager" }, { title: "Anura File Manager" }];
+	let sysapps = [{ title: { text: "Terminal" } }, { title: "Files" }, { title: "Settings" }, { title: { text: "App Store" } }, { title: "Browser" }, { title: "Calculator" }, { title: "Feedback" }, { title: "About" }, { title: "Text Editor" }, { title: "Task Manager" }, { title: "Anura File Manager" }];
 	// @ts-expect-error
 	const isSystemApp = sysapps.map(app => (typeof app.title === "string" ? app.title : app.title.text)).includes(typeof title === "string" ? title : title?.text);
 

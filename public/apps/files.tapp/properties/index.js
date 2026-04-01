@@ -32,6 +32,16 @@ window.addEventListener("message", e => {
                 <div class="text-lg font-extrabold">Type of file:</div>
                 <div class="text-base font-bold">${tof}</div>
             </div>
+            ${
+				data.details.mime
+					? `
+            <div class="flex gap-1 items-center">
+                <div class="text-lg font-extrabold">MIME:</div>
+                <div class="text-base font-bold">${data.details.mime}</div>
+            </div>
+            `
+					: ``
+			}
             <div class="flex gap-1 items-center">
                 <div class="text-lg font-extrabold">Location:</div>
                 <div class="text-base font-bold">${loc}</div>

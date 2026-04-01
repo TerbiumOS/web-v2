@@ -25,6 +25,12 @@
                 </svg>
                 <span class="absolute opacity-0 text-[14px] font-[600] w-max py-1 px-2 -left-1/2 border border-[#ffffff28] rounded-md bg-[#ffffff10] duration-150 pointer-events-none">System Info</span>
             </button>
+            <button class="navbtn p-1.5 hover:bg-[#ffffff28] rounded-lg relative flex items-center select-none cursor-pointer" onclick="loadPane('startup')">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                <span class="absolute opacity-0 text-[14px] font-[600] w-max py-1 px-2 -left-1/2 border border-[#ffffff28] rounded-md bg-[#ffffff10] duration-150 pointer-events-none">Startup Processes</span>
+            </button>
         </div>
         <div class="relative size-full">
             <div class="absolute w-full duration-150" id="appl">
@@ -65,6 +71,43 @@
                 <div class="flex gap-1 items-center">
                     <img class="w-[50px] h-auto" src="./gpu.svg" />
                     <p class="font-semibold" id="gpu"></p>
+                </div>
+            </div>
+            <div class="absolute opacity-0 pointer-events-none duration-150 p-2 w-full h-full" id="startup">
+                <div class="flex items-center justify-between mb-2">
+                    <h1 class="text-xl font-bold">Startup Processes</h1>
+                    <div class="flex items-center gap-2">
+                        <select id="startupScopeSelect" class="rounded-md bg-[#ffffff0a] border border-[#ffffff22] text-[#ffffff] px-2 py-1">
+                            <option value="all">All</option>
+                            <option value="System">System</option>
+                            <option id="userOption">User</option>
+                        </select>
+                        <script>
+                            (function() {
+                                const opt = document.getElementById('userOption');
+                                if (opt) opt.value = sessionStorage.getItem('currAcc') || 'Guest';
+                            })();
+                        </script>
+                        <button id="refreshStartup" class="w-max py-1 px-3 rounded-md font-semibold bg-[#ffffff10] hover:bg-[#ffffff20] duration-150">Refresh</button>
+                        <button id="addStartupBtn" class="w-max py-1 px-3 rounded-md font-semibold bg-[#ffffff10] hover:bg-[#ffffff20] duration-150">Add</button>
+                    </div>
+                </div>
+                <div id="startupTableContainer" class="overflow-auto">
+                    <table class="w-full bg-[#00000068] rounded-[10px] border-collapse overflow-hidden">
+                        <thead class="font-[900] bg-[#ffffff28]">
+                            <th class="text-left py-2.5 px-3.5 cursor-default select-none">Name</th>
+                            <th class="text-left py-2.5 px-3.5 cursor-default select-none">Scope</th>
+                            <th class="text-left py-2.5 px-3.5 cursor-default select-none">Command</th>
+                            <th class="text-left py-2.5 px-3.5 cursor-default select-none">Installed By</th>
+                            <th class="text-left py-2.5 px-3.5 cursor-default select-none">Enabled</th>
+                            <th class="text-left py-2.5 px-3.5 cursor-default select-none"></th>
+                        </thead>
+                        <tbody id="startupTbody">
+                            <tr>
+                                <td class="text-sm">Loading startup processes...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

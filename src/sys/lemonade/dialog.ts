@@ -1,7 +1,21 @@
 interface diagArgs {
 	title?: string;
 	defaultPath?: string;
-	properties?: ("openFile" | "openDirectory")[];
+	properties?: ("openFile" | "openDirectory" | "multiSelections" | "showHiddenFiles")[];
+	buttonLabel?: string;
+	filters?: { name: string; extensions: string[] }[];
+	message?: string;
+}
+
+interface MessageBoxOptions {
+	message: string;
+	title?: string;
+	type?: "none" | "info" | "error" | "question" | "warning";
+	buttons?: string[];
+	defaultId?: number;
+	cancelId?: number;
+	noLink?: boolean;
+	normalizeAccessKeys?: boolean;
 }
 
 export class Dialog {
@@ -39,19 +53,19 @@ export class Dialog {
 	showSaveDialog(win: any, options: diagArgs) {
 		return this.showSaveDialogSync(win, options);
 	}
-	showMessageBoxSync(win: any, options: { message: string; title: string }) {
-		console.log(`property: ${win} wont be used sorry`);
+	showMessageBoxSync(_win: any, options: MessageBoxOptions) {
+		console.log("Using Terbium dialog system");
 		return new Promise(resolve => {
 			window.tb.dialog.Message({
-				title: options.title,
+				title: options.title || "Message",
 				defaultValue: options.message,
-				onOk: (val: string) => {
-					resolve(val);
+				onOk: () => {
+					resolve({ response: options.defaultId || 0, checkboxChecked: false });
 				},
 			});
 		});
 	}
-	showMessageBox(win: any, options: { message: string; title: string }) {
+	showMessageBox(win: any, options: MessageBoxOptions) {
 		return this.showMessageBoxSync(win, options);
 	}
 	showErrorBox(title: string, content: string) {
@@ -60,5 +74,10 @@ export class Dialog {
 			message: content,
 			onOk: () => {},
 		});
+	}
+
+	showCertificateTrustDialog(_win: any, _options: { certificate: any; message: string }) {
+		console.log("Certificate trust dialog not implemented in web environment");
+		return Promise.resolve();
 	}
 }

@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">API Docs</span>
 
-**Last Updated**: v2.2.0 - 12/30/2025
+**Last Updated**: v2.3.0 - 03/31/2026
 
 So you're looking to use Terbium APIs. Well, you're in the right place! Terbium has a decent amount of components which I will break down below. The pages will include a description of the functions and code examples.
 
@@ -61,10 +61,10 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
     - Description: Adds an app to the app launcher.
     - Parameters:
       - `props: { name: string, icon: string, src: string, etc }`
-    - Returns: `Promise<fullfilled>`
+    - Returns: `Promise<boolean>`
     - Example:
       ```javascript
-      const wasadded = await tb.launcher.addAdd({
+      const wasadded = await tb.launcher.addApp({
         name: "Example App",
         icon: "/home/icon.png",
       });
@@ -74,7 +74,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **removeApp**
     - Description: Removes an app from the app launcher.
     - Parameters:
-      - `appname: string` - The app id of the app to be removed.
+      - `name: string` - The app name to remove.
     - Returns: `Promise<boolean>`
     - Example:
       ```js
@@ -90,7 +90,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   > <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> The Theme API is deprecated and remains as a stub for legacy applications
   - **get**
     - Description: Gets the current theme settings.
-    - Returns: `Promise<object>` - Theme settings.
+    - Returns: `Promise<string>` - Theme value.
     - Example:
       ```javascript
       const themeSettings = await tb.theme.get();
@@ -100,11 +100,11 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **set**
     - Description: Sets the theme settings.
     - Parameters:
-      - `data: { color: string, font: string }` - New theme settings.
+      - `data: string` - New theme value.
     - Returns: `Promise<boolean>` - `true` if successful.
     - Example:
       ```javascript
-      await tb.theme.set({ color: "#ffffff", font: "Roboto" });
+      await tb.theme.set("#ffffff");
       console.log("Theme set successfully");
       ```
 
@@ -153,7 +153,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
         - `path: string` - The file path of the wallpaper image.
       - Example:
         ```javascript
-        await tb.wallpaper.set("/path/to/wallpaper.jpg");
+        await tb.desktop.wallpaper.set("/path/to/wallpaper.jpg");
         console.log("Wallpaper set successfully");
         ```
 
@@ -161,7 +161,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Description: Sets the wallpaper mode to "contain".
       - Example:
         ```javascript
-        await tb.wallpaper.contain();
+        await tb.desktop.wallpaper.contain();
         console.log("Wallpaper mode set to contain");
         ```
 
@@ -169,7 +169,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Description: Sets the wallpaper mode to "stretch".
       - Example:
         ```javascript
-        await tb.wallpaper.stretch();
+        await tb.desktop.wallpaper.stretch();
         console.log("Wallpaper mode set to stretch");
         ```
 
@@ -177,7 +177,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Description: Sets the wallpaper mode to "cover".
       - Example:
         ```javascript
-        await tb.wallpaper.cover();
+        await tb.desktop.wallpaper.cover();
         console.log("Wallpaper mode set to cover");
         ```
 
@@ -186,7 +186,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Returns: `Promise<string>` - The current wallpaper mode.
       - Example:
         ```javascript
-        const currentMode = await tb.wallpaper.fillMode();
+        const currentMode = await tb.desktop.wallpaper.fillMode();
         console.log("Current wallpaper mode:", currentMode);
         ```
 
@@ -198,7 +198,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Returns: `Promise<string>` - Returns 'Success' if the app was pinned successfully.
       - Example:
         ```javascript
-        await tb.dock.pin({ title: "MyApp", path: "/path/to/myapp" });
+        await tb.desktop.dock.pin({ title: "MyApp", path: "/path/to/myapp" });
         console.log("Application pinned successfully");
         ```
 
@@ -209,11 +209,23 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Returns: `Promise<string>` - Returns 'Success' if the app was unpinned successfully.
       - Example:
         ```javascript
-        await tb.dock.unpin("MyApp");
+        await tb.desktop.dock.unpin("MyApp");
         console.log("Application unpinned successfully");
         ```
 
 ### Window
+  - **create**
+    - Description: Creates a new window using window configuration.
+    - Parameters:
+      - `props: any` - Window configuration object.
+    - Example:
+      ```javascript
+      tb.window.create({
+        title: "My Window",
+        src: "/fs/apps/system/about.tapp/index.html"
+      });
+      ```
+
   - **close**
     - Description: closes the active window.
     - Example:
@@ -246,7 +258,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       ```
   - **getId**
     - Description: Gets the ID of the currently active window.
-    - Returns: `Promise<string>` - Window ID.
+    - Returns: `number` - Window ID.
     - Example:
       ```javascript
       const windowId = tb.window.getId();
@@ -301,18 +313,18 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       ```
     - **removeControl**
       - Description: Removes a control from the TB App Island
+      - Parameters:
+        - `control_id: string` - The ID used when adding the control.
       - Example:
       ```javascript
-      tb.window.island.removeControl({
-        id: "<idfromthatyouusedforaddingit>",
-      })
+      tb.window.island.removeControl("<idfromthatyouusedforaddingit>")
       ```
 
 ### ContextMenu
   - **create**
     - Description: Creates a Context Menu at your desired location
     - Parameters:
-      - `props: { x: number, y: number, options: Array, titlebar?: boolean }` - Context menu properties.
+      - `props: { x: number, y: number, options: Array, titlebar?: boolean, iframe?: boolean }` - Context menu properties.
     - Example:
       ```javascript
       tb.contextmenu.create({
@@ -428,6 +440,28 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
         iconSrc: "/assets/img/logo.png", 
         time: 10000 
       });
+      ```
+
+  - **Installing**
+    - Description: An installing/progress style notification. If you pass a task Promise (or async function), the notification stays visible until the task finishes, then it automatically shows a completion toast (or failure toast if it throws).
+    - Parameters:
+      - `props: { message: string, application: string, iconSrc: string, time?: number }` - Installing notification properties.
+      - `task?: Promise<T> | (() => Promise<T>)` - Optional async task to track.
+      - `doneToast?: Partial<NotificationProps>` - Optional completion toast overrides.
+      - `failToast?: Partial<NotificationProps>` - Optional failure toast overrides.
+    - Returns: `Promise<T> | void` - Returns the task result when a task is passed.
+    - Example:
+      ```javascript
+      await tb.notification.Installing(
+        {
+          message: "Extracting archive...",
+          application: "Files",
+          iconSrc: "/assets/img/logo.png"
+        },
+        async () => await unzip("pathtoalargezipfolder.zip", "/home/user/documents"),
+        { message: "Archive extracted successfully" },
+        { message: "Archive extraction failed" }
+      );
       ```
 
 ### Dialog
@@ -625,28 +659,44 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
 
 ### Process
   - **kill**
-    - Description: Kill a process with a PID
+    - Description: Kill a process. The argument may be a PID (number or numeric string) or any object that resolves to a process when compared by PID.
     - Parameters:
-      - `config: string | number` - The PID of the process to kill
+      - `config: string | number | any` - The PID of the process to terminate (or an object containing a `pid` property).
     - Example:
       ```javascript
-      tb.process.kill('69420');
+      // simple kill by PID
+      tb.process.kill(69420);
+
+      // you can also look up a process then kill it
+      const procs = tb.process.list();
+      const first = Object.values(procs)[0];
+      tb.process.kill(first.pid);
       ```
 
   - **list**
-    - Description: List all available processes
-    - Returns: `Object` - Object containing all windows with their details (name, wid, icon, pid, src, size)
+    - Description: Return the current process table.
+    - Returns: `Record<number, ProcInf>` - a map of PID to process information (see `ProcessInfo` type in `types.ts` for fields such as name, pid, parent, children, status, memory, cpu, etc.)
     - Example:
       ```javascript
       const processes = tb.process.list();
       console.log(processes);
       ```
 
-  - **create**
-    - Description: Creates a new Process (Can also be used to generate a generic window)
+  - **procs**
+    - Description: Public property exposing the live process record. It is equivalent to calling `tb.process.list()` but can be modified directly when spawning new entries.
     - Example:
       ```javascript
-      tb.process.create();
+      console.log(tb.process.procs); // same as tb.process.list()
+      ```
+
+  - **create**
+    - Description: Creates a new process entry. This is primarily used by the runtime when spawning windows or background tasks, but you can call it manually for testing.
+    - Parameters:
+      - `type: "window" | "runtime"` – the kind of process to create.
+      - `config: any` – configuration object describing the process (window size, title, etc.).
+    - Example:
+      ```javascript
+      tb.process.create("runtime", { name: "my-task" });
       ```
 
   - **parse**
@@ -969,6 +1019,61 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
         await tb.system.users.renameUser('oldname', 'newname');
         ```
 
+  - **startup**
+    - **addProc**
+      - Description: Adds a new process to the startup list. This will register a package or command to run on system or user startup.
+      - Parameters:
+        - `pkgorname: string` - The package name or unique identifier for the startup entry.
+        - `target: "System" | "User"` - Whether the startup entry is registered system-wide or for the current user.
+        - `cmd?: string` - Optional command to execute for the entry (if different from the package default).
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.startup.addProc('my-service', 'System', 'alert("alert evaled")');
+        ```
+
+    - **removeProc**
+      - Description: Removes a previously registered startup process.
+      - Parameters:
+        - `pkgorname: string` - The package name or identifier of the entry to remove.
+        - `target: "System" | "User"` - The scope from which to remove the entry.
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.startup.removeProc('my-service', 'System');
+        ```
+
+    - **enable**
+      - Description: Enables a registered startup process so it will run at boot for the specified scope.
+      - Parameters:
+        - `pkgorname: string` - The package name or identifier of the entry to enable.
+        - `target: "System" | "User"` - The scope in which to enable the entry.
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.startup.enable('my-service', 'User');
+        ```
+
+    - **disable**
+      - Description: Disables a registered startup process so it will not run at boot.
+      - Parameters:
+        - `pkgorname: string` - The package name or identifier of the entry to disable.
+        - `target: "System" | "User"` - The scope in which to disable the entry.
+      - Returns: `Promise<void>`
+      - Example:
+        ```javascript
+        await tb.system.startup.disable('my-service', 'User');
+        ```
+
+    - **list**
+      - Description: Lists all configured startup entries.
+      - Returns: `Promise<object[]>` - An array of startup entries (each entry contains details such as name, target, command, enabled state).
+      - Example:
+        ```javascript
+        const procs = await tb.system.startup.list();
+        console.log(procs);
+        ```
+
   - **bootmenu**
     - **addEntry**
       - Description: Adds a boot entry into the Terbium Boot Menu
@@ -1044,6 +1149,14 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       });
       ```
 
+  - **reauth**
+    - Description: Logs back into Terbium Cloud
+    - Returns: `Promise<void>`
+    - Example:
+      ```javascript
+      await tb.tauth.reauth();
+      ```
+
   - **getInfo**
     - Description: Gets Terbium Cloud Account information
     - Parameters:
@@ -1058,12 +1171,12 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       ```
 
   - **sync**
-    - **retrieve**
+    - **retreive**
       - Description: Retrieves synced data from Terbium Cloud (settings, WebDAV servers, etc.)
       - Returns: `Promise<void>`
       - Example:
         ```javascript
-        await tb.tauth.sync.retrieve();
+        await tb.tauth.sync.retreive();
         console.log("Settings synced from cloud");
         ```
 
@@ -1092,7 +1205,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **music**
     - Description: Activates the Music optimized Media Island
     - Parameters:
-      - `props: { artist: string, track_name: string, album?: string, time?: number, background: string, endtime: number }` - Music player properties.
+      - `props: { artist: string, track_name: string, album?: string, time?: number, background: string, endtime: number, onSeek?: void, onPausePlay: void, onNext?: void; onBack?: void }` - Music player properties.
     - Example:
       ```javascript
       tb.mediaplayer.music({
@@ -1106,7 +1219,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
   - **video**
     - Description: Activates the Video optimized Media Island
     - Parameters:
-      - `props: { creator: string, video_name: string, time?: number, background: string, endtime: number }` - Video player properties.
+      - `props: { creator: string, video_name: string, time?: number, background: string, endtime: number, onSeek?: void, onPausePlay: void, onNext?: void; onBack?: void }` - Video player properties.
     - Example:
       ```javascript
       tb.mediaplayer.video({
@@ -1174,6 +1287,39 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       - Example:
         ```javascript
         await tb.file.handler.removeHandler("swf");
+        ```
+
+  - **icons**
+    - **get**
+      - Description: Gets icon path for a file extension.
+      - Parameters:
+        - `ext: string` - File extension.
+      - Returns: `Promise<string>` - Icon path.
+      - Example:
+        ```javascript
+        const icon = await tb.file.icons.get("png");
+        console.log(icon);
+        ```
+
+    - **set**
+      - Description: Sets icon path for a file extension.
+      - Parameters:
+        - `ext: string` - File extension.
+        - `iconPath: string` - Path to icon.
+      - Returns: `Promise<boolean>`
+      - Example:
+        ```javascript
+        await tb.file.icons.set("log", "/assets/img/file-log.png");
+        ```
+
+    - **remove**
+      - Description: Removes custom icon mapping for a file extension.
+      - Parameters:
+        - `ext: string` - File extension.
+      - Returns: `Promise<boolean>`
+      - Example:
+        ```javascript
+        await tb.file.icons.remove("log");
         ```
 
 ### Additional Libraries

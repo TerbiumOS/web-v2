@@ -9,7 +9,7 @@ interface NotifParams {
 }
 
 export class NotificationService {
-	element = null;
+	element: HTMLDivElement | null = null;
 
 	constructor() {
 		console.log("Loading notifications API");
@@ -26,7 +26,7 @@ export class NotificationService {
 			onOk: params.callback,
 		});
 	}
-	remove(notification: any) {
+	remove(_notification: any) {
 		// API STUB
 	}
 }

@@ -31,10 +31,28 @@ interface SearchMenuState {
 	searchMenuRef: React.RefObject<HTMLDivElement | null>;
 }
 
-let lastPID = 1;
+let lastPID: number = 0;
+
+function ensureLastPID() {
+	if (lastPID === 0) {
+		if (window.tb?.process?.list) {
+			try {
+				const list = window.tb.process.list();
+				lastPID = Math.max(...Object.keys(list).map(Number));
+			} catch (e) {
+				console.warn(e);
+				lastPID = 2;
+			}
+		} else {
+			lastPID = 2;
+		}
+	}
+}
 
 export const createPID = () => {
-	return (lastPID++).toString();
+	ensureLastPID();
+	lastPID += 1;
+	return lastPID.toString();
 };
 
 export const createWID = () => {
@@ -120,6 +138,18 @@ const useWindowStore = create<WindowState>()(set => ({
 			});
 
 			window.dispatchEvent(new CustomEvent("selwin-upd", { detail: typeof config.title === "string" ? config.title : config.title?.text }));
+
+			window.tb.process.procs[config.pid as any] = {
+				name: typeof config.title === "string" ? config.title : config.title.text,
+				wid: config.wid,
+				icon: config.icon!,
+				// @ts-expect-error
+				pid: config.pid!,
+				src: config.src,
+				// @ts-expect-error
+				size: config.size || { width: 800, height: 600 },
+				type: "window",
+			};
 
 			return {
 				windows: [...state.windows, config],

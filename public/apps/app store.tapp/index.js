@@ -321,8 +321,8 @@ async function loadRepos() {
 			repoCard.addEventListener("contextmenu", function (e) {
 				e.preventDefault();
 				window.parent.tb.contextmenu.create({
-					x: e.clientX + 100,
-					y: e.clientY + 275,
+					x: e.clientX,
+					y: e.clientY,
 					options: [
 						{ text: "Load Repo", click: () => loadRepo(repo.url) },
 						{
@@ -361,8 +361,8 @@ async function loadRepos() {
 			repoCard.addEventListener("contextmenu", function (e) {
 				e.preventDefault();
 				window.parent.tb.contextmenu.create({
-					x: e.clientX + 100,
-					y: e.clientY + 275,
+					x: e.clientX,
+					y: e.clientY,
 					options: [
 						{ text: "Load Repo", click: () => loadRepo(repo.url) },
 						{
@@ -400,8 +400,8 @@ async function loadRepos() {
 			repoCard.addEventListener("contextmenu", function (e) {
 				e.preventDefault();
 				window.parent.tb.contextmenu.create({
-					x: e.clientX + 100,
-					y: e.clientY + 275,
+					x: e.clientX,
+					y: e.clientY,
 					options: [
 						{ text: "Load Repo", click: () => loadRepo(repo.url) },
 						{
@@ -786,9 +786,9 @@ async function uninstall(app, type) {
 	switch (type) {
 		case "Terbium":
 			if (await dirExists(`/apps/system/${app.name}.tapp`)) {
-				await new window.parent.tb.fs.Shell().promises.rm(`/apps/system/${app.name}.tapp`, { recursive: true });
+				await window.parent.tb.fs.shell.promises.rm(`/apps/system/${app.name}.tapp`, { recursive: true });
 			} else {
-				await new window.parent.tb.fs.Shell().promises.rm(`/apps/user/${sessionStorage.getItem("currAcc")}/${app.name}.tapp`, { recursive: true });
+				await window.parent.tb.fs.shell.promises.rm(`/apps/user/${sessionStorage.getItem("currAcc")}/${app.name}.tapp`, { recursive: true });
 			}
 			try {
 				let installedApps = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/installed.json`, "utf8"));
@@ -831,7 +831,7 @@ async function uninstall(app, type) {
 			break;
 		case "Anura":
 		case "tb-liq":
-			await new window.parent.tb.fs.Shell().promises.rm(`/apps/anura/${app.name}`, { recursive: true });
+			await window.parent.tb.fs.shell.promises.rm(`/apps/anura/${app.name}`, { recursive: true });
 			try {
 				let installedApps = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/installed.json`, "utf8"));
 				installedApps = installedApps.filter(a => a.name !== app.name);
@@ -857,44 +857,62 @@ async function uninstall(app, type) {
  * @param {string} target
  */
 async function unzip(path, target) {
-	const response = await fetch("/fs/" + path);
-	const zipFileContent = await response.arrayBuffer();
-	if (!(await dirExists(target))) {
-		await window.parent.tb.fs.promises.mkdir(target, { recursive: true });
-	}
-	const compressedFiles = window.parent.tb.fflate.unzipSync(new Uint8Array(zipFileContent));
-	for (const [relativePath, content] of Object.entries(compressedFiles)) {
-		const fullPath = `${target}/${relativePath}`;
-		const pathParts = fullPath.split("/");
-		let currentPath = "";
-		for (let i = 0; i < pathParts.length; i++) {
-			currentPath += pathParts[i] + "/";
-			if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
-				try {
-					console.log(`touch ${currentPath.slice(0, -1)}`);
-					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.parent.tb.buffer.from(content));
-				} catch {
-					console.log(`Cant make ${currentPath.slice(0, -1)}`);
+	const runUnzip = async () => {
+		const response = await fetch("/fs/" + path);
+		const zipFileContent = await response.arrayBuffer();
+		if (!(await dirExists(target))) {
+			await window.parent.tb.fs.promises.mkdir(target, { recursive: true });
+		}
+		const compressedFiles = window.parent.tb.fflate.unzipSync(new Uint8Array(zipFileContent));
+		for (const [relativePath, content] of Object.entries(compressedFiles)) {
+			const fullPath = `${target}/${relativePath}`;
+			const pathParts = fullPath.split("/");
+			let currentPath = "";
+			for (let i = 0; i < pathParts.length; i++) {
+				currentPath += pathParts[i] + "/";
+				if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
+					try {
+						console.log(`touch ${currentPath.slice(0, -1)}`);
+						await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), window.parent.tb.buffer.from(content));
+					} catch {
+						console.log(`Cant make ${currentPath.slice(0, -1)}`);
+					}
+				} else if (!(await dirExists(currentPath))) {
+					try {
+						console.log(`mkdir ${currentPath}`);
+						await window.parent.tb.fs.promises.mkdir(currentPath);
+					} catch {
+						console.log(`Cant make ${currentPath}`);
+					}
 				}
-			} else if (!(await dirExists(currentPath))) {
+			}
+			if (relativePath.endsWith("/")) {
 				try {
-					console.log(`mkdir ${currentPath}`);
-					await window.parent.tb.fs.promises.mkdir(currentPath);
+					console.log(`mkdir fp ${fullPath}`);
+					await window.parent.tb.fs.promises.mkdir(fullPath);
 				} catch {
-					console.log(`Cant make ${currentPath}`);
+					console.log(`Cant make ${fullPath}`);
 				}
 			}
 		}
-		if (relativePath.endsWith("/")) {
-			try {
-				console.log(`mkdir fp ${fullPath}`);
-				await window.parent.tb.fs.promises.mkdir(fullPath);
-			} catch {
-				console.log(`Cant make ${fullPath}`);
-			}
-		}
-	}
-	return "Done!";
+		return "Done!";
+	};
+
+	return window.parent.tb.notification.Installing(
+		{
+			message: "Installing package files...",
+			application: "App Store",
+			iconSrc: "/fs/apps/system/app store.tapp/icon.svg",
+		},
+		runUnzip(),
+		null,
+		{
+			message: "Failed to extract package",
+			application: "App Store",
+			iconSrc: "/fs/apps/system/app store.tapp/icon.svg",
+			time: 5500,
+		},
+	);
 }
 
 /**

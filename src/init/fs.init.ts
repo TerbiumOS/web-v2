@@ -5,6 +5,7 @@ export async function copyfs() {
 	for (const item of paths) {
 		const p = item.toString();
 		if (p.includes("browser.tapp")) continue;
+		window.dispatchEvent(new CustomEvent("oobe-setupstage", { detail: `Copying ${p} to File System...` }));
 		if (p.toLowerCase().includes(".tapp.zip")) {
 			const res = await fetch(`/apps/${p}`);
 			if (!res.ok) {

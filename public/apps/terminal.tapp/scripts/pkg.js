@@ -16,15 +16,15 @@ async function pkg(args) {
 				const response = await tb.libcurl.fetch(repo);
 				let repoData = rType === "terbium" ? (await response.json()).apps : (await (await tb.libcurl.fetch(repo.replace("manifest.json", "list.json"))).json()).apps;
 				const packageName = args._[1];
-				const exactMatch = repoData.find(pkg => pkg.name.toLowerCase() === packageName);
+				const exactMatch = repoData.find(pkg => pkg.name.toLowerCase() === packageName.toLowerCase());
 				if (exactMatch) {
 					displayOutput(`Installing ${exactMatch.name}...`);
 					if (exactMatch.requirements) {
-						if (exactMatch.requirements.os < window.parent.tb.system.version()) {
+						if (exactMatch.requirements.os && semverCompare(exactMatch.requirements.os, window.parent.tb.system.version()) > 0) {
 							displayError(`This app requires terbium version: ${exactMatch.requirements.os} or later`);
 							createNewCommandInput();
 							return;
-						} else if (exactMatch.requirements.proxy !== (await window.parent.tb.proxy.get())) {
+						} else if (exactMatch.requirements.proxy && exactMatch.requirements.proxy !== (await window.parent.tb.proxy.get())) {
 							displayError(`This app requires ${exactMatch.requirements.proxy} as the default proxy.`);
 							createNewCommandInput();
 							return;
@@ -79,7 +79,7 @@ async function pkg(args) {
 			if (args._[1]) {
 				const packageName = args._[1];
 				let installed = JSON.parse(await window.parent.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
-				const appIndex = installed.findIndex(app => app.name.toLowerCase() === packageName);
+				const appIndex = installed.findIndex(app => app.name.toLowerCase() === packageName.toLowerCase());
 				if (appIndex !== -1) {
 					const app = installed[appIndex];
 					installed.splice(appIndex, 1);
@@ -101,14 +101,14 @@ async function pkg(args) {
 					} else if (configPath.endsWith("manifest.json")) {
 						try {
 							await window.parent.tb.fs.promises.unlink(`/system/etc/anura/configs/${app.name}.json`);
-							await tb.sh.rm(configPath.replace("/manifest.json", "/"));
+							await tb.sh.rm(configPath.replace("/manifest.json", "/"), { recursive: true });
 						} catch {}
-						await tb.sh.rm(`/apps/anura/${app.name}`);
+						await tb.sh.rm(`/apps/anura/${app.name}`, { recursive: true });
 						await tb.launcher.removeApp(app.name);
 						delete window.parent.anura.apps[app.package];
 						displayOutput(`${app.name} has been uninstalled.`);
 					} else if (configPath.endsWith(".tbconfig")) {
-						await tb.sh.rm(configPath.replace("/.tbconfig", "/"));
+						await tb.sh.rm(configPath.replace("/.tbconfig", "/"), { recursive: true });
 						await tb.launcher.removeApp(app.name);
 						displayOutput(`${app.name} has been uninstalled.`);
 					}
@@ -128,13 +128,13 @@ async function pkg(args) {
 				const response = await tb.libcurl.fetch(repo);
 				let repoData = rType === "terbium" ? (await response.json()).apps : (await (await tb.libcurl.fetch(repo.replace("manifest.json", "list.json"))).json()).apps;
 				const packageName = args._[1];
-				const exactMatch = repoData.find(pkg => pkg.name.toLowerCase() === packageName);
+				const exactMatch = repoData.find(pkg => pkg.name.toLowerCase() === packageName.toLowerCase());
 				if (exactMatch.requirements) {
-					if (exactMatch.requirements.os < window.parent.tb.system.version()) {
+					if (exactMatch.requirements.os && semverCompare(exactMatch.requirements.os, window.parent.tb.system.version()) > 0) {
 						displayError(`This app requires terbium version: ${exactMatch.requirements.os} or later`);
 						createNewCommandInput();
 						return;
-					} else if (exactMatch.requirements.proxy !== (await window.parent.tb.proxy.get())) {
+					} else if (exactMatch.requirements.proxy && exactMatch.requirements.proxy !== (await window.parent.tb.proxy.get())) {
 						displayError(`This app requires ${exactMatch.requirements.proxy} as the default proxy.`);
 						createNewCommandInput();
 						return;
@@ -245,7 +245,7 @@ async function pkg(args) {
 			break;
 		case "help":
 		default:
-			displayOutput(`TPKG v1.4.2 - August 2025`);
+			displayOutput(`TPKG v1.4.3 - February 2026`);
 			displayOutput(`Usage: pkg <command>`);
 			displayOutput(" ");
 			displayOutput("All commands:");
@@ -436,48 +436,71 @@ async function installApp(app, type) {
 }
 
 async function unzip(path, target) {
-	const response = await fetch("/fs/" + path);
-	const zipFileContent = await response.arrayBuffer();
-	if (!(await dirExists(target))) {
-		await window.parent.tb.fs.promises.mkdir(target, { recursive: true });
-	}
-	const compressedFiles = window.parent.tb.fflate.unzipSync(new Uint8Array(zipFileContent));
-	for (const [relativePath, content] of Object.entries(compressedFiles)) {
-		const fullPath = `${target}/${relativePath}`;
-		const pathParts = fullPath.split("/");
-		let currentPath = "";
-		for (let i = 0; i < pathParts.length; i++) {
-			currentPath += pathParts[i] + "/";
-			if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
-				try {
-					console.log(`touch ${currentPath.slice(0, -1)}`);
-					displayOutput(`touch ${currentPath.slice(0, -1)}`);
-					await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), Filer.Buffer.from(content));
-				} catch {
-					displayOutput(`Cant make ${currentPath.slice(0, -1)}`);
-					console.log(`Cant make ${currentPath.slice(0, -1)}`);
+	const runUnzip = async () => {
+		const response = await fetch("/fs/" + path);
+		const zipFileContent = await response.arrayBuffer();
+		if (!(await dirExists(target))) {
+			await window.parent.tb.fs.promises.mkdir(target, { recursive: true });
+		}
+		const compressedFiles = window.parent.tb.fflate.unzipSync(new Uint8Array(zipFileContent));
+		for (const [relativePath, content] of Object.entries(compressedFiles)) {
+			const fullPath = `${target}/${relativePath}`;
+			const pathParts = fullPath.split("/");
+			let currentPath = "";
+			for (let i = 0; i < pathParts.length; i++) {
+				currentPath += pathParts[i] + "/";
+				if (i === pathParts.length - 1 && !relativePath.endsWith("/")) {
+					try {
+						console.log(`touch ${currentPath.slice(0, -1)}`);
+						displayOutput(`touch ${currentPath.slice(0, -1)}`);
+						await window.parent.tb.fs.promises.writeFile(currentPath.slice(0, -1), Filer.Buffer.from(content));
+					} catch {
+						displayOutput(`Cant make ${currentPath.slice(0, -1)}`);
+						console.log(`Cant make ${currentPath.slice(0, -1)}`);
+					}
+				} else if (!(await dirExists(currentPath))) {
+					try {
+						console.log(`mkdir ${currentPath}`);
+						displayOutput(`mkdir ${currentPath}`);
+						await window.parent.tb.fs.promises.mkdir(currentPath);
+					} catch {
+						console.log(`Cant make ${currentPath}`);
+						displayOutput(`Cant make ${currentPath}`);
+					}
 				}
-			} else if (!(await dirExists(currentPath))) {
+			}
+			if (relativePath.endsWith("/")) {
 				try {
-					console.log(`mkdir ${currentPath}`);
-					displayOutput(`mkdir ${currentPath}`);
-					await window.parent.tb.fs.promises.mkdir(currentPath);
+					console.log(`mkdir fp ${fullPath}`);
+					await window.parent.tb.fs.promises.mkdir(fullPath);
 				} catch {
-					console.log(`Cant make ${currentPath}`);
-					displayOutput(`Cant make ${currentPath}`);
+					console.log(`Cant make ${fullPath}`);
 				}
 			}
 		}
-		if (relativePath.endsWith("/")) {
-			try {
-				console.log(`mkdir fp ${fullPath}`);
-				await window.parent.tb.fs.promises.mkdir(fullPath);
-			} catch {
-				console.log(`Cant make ${fullPath}`);
-			}
-		}
-	}
-	return "Done!";
+		return "Done!";
+	};
+
+	return window.parent.tb.notification.Installing(
+		{
+			message: "Installing package files...",
+			application: "Terminal",
+			iconSrc: "/fs/apps/system/terminal.tapp/icon.svg",
+		},
+		runUnzip(),
+		{
+			message: "Finished extracting package",
+			application: "Terminal",
+			iconSrc: "/fs/apps/system/terminal.tapp/icon.svg",
+			time: 3200,
+		},
+		{
+			message: "Failed to extract package",
+			application: "Terminal",
+			iconSrc: "/fs/apps/system/terminal.tapp/icon.svg",
+			time: 2500,
+		},
+	);
 }
 
 const dirExists = async path => {
@@ -496,6 +519,29 @@ const dirExists = async path => {
 			}
 		});
 	});
+};
+
+/**
+ * Compares two semantic version strings.
+ * @param {string} a - The first version string.
+ * @param {string} b - The second version string.
+ * @returns {number} - Returns 1 if a > b, -1 if a < b, 0 if they are equal.
+ */
+const semverCompare = (a, b) => {
+	const pa = a.split(/[-.]/);
+	const pb = b.split(/[-.]/);
+	for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+		const na = pa[i] || "0";
+		const nb = pb[i] || "0";
+		if (!isNaN(na) && !isNaN(nb)) {
+			if (+na > +nb) return 1;
+			if (+na < +nb) return -1;
+		} else {
+			if (na > nb) return 1;
+			if (na < nb) return -1;
+		}
+	}
+	return 0;
 };
 
 pkg(args);

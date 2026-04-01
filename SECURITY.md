@@ -7,8 +7,9 @@
 | 2.0.0-beta | ❌ |
 | 2.0.0-beta2 | ❌ |
 | 2.0.0-beta3 | ❌ |
-| 2.1.0 | ✅ |
-| 2.2.0 | ✅ |
+| 2.1.x | ❌ |
+| 2.2.x | ✅ |
+| 2.3.x | ✅ |
 
 If your version of terbium is unsupported, please do not make a GitHub Issue about it. Please update to a newer version if your running a unsupported version.
 
@@ -23,7 +24,8 @@ If your version of terbium is unsupported, please do not make a GitHub Issue abo
 
 | Version | Supported |
 | ------- | --------- |
-| 1.0.0 (stable) | ✅ |
+| 1.0.0 (stable) | ❌ |
+| 1.1.0 (stable) | ✅ |
 
 ## Reporting a Vulnerability
 
