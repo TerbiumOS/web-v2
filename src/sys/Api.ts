@@ -28,6 +28,7 @@ import { type COM, type cmprops, type dialogProps, fileExists, type launcherProp
 import { vFS } from "./vFS";
 import { auth, getinfo, setinfo } from "./apis/utils/tauth";
 import { launchProcs, addStartupProc, removeStartupProc, enableProc, disableProc } from "./apis/utils/startupHandler";
+import { TSLParser } from "./apis/utils/TSLParser";
 
 const system = new System();
 const pw = new pwd();
@@ -645,6 +646,7 @@ export default async function Api() {
 					throw err;
 				}
 			},
+			TSLParser: new TSLParser(),
 			users: {
 				async list() {
 					const usersDir = await window.tb.fs.promises.readdir("/home/");

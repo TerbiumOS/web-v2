@@ -1,0 +1,146 @@
+<TSL version="1.0">
+  <Manifest>
+    <Id>settings.internet</Id>
+    <Title>Internet</Title>
+    <Icon>public</Icon>
+    <Version>1.0</Version>
+    <Author>System</Author>
+  </Manifest>
+  <UI>
+    <SettingsPage>
+      <Sidebar>
+        <Item id="proxy" title="Proxy" icon="vpn_lock" default="true" />
+        <Item id="wisp" title="Wisp Server" icon="wifi_tethering" />
+        <Item id="transport" title="Transport" icon="swap_horiz" />
+      </Sidebar>
+      <RecommendedOptions>
+        <Option id="internet.quick.wisp" text="Change wisp server" view="wisp" />
+        <Option id="internet.quick.proxy" text="Change proxy" view="proxy" />
+        <Option id="internet.quick.transport" text="Change transport" view="transport" />
+      </RecommendedOptions>
+      <Content>
+        <View id="proxy">
+          <Section title="Proxy">
+            <Select label="Provider" bind="internet.proxy.provider" options="Ultraviolet,Scramjet" />
+            <Button label="Apply Proxy" action="applyProxy" />
+          </Section>
+        </View>
+        <View id="wisp">
+          <Section title="Wisp Server">
+            <List label="Servers" bind="internet.wisp.servers" />
+            <Button label="Add Wisp Server" action="addWisp" />
+            <Button label="Remove Wisp Server" action="removeWisp" />
+          </Section>
+        </View>
+        <View id="transport">
+          <Section title="Transport">
+            <Select label="Type" bind="internet.transport.type" options="Default (Epoxy),Libcurl,Anura BCC" />
+            <Button label="Apply Transport" action="applyTransport" />
+          </Section>
+        </View>
+      </Content>
+    </SettingsPage>
+  </UI>
+  <Actions>
+    <Action id="applyProxy">
+      <![CDATA[
+        async function(context) {
+          const provider = (context.bindings && context.bindings["internet.proxy.provider"]) || "Ultraviolet";
+          if (tb.proxy && tb.proxy.set) {
+            await tb.proxy.set(provider);
+          }
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+          cfg.proxy = provider;
+          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+          if (context.notify) context.notify("Proxy updated");
+        }
+      ]]>
+    </Action>
+    <Action id="addWisp">
+      <![CDATA[
+        async function(context) {
+          const name = await new Promise(function(resolve) {
+            tb.dialog.Message({
+              title: "Enter Wisp display name",
+              onOk: function(value) {
+                resolve(value);
+              },
+            });
+          });
+          if (!name) return;
+
+          const addr = await new Promise(function(resolve) {
+            tb.dialog.Message({
+              title: "Enter Wisp socket URL",
+              onOk: function(value) {
+                resolve(value);
+              },
+            });
+          });
+          if (!addr) return;
+
+          const storePath = "//apps/system/settings.tapp/wisp-servers.json";
+          const exists = await tb.fs.promises.stat(storePath).then(function() { return true; }).catch(function() { return false; });
+          if (!exists) {
+            const initData = [
+              { id: `${tb.system?.originWs || "wss://"}`, name: "Backend" },
+            ];
+            await tb.fs.promises.writeFile(storePath, JSON.stringify(initData, null, 2), "utf8");
+          }
+
+          const data = JSON.parse(await tb.fs.promises.readFile(storePath, "utf8"));
+          data.push({ id: addr, name: name });
+          await tb.fs.promises.writeFile(storePath, JSON.stringify(data, null, 2), "utf8");
+          if (context.notify) context.notify("Wisp server added");
+        }
+      ]]>
+    </Action>
+    <Action id="removeWisp">
+      <![CDATA[
+        async function(context) {
+          const storePath = "//apps/system/settings.tapp/wisp-servers.json";
+          const data = JSON.parse(await tb.fs.promises.readFile(storePath, "utf8"));
+          if (!Array.isArray(data) || data.length === 0) {
+            if (context.notify) context.notify("No Wisp entries");
+            return;
+          }
+
+          const options = data.map(function(item) {
+            return { text: item.name, value: item.name };
+          });
+          const selected = await new Promise(function(resolve) {
+            tb.dialog.Select({
+              title: "Remove which Wisp?",
+              options: options,
+              onOk: function(value) {
+                resolve(value);
+              },
+            });
+          });
+          if (!selected) return;
+
+          const next = data.filter(function(item) {
+            return item.name !== selected;
+          });
+          await tb.fs.promises.writeFile(storePath, JSON.stringify(next, null, 2), "utf8");
+          if (context.notify) context.notify("Wisp server removed");
+        }
+      ]]>
+    </Action>
+    <Action id="applyTransport">
+      <![CDATA[
+        async function(context) {
+          const kind = (context.bindings && context.bindings["internet.transport.type"]) || "Default (Epoxy)";
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+          cfg.transport = kind;
+          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+          if (context.notify) context.notify("Transport updated");
+        }
+      ]]>
+    </Action>
+  </Actions>
+</TSL>

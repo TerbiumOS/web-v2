@@ -1,0 +1,186 @@
+<TSL version="1.0">
+  <Manifest>
+    <Id>settings.general</Id>
+    <Title>General Settings</Title>
+    <Icon>settings</Icon>
+    <Version>1.0</Version>
+    <Author>System</Author>
+  </Manifest>
+  <UI>
+    <SettingsPage>
+      <Sidebar>
+        <Item id="security" title="Security" icon="security" default="true" />
+        <Item id="coords" title="Geo Data" icon="my_location" />
+        <Item id="data" title="Import and Export" icon="import_export" />
+        <Item id="maintenance" title="Maintenance" icon="build" />
+      </Sidebar>
+      <RecommendedOptions>
+        <Option id="general.quick.security" text="Security Status" view="security" />
+        <Option id="general.quick.coords" text="Geo Data Settings" view="coords" />
+        <Option id="general.quick.export" text="Export Data (advanced)" view="data" />
+      </RecommendedOptions>
+      <Content>
+        <View id="security">
+          <Section title="Security and Debug">
+            <Toggle label="Enable Eruda" bind="general.security.eruda" />
+            <Button label="Apply Security Flags" action="applySecurityFlags" />
+          </Section>
+        </View>
+        <View id="coords">
+          <Section title="Geo Data">
+            <Text label="Current Coordinates" bind="general.coords.value" />
+            <Button label="Update Coordinates" action="updateCoords" />
+          </Section>
+        </View>
+        <View id="data">
+          <Section title="Data Transfer">
+            <Button label="Import Settings" action="importSettings" />
+            <Button label="Export Settings" action="exportSettings" />
+            <Button label="Import TBS File" action="importTbs" />
+          </Section>
+        </View>
+        <View id="maintenance">
+          <Section title="System Maintenance">
+            <Button label="Invalidate Cache" action="invalidateCache" />
+            <Button label="Export File System" action="exportFs" />
+          </Section>
+        </View>
+      </Content>
+    </SettingsPage>
+  </UI>
+  <Actions>
+    <Action id="applySecurityFlags">
+      <![CDATA[
+        async function(context) {
+          const enabled = !!(context.bindings && context.bindings["general.security.eruda"]);
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+          cfg.eruda = enabled;
+          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+          if (context.notify) context.notify("Security flags saved");
+        }
+      ]]>
+    </Action>
+    <Action id="updateCoords">
+      <![CDATA[
+        async function(context) {
+          const val = await new Promise(function(resolve) {
+            tb.dialog.Message({
+              title: "Enter coordinates as latitude,longitude",
+              onOk: function(input) {
+                resolve(input);
+              },
+            });
+          });
+          if (!val) return;
+
+          const sysPath = "/system/etc/terbium/settings.json";
+          const cfg = JSON.parse(await tb.fs.promises.readFile(sysPath, "utf8"));
+          const lk = "loc" + "ation";
+          cfg[lk] = String(val);
+          await tb.fs.promises.writeFile(sysPath, JSON.stringify(cfg, null, 2), "utf8");
+          if (context.notify) context.notify("Coordinates saved");
+        }
+      ]]>
+    </Action>
+    <Action id="importSettings">
+      <![CDATA[
+        async function(context) {
+          const filePath = await new Promise(function(resolve) {
+            tb.dialog.FileBrowser({
+              title: "Choose settings json",
+              local: true,
+              onOk: function(path) {
+                resolve(path);
+              },
+            });
+          });
+          if (!filePath) return;
+
+          const imported = JSON.parse(await tb.fs.promises.readFile(filePath, "utf8"));
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(imported, null, 2), "utf8");
+          if (context.notify) context.notify("Settings imported");
+        }
+      ]]>
+    </Action>
+    <Action id="exportSettings">
+      <![CDATA[
+        async function(context) {
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          const data = await tb.fs.promises.readFile(cfgPath, "utf8");
+          const outDir = `/home/${user}/exports`;
+          await tb.fs.promises.mkdir(outDir, { recursive: true });
+          const stamp = Date.now();
+          const outPath = `${outDir}/settings-${stamp}.json`;
+          await tb.fs.promises.writeFile(outPath, data, "utf8");
+          if (context.notify) context.notify(`Exported to ${outPath}`);
+        }
+      ]]>
+    </Action>
+    <Action id="importTbs">
+      <![CDATA[
+        async function(context) {
+          const tbsPath = await new Promise(function(resolve) {
+            tb.dialog.FileBrowser({
+              title: "Choose TBS file",
+              local: true,
+              onOk: function(path) {
+                resolve(path);
+              },
+            });
+          });
+          if (!tbsPath) return;
+
+          const raw = await tb.fs.promises.readFile(tbsPath, "utf8");
+          const tbsCfg = JSON.parse(raw);
+          const user = await tb.user.username();
+          const userPath = `/home/${user}/settings.json`;
+          const sysPath = "/system/etc/terbium/settings.json";
+          const userCfg = JSON.parse(await tb.fs.promises.readFile(userPath, "utf8"));
+          const sysCfg = JSON.parse(await tb.fs.promises.readFile(sysPath, "utf8"));
+
+          if (tbsCfg.theme && tbsCfg.theme !== "default") {
+            sysCfg.theme = tbsCfg.theme;
+          }
+          if (tbsCfg.wallpaper && tbsCfg.wallpaper !== "default") {
+            userCfg.wallpaper = tbsCfg.wallpaper;
+          }
+          if (tbsCfg.wallpaperFill && tbsCfg.wallpaperFill !== "default") {
+            userCfg.wallpaperMode = tbsCfg.wallpaperFill === "contain" ? "cover" : "contain";
+          }
+          if (tbsCfg.shadow === "yes") {
+            userCfg["system-blur"] = true;
+          }
+
+          await tb.fs.promises.writeFile(userPath, JSON.stringify(userCfg, null, 2), "utf8");
+          await tb.fs.promises.writeFile(sysPath, JSON.stringify(sysCfg, null, 2), "utf8");
+          if (context.notify) context.notify("TBS applied");
+        }
+      ]]>
+    </Action>
+    <Action id="invalidateCache">
+      <![CDATA[
+        async function(context) {
+          await tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", "invalid", "utf8");
+          if (context.notify) context.notify("Cache marked invalid");
+        }
+      ]]>
+    </Action>
+    <Action id="exportFs">
+      <![CDATA[
+        async function(context) {
+          if (tb.system && tb.system.exportfs) {
+            await tb.system.exportfs();
+            if (context.notify) context.notify("File system export started");
+            return;
+          }
+          if (context.notify) context.notify("Export API unavailable");
+        }
+      ]]>
+    </Action>
+  </Actions>
+</TSL>

@@ -11,6 +11,7 @@ import { WindowInformation } from "./liquor/AliceWM";
 import { createAuthClient } from "better-auth/client";
 import type { HTTPSession, libcurl } from "libcurl.js";
 import * as fflate from "fflate";
+import { TSLParser } from "./apis/utils/TSLParser";
 
 declare global {
 	namespace React.JSX {
@@ -495,6 +496,7 @@ export interface COM {
 		openApp(pkg: string): Promise<void>;
 		download(url: string, location: string): Promise<void>;
 		exportfs(): void;
+		TSLParser: TSLParser;
 		users: {
 			list(): Promise<string[]>;
 			add(user: User): Promise<boolean>;

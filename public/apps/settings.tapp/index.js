@@ -1,1090 +1,730 @@
-const Filer = window.Filer;
-const tb = parent.window.tb;
-const tb_window = tb.window;
-const tb_desktop = tb.desktop;
-const tb_preferences = tb.desktop.preferences;
-const tb_island = tb.window.island;
-const tb_context_menu = tb.context_menu;
-const tb_dialog = tb.dialog;
-const tb_wallpaper = parent.window.tb.desktop.wallpaper;
-const parent_body = parent.document.body;
-setInterval(() => {
-	if (parent_body.getAttribute("theme")) document.body.setAttribute("theme", parent_body.getAttribute("theme"));
-});
-
-const cat_options = document.querySelectorAll(".cat-option");
-cat_options.forEach(option => {
-	function mouseleave() {
-		let tooltip = option.querySelector(".cat-tooltip");
-		tooltip.classList.add("hidden");
-		option.removeEventListener("mouseleave", mouseleave);
-		option.addEventListener("mouseover", mouseover);
-	}
-	function mouseover() {
-		setTimeout(() => {
-			if (option.matches(":hover")) {
-				if (option.offsetWidth === 36) {
-					let tooltip = option.querySelector(".cat-tooltip");
-					tooltip.classList.remove("hidden");
-					document.querySelectorAll(".cat-tooltip").forEach(tooltip => {
-						if (tooltip !== option.querySelector(".cat-tooltip")) tooltip.classList.add("hidden");
-					});
-					option.addEventListener("mouseleave", mouseleave);
-				}
-			}
-		}, 1000);
-	}
-	option.addEventListener("click", e => {
-		const cat = option.getAttribute("data-category");
-		const current_cat = document.querySelector('.settings-category[data-visible="true"]').getAttribute("category");
-		if (cat === current_cat) return;
-		document.querySelectorAll(".settings-category").forEach(category => {
-			category.dataset.visible = "false";
-			category.classList.add("opacity-0", "pointer-events-none", "translate-y-6");
-		});
-		document.querySelectorAll(".cat-option").forEach(opt => opt.classList.remove("selected"));
-		const view = document.querySelector(`.settings-category[category="${cat}"]`);
-		if (view === null) return;
-		view.dataset.visible = "true";
-		view.classList.remove("opacity-0", "pointer-events-none", "translate-y-6");
-		option.classList.add("selected");
-	});
-	option.addEventListener("mouseover", mouseover);
-});
-
-const wallpaper_options = document.querySelectorAll(".wallpaper-option");
-wallpaper_options.forEach(option => {
-	option.addEventListener("click", async e => {
-		const parent_origin = parent.parent.window.location.origin;
-		const wallpaper = option.src.toString().split(parent_origin)[1];
-		const color = option.getAttribute("color-type");
-		let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
-		data["wallpaper"] = wallpaper;
-		tb_wallpaper.set(wallpaper);
-		const fillMode = parent.window.tb.desktop.wallpaper.fillMode();
-		if (fillMode === null) parent.window.tb.desktop.wallpaper.cover();
-		if (color !== parent.window.tb.desktop.preferences.theme()) {
-			// parent.window.tb.desktop.preferences.setTheme(`${color`)
-			document.body.setAttribute("theme", color);
-		}
-	});
-});
-
-window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8", (err, data) => {
-	if (err) return console.log(err);
-	data = JSON.parse(data);
-	const fillMode = data["wallpaperMode"];
-	const showSeconds = data["times"]["showSeconds"];
-	const twentyFourHour = data["times"]["format"];
-	let fillModeCapitalized = fillMode.charAt(0).toUpperCase() + fillMode.slice(1);
-	document.querySelector(`[action-for="wallpaper-fill"]`).querySelector(".select-title .text").innerText = fillModeCapitalized;
-	document.querySelector(`[action-for="proxy"]`).querySelector(".select-title .text").innerText = data["proxy"];
-	document.querySelector(`[action-for="transports"]`).querySelector(".select-title .text").innerText = data["transport"];
-	document.querySelector(`[action-for="show-seconds"]`).querySelector(".select-title .text").innerText = showSeconds ? "Yes" : "No";
-	document.querySelector(`[action-for="24h-12h"]`).querySelector(".select-title .text").innerText = twentyFourHour === "24h" ? "Yes" : "No";
-	document.querySelector(`[action-for="wmx"]`).querySelector(".select-title .text").innerText = data["window"]["alwaysMaximized"] ? "Yes" : "No";
-	document.querySelector(`[action-for="wfs"]`).querySelector(".select-title .text").innerText = data["window"]["alwaysFullscreen"] ? "Yes" : "No";
-	try {
-		const wallpaperVal = data["wallpaper"];
-		const isb64 = val => {
-			if (!val || typeof val !== "string") return false;
-			if (val.startsWith("data:")) return true;
-			const stripped = val.replace(/\s+/g, "");
-			return /^[A-Za-z0-9+/=]+$/.test(stripped) && stripped.length > 200;
-		};
-		if (isb64(wallpaperVal)) {
-			const wallpaperContainer = document.querySelector(".wallpapers");
-			if (wallpaperContainer) {
-				const container = document.createElement("div");
-				container.classList.add("wallpaper-container");
-				container.style.position = "relative";
-				const img = document.createElement("img");
-				img.classList.add("wallpaper-option");
-				img.src = wallpaperVal.startsWith("data:") ? wallpaperVal : `data:image/png;base64,${wallpaperVal}`;
-				img.alt = "Synced Wallpaper";
-				img.style.objectFit = "cover";
-				img.addEventListener("click", async () => {
-					tb_wallpaper.set(img.src);
-				});
-				const label = document.createElement("div");
-				label.innerText = "Synced Wallpaper";
-				label.style.position = "absolute";
-				label.style.bottom = "6px";
-				label.style.left = "6px";
-				label.style.background = "rgba(0,0,0,0.45)";
-				label.style.padding = "2px 6px";
-				label.style.borderRadius = "6px";
-				label.style.color = "#ffffff";
-				label.style.fontSize = "12px";
-				container.appendChild(img);
-				container.appendChild(label);
-				wallpaperContainer.prepend(container);
-			}
-		}
-	} catch (e) {
-		console.warn("Unable to show synced wallpaper label:", e);
-	}
-});
-
-window.parent.tb.fs.readFile("/system/etc/terbium/settings.json", "utf8", (err, data) => {
-	if (err) return console.log(err);
-	data = JSON.parse(data);
-	const cords = data["location"];
-	document.querySelector(`.cords`).innerText = `${cords}`;
-	const tempunit = data["weather"]["unit"];
-	document.querySelector(`[action-for="temperature-unit"]`).querySelector(".select-title .text").innerText = tempunit;
-});
-
-const customWallpaper = () => {
-	window.parent.tb.dialog.Select({
-		title: "Where do you want to load the wallpaper from?",
-		options: [
-			{
-				text: "System Storage",
-				value: "sys",
-			},
-			{
-				text: "Terbium File System",
-				value: "fs",
-			},
-			{
-				text: "Internet Url",
-				value: "url",
-			},
-		],
-		onOk: async perm => {
-			switch (perm) {
-				case "sys":
-					const input = document.createElement("input");
-					input.type = "file";
-					input.setAttribute("accept", "image/*");
-					input.click();
-					input.addEventListener("change", async e => {
-						const file = input.files[0];
-						const buffer = await file.arrayBuffer();
-						const reader = new FileReader();
-						reader.readAsDataURL(file);
-						reader.onload = async () => {
-							const imgdata = reader.result;
-							const path = "/system/etc/terbium/wallpapers/" + file.name;
-
-							tb_wallpaper.set(path);
-							const img_container = document.createElement("div");
-							img_container.classList.add("wallpaper-container");
-							const wimg = document.createElement("img");
-							wimg.src = imgdata;
-							wimg.classList.add("wallpaper-option");
-
-							const delete_button = document.createElement("img");
-							delete_button.src = "/fs/apps/system/settings.tapp/delete.svg";
-							delete_button.classList.add("delete-wallpaper");
-							delete_button.addEventListener("click", async e => {
-								let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-								if (data["wallpaper"] === path) {
-									tb_wallpaper.set("/assets/wallpapers/1.png");
-								}
-								await window.parent.tb.fs.promises.unlink(path);
-								img_container.remove();
-							});
-							wimg.addEventListener("click", async e => {
-								tb_wallpaper.set(path);
-							});
-							await window.parent.tb.fs.promises.writeFile(path, window.parent.tb.buffer.from(buffer), "arraybuffer");
-							tb_wallpaper.set(path);
-							img_container.append(wimg);
-							img_container.append(delete_button);
-							document.querySelector(".custom-wallpaper").remove();
-							document.querySelector(".wallpapers").append(img_container);
-							appendCustomWallpaper();
-						};
-					});
-					break;
-				case "fs":
-					tb.dialog.FileBrowser({
-						title: "Select a wallpaper from the file system",
-						local: true,
-						onOk: async filePath => {
-							const imgdata = await window.parent.tb.fs.promises.readFile(filePath, "arraybuffer");
-							await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/wallpapers/" + filePath.split("/").pop(), imgdata, "arraybuffer");
-							tb.desktop.wallpaper.set("/system/etc/terbium/wallpapers/" + filePath.split("/").pop());
-							document.querySelector(".wallpapers").innerHTML = `
-								<img src="/assets/wallpapers/1.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/2.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/3.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/4.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/5.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/6.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/7.png" class="wallpaper-option"></img>
-							`;
-							const wallpaper_options = document.querySelectorAll(".wallpaper-option");
-							wallpaper_options.forEach(option => {
-								option.addEventListener("click", async e => {
-									const parent_origin = parent.parent.window.location.origin;
-									const wallpaper = option.src.toString().split(parent_origin)[1];
-									const color = option.getAttribute("color-type");
-									let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
-									data["wallpaper"] = wallpaper;
-									tb_wallpaper.set(wallpaper);
-									const fillMode = parent.window.tb.desktop.wallpaper.fillMode();
-									if (fillMode === null) parent.window.tb.desktop.wallpaper.cover();
-									if (color !== parent.window.tb.desktop.preferences.theme()) {
-										// parent.window.tb.desktop.preferences.setTheme(`${color`)
-										document.body.setAttribute("theme", color);
-									}
-								});
-							});
-							getWallpapers();
-						},
-					});
-					break;
-				case "url":
-					tb.dialog.Message({
-						title: "Enter a URL of the wallpaper",
-						onOk: async value => {
-							await window.parent.tb.system.download(value, `/system/etc/terbium/wallpapers/${value.split("/").pop()}`);
-							tb.desktop.wallpaper.set("/system/etc/terbium/wallpapers/" + value.split("/").pop());
-							document.querySelector(".wallpapers").innerHTML = `
-								<img src="/assets/wallpapers/1.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/2.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/3.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/4.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/5.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/6.png" class="wallpaper-option"></img>
-								<img src="/assets/wallpapers/7.png" class="wallpaper-option"></img>
-							`;
-							const wallpaper_options = document.querySelectorAll(".wallpaper-option");
-							wallpaper_options.forEach(option => {
-								option.addEventListener("click", async e => {
-									const parent_origin = parent.parent.window.location.origin;
-									const wallpaper = option.src.toString().split(parent_origin)[1];
-									const color = option.getAttribute("color-type");
-									let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
-									data["wallpaper"] = wallpaper;
-									tb_wallpaper.set(wallpaper);
-									const fillMode = parent.window.tb.desktop.wallpaper.fillMode();
-									if (fillMode === null) parent.window.tb.desktop.wallpaper.cover();
-									if (color !== parent.window.tb.desktop.preferences.theme()) {
-										// parent.window.tb.desktop.preferences.setTheme(`${color`)
-										document.body.setAttribute("theme", color);
-									}
-								});
-							});
-							getWallpapers();
-						},
-					});
-					break;
-			}
-		},
-	});
+﻿const iconSet = {
+settings: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.078 2.25c-.917 0-1.699.663-1.85 1.568l-.147.883a7.52 7.52 0 0 0-1.498.62l-.755-.475a1.875 1.875 0 0 0-2.369.284l-.524.524a1.875 1.875 0 0 0-.283 2.369l.474.755c-.261.47-.468.97-.62 1.498l-.883.147a1.875 1.875 0 0 0-1.568 1.85v.741c0 .916.663 1.698 1.568 1.85l.883.147c.152.527.359 1.027.62 1.497l-.474.756a1.875 1.875 0 0 0 .283 2.369l.524.524c.649.649 1.659.77 2.369.283l.755-.474c.47.261.97.468 1.498.62l.147.883a1.875 1.875 0 0 0 1.85 1.568h.741a1.875 1.875 0 0 0 1.85-1.568l.147-.883a7.517 7.517 0 0 0 1.497-.62l.756.474c.71.487 1.72.366 2.369-.283l.524-.524a1.875 1.875 0 0 0 .283-2.369l-.474-.756c.261-.47.468-.97.62-1.497l.883-.147a1.875 1.875 0 0 0 1.568-1.85v-.741a1.875 1.875 0 0 0-1.568-1.85l-.883-.147a7.523 7.523 0 0 0-.62-1.498l.474-.755a1.875 1.875 0 0 0-.283-2.369l-.524-.524a1.875 1.875 0 0 0-2.369-.284l-.756.475a7.518 7.518 0 0 0-1.497-.62l-.147-.883a1.875 1.875 0 0 0-1.85-1.568h-.741Zm.37 13.5a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" clip-rule="evenodd"/></svg>`,
+brush: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.862 4.487a2.25 2.25 0 1 1 3.182 3.182l-6.375 6.375a4.5 4.5 0 0 1-1.591 1.024l-2.555.852a.75.75 0 0 1-.949-.949l.852-2.555a4.5 4.5 0 0 1 1.024-1.591l6.412-6.338ZM7.097 16.785l-.077.077a4.5 4.5 0 0 0 6.364 6.364l.077-.077.83-2.487a1.875 1.875 0 0 0-.417-1.918l-1.91-1.91a1.875 1.875 0 0 0-1.918-.417l-2.487.83Z"/></svg>`,
+globe: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm8.25-8.147V8.25H7.102a13.341 13.341 0 0 1 3.398-4.397Zm0 6.147H6.255a14.64 14.64 0 0 0 0 4h4.245V10Zm0 6H7.102a13.341 13.341 0 0 0 3.398 4.397V16Zm1.5 4.397A13.341 13.341 0 0 0 15.398 16H12v4.397Zm0-6.397h4.245a14.64 14.64 0 0 0 0-4H12v4Zm0-5.75h3.398A13.341 13.341 0 0 0 12 3.853V8.25Z" clip-rule="evenodd"/></svg>`,
+apps: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5.25 3.75A1.5 1.5 0 0 0 3.75 5.25v3a1.5 1.5 0 0 0 1.5 1.5h3a1.5 1.5 0 0 0 1.5-1.5v-3a1.5 1.5 0 0 0-1.5-1.5h-3ZM5.25 14.25a1.5 1.5 0 0 0-1.5 1.5v3a1.5 1.5 0 0 0 1.5 1.5h3a1.5 1.5 0 0 0 1.5-1.5v-3a1.5 1.5 0 0 0-1.5-1.5h-3ZM14.25 5.25a1.5 1.5 0 0 1 1.5-1.5h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3a1.5 1.5 0 0 1-1.5-1.5v-3ZM15.75 14.25a1.5 1.5 0 0 0-1.5 1.5v3a1.5 1.5 0 0 0 1.5 1.5h3a1.5 1.5 0 0 0 1.5-1.5v-3a1.5 1.5 0 0 0-1.5-1.5h-3Z"/></svg>`,
+account: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM3.75 20.25a8.25 8.25 0 1 1 16.5 0 .75.75 0 0 1-.75.75h-15a.75.75 0 0 1-.75-.75Z"/></svg>`,
+chain: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M15.75 3a3.75 3.75 0 0 1 2.652 6.402l-1.72 1.72a.75.75 0 1 1-1.06-1.06l1.719-1.72a2.25 2.25 0 1 0-3.182-3.182l-1.72 1.72a.75.75 0 0 1-1.06-1.06l1.72-1.72A3.738 3.738 0 0 1 15.75 3Zm-3.22 5.03a.75.75 0 0 1 0 1.06l-3.44 3.44a.75.75 0 0 1-1.06-1.06l3.44-3.44a.75.75 0 0 1 1.06 0Zm-5.872 4.848a.75.75 0 0 1 1.06 0l1.72 1.72a2.25 2.25 0 0 1-3.182 3.182l-1.72-1.72a3.75 3.75 0 0 1 5.304-5.304l1.72 1.72a.75.75 0 0 1-1.06 1.06l-1.72-1.72a2.25 2.25 0 0 0-3.182 3.182l1.72 1.72a2.25 2.25 0 0 0 3.182-3.182l-1.72-1.72a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>`,
+trash: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.25 4.5a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 .75.75V6h3a.75.75 0 0 1 0 1.5h-.29l-.83 11.614A2.25 2.25 0 0 1 15.386 21h-6.772a2.25 2.25 0 0 1-2.244-1.886L5.54 7.5H5.25a.75.75 0 0 1 0-1.5h3V4.5Zm1.5 1.5h4.5V5.25h-4.5V6Zm-.75 4.5a.75.75 0 0 1 1.5 0v6a.75.75 0 1 1-1.5 0v-6Zm4.5-.75a.75.75 0 0 0-1.5 0v6a.75.75 0 1 0 1.5 0v-6Z" clip-rule="evenodd"/></svg>`,
+wifi: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M1.371 8.143c5.858-5.857 15.356-5.857 21.213 0a.75.75 0 0 1 0 1.061l-.53.53a.75.75 0 0 1-1.06 0c-4.98-4.979-13.053-4.979-18.032 0a.75.75 0 0 1-1.06 0l-.53-.53a.75.75 0 0 1 0-1.06Zm3.182 3.182c4.1-4.1 10.749-4.1 14.85 0a.75.75 0 0 1 0 1.061l-.53.53a.75.75 0 0 1-1.062 0 8.25 8.25 0 0 0-11.667 0 .75.75 0 0 1-1.06 0l-.53-.53a.75.75 0 0 1 0-1.06Zm3.204 3.182a6 6 0 0 1 8.486 0 .75.75 0 0 1 0 1.061l-.53.53a.75.75 0 0 1-1.061 0 3.75 3.75 0 0 0-5.304 0 .75.75 0 0 1-1.06 0l-.53-.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>`,
 };
 
-const appendCustomWallpaper = () => {
-	if (document.querySelector(".custom-wallpaper")) {
-		console.log(document.querySelector(".custom-wallpaper"));
-	}
+const SETTINGS_DIR = "/apps/system/settings.tapp";
+const WISP_PATH = `${SETTINGS_DIR}/wisp-servers.json`;
+const RECENT_PATH = `${SETTINGS_DIR}/recent.json`;
+const MAX_RECENT_ITEMS = 4;
+const CAT_ORDER = ["general", "appearance", "internet", "apps", "account"];
 
-	const newButton = `
-        <button class="wallpaper-option flex justify-center items-center bg-[#ffffff10] hover:bg-[#ffffff20] duration-150 custom-wallpaper" style="box-shadow: inset 0 0 0 0.5px #ffffff38;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-8 pointer-events-none">
-                <path style="stroke: currentColor; stroke-width: 1;" fill-rule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
-            </svg>
-        </button>
-    `;
+const fsApi = window.tb?.fs;
+const parser = window.tb?.system?.TSLParser;
 
-	const wallpaperContainer = document.querySelector(".wallpapers");
-	wallpaperContainer.insertAdjacentHTML("beforeend", newButton);
-	const customWallpaperBtn = document.querySelector(".custom-wallpaper");
-	customWallpaperBtn.addEventListener("click", e => {
-		customWallpaper();
-	});
-};
+const homeScreen = document.getElementById("homeScreen");
+const detailScreen = document.getElementById("detailScreen");
+const recentlyVisitedEl = document.getElementById("recentlyVisited");
+const categoryGridEl = document.getElementById("categoryGrid");
+const detailTitleEl = document.getElementById("detailTitle");
+const detailSidebarEl = document.getElementById("detailSidebar");
+const detailContentEl = document.getElementById("detailContent");
 
-async function getWispSrvs() {
-	const fileExists = await window.parent.tb.fs.promises
-		.stat("//apps/system/settings.tapp/wisp-servers.json")
-		.then(() => true)
-		.catch(() => false);
-	if (!fileExists) {
-		await window.parent.tb.fs.promises.mkdir("//apps/settings.tapp/", { recursive: true });
-		const stockDat = [
-			{ id: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`, name: "Backend" },
-			{ id: "wss://wisp.terbiumon.top/wisp/", name: "TB Wisp Instance" },
-		];
-		await window.parent.tb.fs.promises.writeFile("//apps/system/settings.tapp/wisp-servers.json", JSON.stringify(stockDat));
-	}
-	const main = document.getElementById("wispSrvs");
-	window.parent.window.dispatchEvent(new Event("update-wispsrvs"));
-	const makeCard = async (name, id) => {
-		let settings = await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8");
-		let settdata = JSON.parse(settings);
+let categoryModels = [];
+let recentItems = [];
+let currentCategory = null;
+let currentViewId = "";
+let currentSearchTerm = "";
+let navHistory = [];
+let navFuture = [];
 
-		const card = document.createElement("div");
-		card.classList.add("flex", "justify-between", "w-full", "p-1.5", "rounded-lg", "duration-150", `srv-${id.replace(/\s/g, "-")}`);
-		if (name === settdata.wispServer) {
-			card.classList.add("bg-[#4acd609c]");
-		} else {
-			card.classList.add("bg-[#ffffff18]", "hover:bg-[#ffffff38]", "cursor-pointer");
-		}
-
-		const html = `
-            <div class="flex gap-6 items-center justify-between text-[#ffffffd1] w-full pointer-events-none">
-                <div class="flex gap-3 items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-8">
-                        <path fill-rule="evenodd" d="M1.371 8.143c5.858-5.857 15.356-5.857 21.213 0a.75.75 0 0 1 0 1.061l-.53.53a.75.75 0 0 1-1.06 0c-4.98-4.979-13.053-4.979-18.032 0a.75.75 0 0 1-1.06 0l-.53-.53a.75.75 0 0 1 0-1.06Zm3.182 3.182c4.1-4.1 10.749-4.1 14.85 0a.75.75 0 0 1 0 1.061l-.53.53a.75.75 0 0 1-1.062 0 8.25 8.25 0 0 0-11.667 0 .75.75 0 0 1-1.06 0l-.53-.53a.75.75 0 0 1 0-1.06Zm3.204 3.182a6 6 0 0 1 8.486 0 .75.75 0 0 1 0 1.061l-.53.53a.75.75 0 0 1-1.061 0 3.75 3.75 0 0 0-5.304 0 .75.75 0 0 1-1.06 0l-.53-.53a.75.75 0 0 1 0-1.06Zm3.182 3.182a1.5 1.5 0 0 1 2.122 0 .75.75 0 0 1 0 1.061l-.53.53a.75.75 0 0 1-1.061 0l-.53-.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
-                    </svg>
-                    <div class="flex flex-col">
-                        <h3 class="font-bold leading-tight">${id}</h3>
-                        <span class="text-xs leading-tight">${name}</span>
-                    </div>
-                </div>
-                <p latency-${id.replace(/\s/g, "-")} class="text-sm p-2 bg-[#ffffff38] rounded-lg leading-none text-[#ffffffce] font-extrabold ">Pinging...</p>
-            </div>
-        `;
-
-		card.innerHTML = html;
-		setTimeout(async () => {
-			const res = await ping(name);
-			document.querySelector(`[latency-${id.replace(/\s/g, "-")}]`).innerHTML = res.latency + "ms";
-		}, 1750);
-
-		card.addEventListener("click", async () => {
-			settdata.wispServer = name;
-			const updSet = JSON.stringify(settdata, null, 2);
-			await window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, updSet);
-			window.parent.tb.proxy.updateSWs();
-			window.parent.window.dispatchEvent(new Event("update-wispsrvs"));
-		});
-
-		main.appendChild(card);
-	};
-	const data = JSON.parse(await window.parent.tb.fs.promises.readFile("//apps/system/settings.tapp/wisp-servers.json"));
-	data.forEach(item => {
-		makeCard(item.id, item.name);
-	});
-	const ping = id => {
-		return new Promise(resolve => {
-			const websocket = new WebSocket(id);
-			const startTime = Date.now();
-			const onOpen = () => {
-				const latency = Date.now() - startTime;
-				websocket.close();
-				resolve({ status: "OK", latency });
-			};
-			const onMessage = () => {
-				const latency = Date.now() - startTime;
-				websocket.close();
-				resolve({ status: "OK", latency });
-			};
-			const onError = () => {
-				websocket.close();
-				resolve({ status: "Fail", latency: "N/A" });
-			};
-			websocket.addEventListener("open", onOpen);
-			websocket.addEventListener("message", onMessage);
-			websocket.addEventListener("error", onError);
-			setTimeout(() => {
-				websocket.close();
-				resolve({ status: "Fail", latency: "N/A" });
-			}, 5000);
-		});
-	};
-	const addWispbtn = document.getElementById("addWisp");
-	addWispbtn.addEventListener("click", () => {
-		window.parent.tb.dialog.Message({
-			title: "Enter a name for the Wisp server",
-			onOk: async val => {
-				sessionStorage.setItem("wispSrv", val);
-				window.parent.tb.dialog.Message({
-					title: "Enter the socket URL for the Wisp server",
-					onOk: async val => {
-						const ent = { id: val, name: sessionStorage.getItem("wispSrv") };
-						let data = JSON.parse(await window.parent.tb.fs.promises.readFile("//apps/system/settings.tapp/wisp-servers.json"));
-						data.push(ent);
-						window.parent.tb.fs.promises.writeFile("//apps/system/settings.tapp/wisp-servers.json", JSON.stringify(data));
-						makeCard(val, sessionStorage.getItem("wispSrv"));
-					},
-				});
-			},
-		});
-	});
-	const rmWispbtn = document.getElementById("rmWisp");
-	rmWispbtn.addEventListener("click", async () => {
-		let data = JSON.parse(await window.parent.tb.fs.promises.readFile("//apps/system/settings.tapp/wisp-servers.json"));
-		const servers = data.map(item => ({
-			text: item.name,
-			value: item.name,
-		}));
-		window.parent.tb.dialog.Select({
-			title: "Select the Wisp server to remove",
-			options: servers,
-			onOk: async selectedName => {
-				data = data.filter(item => item.name !== selectedName);
-				await window.parent.tb.fs.promises.writeFile("//apps/system/settings.tapp/wisp-servers.json", JSON.stringify(data));
-				document.querySelector(`.srv-${selectedName.replace(/\s/g, "-")}`).remove();
-				window.parent.window.dispatchEvent(new Event("update-wispsrvs"));
-			},
-		});
-	});
-}
-getWispSrvs();
-
-async function updateTransport(transport) {
-	const st = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-	st["transport"] = transport;
-	await window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(st), "utf8");
+function getTitlebarEl(id) {
+return window.parent?.document?.getElementById(id) || null;
 }
 
-const accentPreview = document.querySelector(".accent-preview");
-const accentMousedown = async () => {
-	const defaultAccent = "#32ae62";
-	accentPreview.classList.remove("group", "cursor-pointer");
-	accentPreview.style.setProperty("--accent", defaultAccent);
-	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-	settings["accent"] = defaultAccent;
-	window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
-	accentPreview.removeEventListener("mousedown", accentMousedown);
-};
-
-const getAccent = async () => {
-	const settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-	var accentColor = settings["accent"];
-	const defaultAccent = "#32ae62";
-	if (accentColor !== defaultAccent) {
-		accentPreview.classList.add("group", "cursor-pointer");
-		accentPreview.addEventListener("mousedown", accentMousedown);
-	}
-	if (accentColor) {
-		accentPreview.style.setProperty("--accent", accentColor);
-	} else {
-		accentPreview.style.setProperty("--accent", "#32ae62");
-	}
-};
-getAccent();
-
-const custom_accent = document.querySelector(".custom-accent");
-custom_accent.addEventListener("click", e => {
-	const color_picker = document.createElement("input");
-	color_picker.type = "color";
-	color_picker.click();
-	color_picker.addEventListener("change", async e => {
-		let color = color_picker.value;
-		if (color.charAt(0) !== "#") {
-			const rgb = color.match(/\d+/g);
-			const r = rgb[0];
-			const g = rgb[1];
-			const b = rgb[2];
-			color = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-			settings["accent"] = color;
-			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
-		} else {
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-			settings["accent"] = color;
-			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
-		}
-		accentPreview.style.setProperty("--accent", color);
-		accentPreview.classList.add("group", "cursor-pointer");
-		accentPreview.addEventListener("mousedown", accentMousedown);
-		window.parent.window.dispatchEvent(new Event("upd-accent"));
-	});
-});
-
-const getWallpapers = async () => {
-	const files = await window.parent.tb.fs.promises.readdir("/system/etc/terbium/wallpapers");
-	for (const file of files) {
-		const path = "/system/etc/terbium/wallpapers/" + file;
-		const data = URL.createObjectURL(new Blob([await window.parent.tb.fs.promises.readFile(path, "utf8")]));
-		const img_container = document.createElement("div");
-		img_container.classList.add("wallpaper-container");
-		const img = document.createElement("img");
-		img.src = `/fs/${path}`;
-		img.classList.add("wallpaper-option");
-		const delete_button = document.createElement("img");
-		delete_button.src = "/fs/apps/system/settings.tapp/delete.svg";
-		delete_button.classList.add("delete-wallpaper");
-		delete_button.addEventListener("click", e => {
-			window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8", (err, data) => {
-				if (err) return console.log(err);
-				data = JSON.parse(data);
-				if (data["wallpaper"] === path) {
-					tb_wallpaper.set("/assets/wallpapers/1.png");
-				}
-			});
-			window.parent.tb.fs.unlink(path, err => {
-				if (err) return console.log(err);
-				img_container.remove();
-			});
-		});
-		img_container.append(img);
-		img_container.append(delete_button);
-		document.querySelector(".wallpapers").append(img_container);
-		img.addEventListener("click", e => {
-			tb_wallpaper.set(path);
-		});
-	}
-	appendCustomWallpaper();
-};
-getWallpapers();
-
-const pfpEl = document.querySelector(".pfp");
-window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8", (err, data) => {
-	if (err) return console.log(err);
-	data = JSON.parse(data);
-	pfpEl.src = data["pfp"];
-});
-
-pfpEl.addEventListener("click", async e => {
-	const uploader = document.createElement("input");
-	uploader.type = "file";
-	uploader.accept = "img/*";
-	uploader.onchange = () => {
-		const files = uploader.files;
-		const file = files[0];
-		const reader = new FileReader();
-		reader.onload = () => {
-			tb.dialog.Cropper({
-				title: "Resize your Profile picture",
-				img: reader.result,
-				onOk: async img => {
-					if (await window.parent.tb.tauth.isTACC()) {
-						tb.dialog.Select({
-							title: "Do you want to upload this profile picture to your Terbium Account?",
-							options: [
-								{
-									text: "Yes",
-									value: "yes",
-								},
-								{
-									text: "No",
-									value: "no",
-								},
-							],
-							onOk: async choice => {
-								if (choice === "yes") {
-									await window.parent.tb.tauth.updateInfo({
-										pfp: img,
-									});
-								} else {
-									return;
-								}
-							},
-						});
-					}
-					const uSettings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"));
-					uSettings["pfp"] = img;
-					pfpEl.src = img;
-					await window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, JSON.stringify(uSettings));
-					window.parent.dispatchEvent(new Event("accUpd"));
-				},
-			});
-		};
-		reader.readAsDataURL(file);
-	};
-	uploader.click();
-});
-
-const usernameEl = document.querySelector(".username");
-usernameEl.addEventListener("input", async e => {
-	usernameEl.addEventListener("blur", async () => {
-		if (usernameEl.value !== JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"))["username"]) {
-			await window.parent.tb.system.users.renameUser(sessionStorage.getItem("currAcc"), usernameEl.value);
-		}
-	});
-});
-
-const permEl = document.querySelector(".perm");
-permEl.addEventListener("click", async () => {
-	const data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"));
-	if (data["password"] === false) {
-		await tb.dialog.Select({
-			title: "Enter the permission level you wish to set (Ex: Admin, User, Group, Public)",
-			options: [
-				{
-					text: "Admin",
-					value: "admin",
-				},
-				{
-					text: "User",
-					value: "user",
-				},
-				{
-					text: "Group",
-					value: "group",
-				},
-				{
-					text: "Public",
-					value: "public",
-				},
-			],
-			onOk: async perm => {
-				if (perm === data["perm"]) return;
-				data["perm"] = perm;
-				permEl.innerHTML = perm.charAt(0).toUpperCase() + perm.slice(1);
-				await window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, JSON.stringify(data));
-			},
-		});
-	} else {
-		await tb.dialog.Auth({
-			sudo: true,
-			title: "Authenticate to change your permissions",
-			defaultUsername: sessionStorage.getItem("currAcc"),
-			onOk: async (_username, password) => {
-				const pass = await tb.crypto(password);
-				if (pass === data["password"]) {
-					await tb.dialog.Select({
-						title: "Enter the permission level you wish to set (Ex: Admin, User, Group, Public)",
-						options: [
-							{
-								text: "Admin",
-								value: "admin",
-							},
-							{
-								text: "User",
-								value: "user",
-							},
-							{
-								text: "Group",
-								value: "group",
-							},
-							{
-								text: "Public",
-								value: "public",
-							},
-						],
-						onOk: async perm => {
-							if (perm === data["perm"]) return;
-							data["perm"] = perm;
-							permEl.innerHTML = perm.charAt(0).toUpperCase() + perm.slice(1);
-							await window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, JSON.stringify(data));
-						},
-					});
-				} else {
-					throw new Error("Incorrect Password");
-				}
-			},
-		});
-	}
-});
-
-const actype = document.querySelector(".actype");
-actype.addEventListener("click", async () => {
-	await tb.dialog.Select({
-		title: "Select Option",
-		options: [
-			{
-				text: "Link Terbium Cloud™ Account",
-				value: "cloud",
-			},
-			{
-				text: "Convert to Local Account",
-				value: "local",
-			},
-		],
-		onOk: async choice => {
-			switch (choice) {
-				case "cloud":
-					const res = await window.parent.tb.tauth.signIn();
-					actype.innerHTML = "Terbium Cloud\u2122 Account";
-					const currAcc = sessionStorage.getItem("currAcc");
-					sessionStorage.setItem("currAcc", res.data.user.name);
-					await window.parent.tb.tauth.sync.retreive();
-					sessionStorage.setItem("currAcc", currAcc);
-					const userinfo = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"));
-					userinfo["password"] = await window.parent.tb.crypto(res.data.user.password);
-					userinfo["perm"] = "admin";
-					await window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, JSON.stringify(userinfo));
-					await window.parent.tb.system.users.renameUser(sessionStorage.getItem("currAcc"), res.data.user.name);
-					break;
-				case "local":
-					window.parent.tb.dialog.Select({
-						title: "Save current settings to cloud before converting to local?",
-						options: [
-							{
-								text: "Yes",
-								value: "yes",
-							},
-							{
-								text: "No",
-								value: "no",
-							},
-						],
-						onOk: async val => {
-							if (val === "yes") {
-								await window.parent.tb.tauth.sync.upload();
-							} else {
-								return;
-							}
-						},
-					});
-					await window.parent.tb.tauth.signOut();
-					actype.innerHTML = "Local Account";
-					break;
-			}
-		},
-	});
-});
-
-window.parent.tb.fs.readFile(`/system/etc/terbium/taccs.json`, "utf8", (err, data) => {
-	if (err) actype.innerHTML = "Local Account";
-	const entries = JSON.parse(data);
-	const act = sessionStorage.getItem("currAcc");
-	try {
-		let isCloud = false;
-		if (Array.isArray(entries)) {
-			isCloud = entries.some(e => e && e.username === act);
-		} else if (entries && typeof entries === "object") {
-			isCloud = Object.values(entries).some(e => e && e.username === act);
-		}
-		actype.innerHTML = isCloud ? "Terbium Cloud\u2122 Account" : "Local Account";
-	} catch (e) {
-		actype.innerHTML = "Local Account";
-	}
-});
-
-window.parent.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8", (err, data) => {
-	if (err) return console.log(err);
-	data = JSON.parse(data);
-	usernameEl.value = data["username"];
-	permEl.innerHTML = data["perm"].charAt(0).toUpperCase() + data["perm"].slice(1);
-});
-
-const hostnameEl = document.querySelector(".hostname");
-hostnameEl.addEventListener("input", async e => {
-	hostnameEl.addEventListener("blur", async () => {
-		if (hostnameEl.value !== JSON.parse(await window.parent.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"))["host-name"]) {
-			window.parent.tb.fs.readFile("/system/etc/terbium/settings.json", "utf8", async (err, data) => {
-				if (err) return console.log(err);
-				data = JSON.parse(data);
-				data["host-name"] = hostnameEl.value;
-				await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(data));
-			});
-		}
-	});
-});
-
-window.parent.tb.fs.readFile("/system/etc/terbium/settings.json", "utf8", (err, data) => {
-	if (err) return console.log(err);
-	data = JSON.parse(data);
-	hostnameEl.value = data["host-name"];
-});
-
-const cords = document.querySelector(".cords");
-const saveCity = document.querySelector(".save-city");
-saveCity.addEventListener("click", e => {
-	window.parent.tb.fs.readFile("/system/etc/terbium/settings.json", "utf8", (err, data) => {
-		if (err) return console.log(err);
-		data = JSON.parse(data);
-		if (navigator.geolocation) {
-			navigator.geolocation.getCurrentPosition(
-				function (position) {
-					const latitude = position.coords.latitude;
-					const longitude = position.coords.longitude;
-					console.log(`${latitude},${longitude}`);
-					data["location"] = `${latitude},${longitude}`;
-					window.parent.dispatchEvent(new Event("updWeather"));
-					window.parent.tb.fs.writeFile("/system/etc/terbium/settings.json", JSON.stringify(data), err => {
-						if (err) return console.log(err);
-					});
-				},
-				function (error) {
-					console.error(`Error Occured: ${error.code}`);
-				},
-				{
-					enableHighAccuracy: true,
-					timeout: 5000,
-					maximumAge: 0,
-				},
-			);
-		}
-	});
-});
-
-const accountsButton = document.querySelector(".accounts");
-accountsButton.addEventListener("mousedown", e => {
-	tb_window.create({
-		title: "Accounts",
-		src: "/fs/apps/system/settings.tapp/accounts/index.html",
-		icon: "/fs/apps/system/settings.tapp/accounts/icon.svg",
-		size: {
-			width: 400,
-			height: 500,
-		},
-	});
-});
-
-const batteryPercentage = document.querySelector(".battery-percentage");
-(async () => {
-	let showBatteryPercentage = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"))["battery-percent"];
-	const realCheckbox = batteryPercentage.querySelector("input[type='checkbox']");
-	if (showBatteryPercentage) {
-		realCheckbox.checked = true;
-		const checkIcon = batteryPercentage.querySelector(".checkIcon");
-		checkIcon.classList.remove("opacity-0", "scale-85");
-	} else {
-		realCheckbox.checked = false;
-		const checkIcon = batteryPercentage.querySelector(".checkIcon");
-		checkIcon.classList.add("opacity-0", "scale-85");
-	}
-})();
-
-batteryPercentage.addEventListener("mousedown", async e => {
-	let data = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-	const realCheckbox = batteryPercentage.querySelector("input[type='checkbox']");
-	realCheckbox.checked = !realCheckbox.checked;
-	const checkIcon = batteryPercentage.querySelector(".checkIcon");
-	if (realCheckbox.checked) {
-		checkIcon.classList.remove("opacity-0", "scale-85");
-		tb.battery.showPercentage();
-	} else {
-		checkIcon.classList.add("opacity-0", "scale-85");
-		tb.battery.hidePercentage();
-	}
-	data["battery-percent"] = realCheckbox.checked;
-	window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(data));
-});
-
-const getBat = async () => {
-	const battery = await window.parent.tb.battery.canUse();
-	if (!battery) {
-		document.querySelector(".battery").remove();
-	}
-};
-getBat();
-
-const showCords = document.querySelector(".showCords");
-showCords.addEventListener("mousedown", async e => {
-	showCords.classList.add("opacity-0", "pointer-events-none");
-	cords.classList.remove("opacity-0");
-	const mouseup = () => {
-		showCords.classList.remove("opacity-0", "pointer-events-none");
-		cords.classList.add("opacity-0");
-		document.removeEventListener("mouseup", mouseup);
-	};
-	document.addEventListener("mouseup", mouseup);
-});
-
-async function exportSettings() {
-	let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-	let data = JSON.stringify(settings);
-	let blob = new Blob([data], { type: "application/json" });
-	let url = URL.createObjectURL(blob);
-	let a = document.createElement("a");
-	a.href = url;
-	a.download = "settings.json";
-	a.click();
+function styleNavButton(button, enabled) {
+if (!button) return;
+button.style.background = enabled ? "#4b8f4b" : "#ffffff14";
+button.style.color = enabled ? "#ffffff" : "#ffffff70";
+button.style.cursor = enabled ? "pointer" : "default";
 }
 
-const range = document.getElementById("blurRange");
-const pct = document.getElementById("blurPercent");
-async function render(initial) {
-	const settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
-	const v = initial ? settings.window.blurlevel : Number(range.value);
-	if (initial) range.value = v;
-	const mapped = Math.round((v / 50) * 100);
-	pct.textContent = mapped + "%";
-	const fill = (v / 50) * 100;
-	range.style.background = `linear-gradient(90deg,#60a5fa ${fill}%, rgba(255,255,255,0.12) ${fill}%)`;
-	range.dataset.mappedPercent = mapped;
-	if (initial) return;
-	settings.window.blurlevel = v;
-	window.parent.tb.fs.promises.writeFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, JSON.stringify(settings, null, 4), "utf8");
-	window.parent.dispatchEvent(new Event("upd-accent"));
+function updateTitlebarNavState() {
+const backBtn = getTitlebarEl("settings-nav-back");
+const forwardBtn = getTitlebarEl("settings-nav-forward");
+styleNavButton(backBtn, navHistory.length > 1);
+styleNavButton(forwardBtn, navFuture.length > 0);
 }
 
-render(true);
-range.addEventListener("input", () => render(false));
-
-const winAccent = document.querySelector(".winaccent-preview");
-const initWinAccent = async () => {
-	const defaultAccent = "#ffffff";
-	try {
-		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-		const current = settings.window && settings.window.winAccent ? settings.window.winAccent : defaultAccent;
-		winAccent.style.setProperty("--accent", current);
-		if (current !== defaultAccent) {
-			winAccent.classList.add("group", "cursor-pointer");
-			const resetHandler = async () => {
-				let s = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-				s.window = s.window || {};
-				s.window.winAccent = defaultAccent;
-				await window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(s));
-				winAccent.style.setProperty("--accent", defaultAccent);
-				winAccent.classList.remove("group", "cursor-pointer");
-				winAccent.removeEventListener("mousedown", resetHandler);
-				window.parent.dispatchEvent(new Event("upd-accent"));
-			};
-			winAccent.addEventListener("mousedown", resetHandler);
-		}
-	} catch (err) {
-		winAccent.style.setProperty("--accent", defaultAccent);
-	}
+function currentRoute() {
+if (homeScreen && !homeScreen.classList.contains("hidden")) {
+return { screen: "home" };
+}
+if (currentSearchTerm) {
+return {
+screen: "search",
+searchTerm: currentSearchTerm,
 };
-initWinAccent();
+}
+return {
+screen: "detail",
+categoryId: currentCategory?.id || "",
+viewId: currentViewId || "",
+};
+}
 
-const custom_waccent = document.querySelector(".custom-waccent");
-custom_waccent.addEventListener("click", e => {
-	const color_picker = document.createElement("input");
-	color_picker.type = "color";
-	color_picker.click();
-	color_picker.addEventListener("change", async e => {
-		let color = color_picker.value;
-		if (color.charAt(0) !== "#") {
-			const rgb = color.match(/\d+/g);
-			const r = rgb[0];
-			const g = rgb[1];
-			const b = rgb[2];
-			color = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-			settings["window"]["winAccent"] = color;
-			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
-			window.parent.dispatchEvent(new Event("upd-accent"));
-		} else {
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-			settings["window"]["winAccent"] = color;
-			window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings));
-			window.parent.dispatchEvent(new Event("upd-accent"));
-		}
-		winAccent.style.setProperty("--accent", color);
-		winAccent.classList.add("group", "cursor-pointer");
-		winAccent.addEventListener("mousedown", winAccentPrev);
-	});
+function sameRoute(a, b) {
+if (!a || !b) return false;
+return (
+a.screen === b.screen
+&& (a.categoryId || "") === (b.categoryId || "")
+&& (a.viewId || "") === (b.viewId || "")
+&& (a.searchTerm || "") === (b.searchTerm || "")
+);
+}
+
+function pushRoute(route) {
+const last = navHistory[navHistory.length - 1];
+if (!sameRoute(last, route)) {
+navHistory.push(route);
+}
+navFuture = [];
+updateTitlebarNavState();
+}
+
+async function navigateToRoute(route, opts = { push: true, reverse: false }) {
+if (!route) return;
+if (route.screen === "home") {
+currentSearchTerm = "";
+openHomeScreen();
+updateDetailTitle();
+} else if (route.screen === "search") {
+await openSearchResults(route.searchTerm || "", !!opts.reverse, !!opts.push);
+} else if (route.screen === "detail" && route.categoryId) {
+await openCategoryDetail(route.categoryId, route.viewId || undefined, !!opts.reverse, !!opts.push);
+}
+if (opts.push) {
+pushRoute(currentRoute());
+}
+}
+
+function bindTitlebarNav() {
+const backBtn = getTitlebarEl("settings-nav-back");
+const forwardBtn = getTitlebarEl("settings-nav-forward");
+const searchInput = getTitlebarEl("settings-nav-search");
+
+if (backBtn && !backBtn.dataset.boundSettingsNav) {
+backBtn.dataset.boundSettingsNav = "true";
+backBtn.addEventListener("click", async () => {
+if (navHistory.length <= 1) return;
+const current = navHistory.pop();
+if (current) navFuture.unshift(current);
+const previous = navHistory[navHistory.length - 1];
+if (!previous) return;
+await navigateToRoute(previous, { push: false, reverse: true });
+updateTitlebarNavState();
+});
+}
+
+if (forwardBtn && !forwardBtn.dataset.boundSettingsNav) {
+forwardBtn.dataset.boundSettingsNav = "true";
+forwardBtn.addEventListener("click", async () => {
+if (!navFuture.length) return;
+const next = navFuture.shift();
+if (!next) return;
+await navigateToRoute(next, { push: false, reverse: false });
+navHistory.push(next);
+updateTitlebarNavState();
+});
+}
+
+if (searchInput && !searchInput.dataset.boundSettingsNav) {
+searchInput.dataset.boundSettingsNav = "true";
+searchInput.addEventListener("keydown", async ev => {
+if (ev.key !== "Enter") return;
+const term = String(searchInput.value || "").trim();
+if (!term) {
+await navigateToRoute({ screen: "home" }, { push: true, reverse: true });
+return;
+}
+await navigateToRoute({ screen: "search", searchTerm: term }, { push: true, reverse: false });
+});
+}
+
+updateTitlebarNavState();
+}
+
+function readFileFs(path, encoding = "utf8") {
+return new Promise((resolve, reject) => {
+if (!fsApi || typeof fsApi.readFile !== "function") {
+reject(new Error("tb.fs.readFile unavailable"));
+return;
+}
+fsApi.readFile(path, encoding, (err, data) => {
+if (err) {
+reject(err);
+return;
+}
+resolve(data);
+});
+});
+}
+
+function writeFileFs(path, value, encoding = "utf8") {
+return new Promise((resolve, reject) => {
+if (!fsApi || typeof fsApi.writeFile !== "function") {
+reject(new Error("tb.fs.writeFile unavailable"));
+return;
+}
+fsApi.writeFile(path, value, encoding, err => {
+if (err) {
+reject(err);
+return;
+}
+resolve();
+});
+});
+}
+
+async function readDirFs(path) {
+if (fsApi && typeof fsApi.readDir === "function") {
+return new Promise((resolve, reject) => {
+fsApi.readDir(path, (err, files) => {
+if (err) return reject(err);
+resolve(files || []);
+});
+});
+}
+if (fsApi && typeof fsApi.readdir === "function") {
+return new Promise((resolve, reject) => {
+fsApi.readdir(path, (err, files) => {
+if (err) return reject(err);
+resolve(files || []);
+});
+});
+}
+if (fsApi?.promises?.readdir) {
+return fsApi.promises.readdir(path);
+}
+throw new Error("tb.fs.readDir/readdir unavailable");
+}
+
+function mapIcon(iconValue) {
+const icon = String(iconValue || "").toLowerCase();
+if (icon.includes("palette") || icon.includes("paint") || icon.includes("brush")) return "brush";
+if (icon.includes("internet") || icon.includes("network") || icon.includes("public") || icon.includes("globe")) return "globe";
+if (icon.includes("account") || icon.includes("person") || icon.includes("user")) return "account";
+if (icon.includes("app")) return "apps";
+return "settings";
+}
+
+function orderCategory(a, b) {
+const aTitle = String(a?.title || "").toLowerCase();
+const bTitle = String(b?.title || "").toLowerCase();
+const ai = CAT_ORDER.findIndex(v => aTitle.includes(v));
+const bi = CAT_ORDER.findIndex(v => bTitle.includes(v));
+const av = ai === -1 ? 999 : ai;
+const bv = bi === -1 ? 999 : bi;
+if (av !== bv) return av - bv;
+return aTitle.localeCompare(bTitle);
+}
+
+function normalizeCategoryFromDoc(doc, sourcePath) {
+const rec = Array.isArray(doc?.ui?.recommendedOptions) ? doc.ui.recommendedOptions : [];
+const views = Array.isArray(doc?.ui?.views) ? doc.ui.views : [];
+const quickLinks = rec.slice(0, 3).map((opt, index) => ({
+id: opt.id || `${doc?.manifest?.id || sourcePath}-opt-${index}`,
+label: opt.text || opt.id || `Option ${index + 1}`,
+view: opt.view || "",
+action: opt.action || "",
+}));
+return {
+id: doc?.manifest?.id || sourcePath,
+title: doc?.manifest?.title || sourcePath.split("/").pop()?.replace(/\.tsl$/i, "") || "Settings",
+icon: mapIcon(doc?.manifest?.icon),
+path: sourcePath,
+document: doc,
+views,
+quickLinks,
+};
+}
+
+function openDetailScreen(reverse = false) {
+if (!homeScreen || !detailScreen) return;
+homeScreen.classList.remove("entering");
+homeScreen.classList.add("leaving");
+detailScreen.classList.remove("hidden", "leaving", "reverse");
+detailScreen.classList.add("entering");
+if (reverse) detailScreen.classList.add("reverse");
+window.setTimeout(() => {
+homeScreen.classList.add("hidden");
+homeScreen.classList.remove("leaving");
+detailScreen.classList.remove("entering");
+}, 230);
+}
+
+function openHomeScreen() {
+if (!homeScreen || !detailScreen) return;
+detailScreen.classList.add("leaving", "reverse");
+homeScreen.classList.remove("hidden", "leaving");
+homeScreen.classList.add("entering");
+window.setTimeout(() => {
+detailScreen.classList.add("hidden");
+detailScreen.classList.remove("leaving", "reverse", "entering");
+homeScreen.classList.remove("entering");
+}, 230);
+}
+
+async function ensureRecentFile() {
+try {
+const raw = await readFileFs(RECENT_PATH, "utf8");
+const parsed = JSON.parse(String(raw || "[]"));
+recentItems = Array.isArray(parsed) ? parsed.slice(0, MAX_RECENT_ITEMS) : [];
+} catch {
+recentItems = [];
+await writeFileFs(RECENT_PATH, JSON.stringify([], null, 2), "utf8");
+}
+}
+
+async function saveRecentFile() {
+await writeFileFs(RECENT_PATH, JSON.stringify(recentItems.slice(0, MAX_RECENT_ITEMS), null, 2), "utf8");
+}
+
+async function pushRecent(item) {
+const key = `${item.categoryId}|${item.optionId}`;
+recentItems = [item, ...recentItems.filter(it => `${it.categoryId}|${it.optionId}` !== key)].slice(0, MAX_RECENT_ITEMS);
+await saveRecentFile();
+buildRecentlyVisited();
+}
+
+function buildRecentlyVisited() {
+if (!recentlyVisitedEl) return;
+const fallback = categoryModels.slice(0, MAX_RECENT_ITEMS).map(cat => ({
+label: cat.title,
+icon: cat.icon,
+categoryId: cat.id,
+optionId: "",
+viewId: "",
+}));
+const source = recentItems.length ? recentItems : fallback;
+recentlyVisitedEl.innerHTML = source
+.map(
+item => `
+<button type="button" class="recent-chip" data-category-id="${item.categoryId || ""}" data-option-id="${item.optionId || ""}" data-view-id="${item.viewId || ""}" aria-label="${item.label}">
+<span class="icon-spot">${iconSet[item.icon] || iconSet.settings}</span>
+<span>${item.label}</span>
+</button>
+`,
+)
+.join("");
+
+recentlyVisitedEl.querySelectorAll(".recent-chip").forEach(btn => {
+btn.addEventListener("click", () => {
+const categoryId = btn.getAttribute("data-category-id") || "";
+const viewId = btn.getAttribute("data-view-id") || "";
+if (!categoryId) return;
+navigateToRoute({ screen: "detail", categoryId, viewId: viewId || undefined }, { push: true, reverse: true });
+});
+});
+}
+
+function buildCategoryGrid() {
+if (!categoryGridEl) return;
+categoryGridEl.innerHTML = categoryModels
+.map(
+cat => `
+<article class="settings-card" data-category-open="${cat.id}">
+<header class="settings-card-header">
+<span class="icon-spot">${iconSet[cat.icon] || iconSet.settings}</span>
+<h3 class="settings-card-title">${cat.title}</h3>
+</header>
+<div class="flex flex-col">
+${cat.quickLinks
+.map(
+link => `
+<button type="button" class="quick-link" data-category-id="${cat.id}" data-option-id="${link.id}" data-view-id="${link.view || ""}" aria-label="${link.label}">
+<span class="link-icon">${iconSet.chain}</span>
+<span>${link.label}</span>
+</button>
+`,
+)
+.join("")}
+</div>
+</article>
+`,
+)
+.join("");
+
+categoryGridEl.querySelectorAll("[data-category-open]").forEach(el => {
+el.addEventListener("click", ev => {
+if (ev.target instanceof HTMLElement && ev.target.closest(".quick-link")) return;
+const categoryId = el.getAttribute("data-category-open") || "";
+if (!categoryId) return;
+navigateToRoute({ screen: "detail", categoryId }, { push: true, reverse: false });
+});
 });
 
-async function convertTBSIF() {
-	const input = document.createElement("input");
-	input.type = "file";
-	input.accept = ".tbs";
-	input.onchange = async () => {
-		let file = input.files[0];
-		let reader = new FileReader();
-		reader.onload = async () => {
-			let tbs_config = reader.result;
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-			let syssettings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.parent.tb.user.username()}/settings.json`, "utf8"));
-			if (tbs_config.theme && tbs_config.theme !== "default") {
-				syssettings.theme = tbs_config.theme;
-			}
-			if (tbs_config.wallpaper && tbs_config.wallpaper !== "default" && settings.wallpaper !== "/assets/wallpapers/1.png") {
-				settings.wallpaper = tbs_config.wallpaper;
-			}
-			if (tbs_config.wallpaperFill && tbs_config.wallpaperFill !== "default") {
-				settings.wallpaperMode = tbs_config.wallpaperFill === "contain" ? "cover" : "contain";
-			}
-			if (tbs_config.shadow === "yes") {
-				settings["system-blur"] = true;
-			}
-			await window.parent.tb.fs.promises.writeFile(`/home/${await window.parent.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
-			await window.parent.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(syssettings, null, 2), "utf8");
-			parent.window.location.reload();
-		};
-		reader.readAsText(file);
-	};
-	input.click();
+categoryGridEl.querySelectorAll(".quick-link").forEach(btn => {
+btn.addEventListener("click", async ev => {
+ev.stopPropagation();
+const categoryId = btn.getAttribute("data-category-id") || "";
+const optionId = btn.getAttribute("data-option-id") || "";
+const viewId = btn.getAttribute("data-view-id") || "";
+if (!categoryId) return;
+
+await navigateToRoute({ screen: "detail", categoryId, viewId: viewId || undefined }, { push: true, reverse: false });
+
+const category = categoryModels.find(cat => cat.id === categoryId);
+const option = category?.quickLinks.find(it => it.id === optionId);
+if (!category || !option) return;
+await pushRecent({ categoryId, optionId, viewId: option.view || "", label: option.label, icon: category.icon });
+});
+});
 }
 
-const animationCheckbox = document.querySelector(".eruda-check");
-const eruda = () => {
-	const realCheckbox = animationCheckbox.querySelector("input[type='checkbox']");
-	const checkIcon = animationCheckbox.querySelector(".checkIcon");
-	const setState = enabled => {
-		realCheckbox.checked = enabled;
-		if (enabled) {
-			checkIcon.classList.remove("opacity-0", "scale-85");
-			localStorage.setItem("eruda", "true");
-		} else {
-			checkIcon.classList.add("opacity-0", "scale-85");
-			localStorage.removeItem("eruda");
-		}
-	};
-	setState(localStorage.getItem("eruda") === "true");
-	animationCheckbox.addEventListener("mousedown", () => {
-		setState(!realCheckbox.checked);
-	});
-};
-eruda();
+function getCategoryById(categoryId) {
+return categoryModels.find(cat => cat.id === categoryId) || null;
+}
 
-const windowOptimizationsCheckbox = document.querySelector(".window-optimizations-check");
-const setupWindowOptimizations = async () => {
-	const realCheckbox = windowOptimizationsCheckbox.querySelector("input[type='checkbox']");
-	const checkIcon = windowOptimizationsCheckbox.querySelector(".checkIcon");
-	const setState = async (enabled, forceWrite = false) => {
-		realCheckbox.checked = enabled;
-		if (enabled) {
-			checkIcon.classList.remove("opacity-0", "scale-85");
-		} else {
-			checkIcon.classList.add("opacity-0", "scale-85");
-		}
-		try {
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-			if (forceWrite || settings.windowOptimizations !== enabled) {
-				settings.windowOptimizations = enabled;
-				await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
-			}
-		} catch (err) {
-			if (forceWrite) {
-				const base = { windowOptimizations: enabled };
-				await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(base, null, 2), "utf8");
-			}
-		}
-	};
-	try {
-		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-		setState(settings.windowOptimizations ?? true, false);
-	} catch (err) {
-		console.error("Failed to load window optimization settings:", err);
-		setState(true, false);
-	}
-	windowOptimizationsCheckbox.addEventListener("mousedown", async () => {
-		await setState(!realCheckbox.checked, true);
-	});
-};
-setupWindowOptimizations();
+function selectViewInSidebar(viewId) {
+if (!detailSidebarEl) return;
+detailSidebarEl.querySelectorAll(".detail-nav-btn").forEach(btn => {
+const on = btn.getAttribute("data-view-id") === viewId;
+btn.classList.toggle("active", on);
+});
+}
 
-const fpsCounterCheckbox = document.querySelector(".fps-counter-check");
-const setupFPSCounter = async () => {
-	const realCheckbox = fpsCounterCheckbox.querySelector("input[type='checkbox']");
-	const checkIcon = fpsCounterCheckbox.querySelector(".checkIcon");
-	const setState = async (enabled, forceWrite = false) => {
-		realCheckbox.checked = enabled;
-		if (enabled) {
-			checkIcon.classList.remove("opacity-0", "scale-85");
-		} else {
-			checkIcon.classList.add("opacity-0", "scale-85");
-		}
-		try {
-			let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-			if (forceWrite || settings.showFPS !== enabled) {
-				settings.showFPS = enabled;
-				await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
-			}
-		} catch (err) {
-			if (forceWrite) {
-				const base = { showFPS: enabled };
-				await window.parent.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(base, null, 2), "utf8");
-			}
-		}
-		window.parent.dispatchEvent(new CustomEvent("settings-changed", { detail: { showFPS: enabled } }));
-	};
+function parseCategoryContext(category) {
+const title = String(category.title || "").toLowerCase();
+if (title.includes("internet")) return "internet";
+if (title.includes("account")) return "account";
+if (title.includes("appearance")) return "appearance";
+if (title.includes("general")) return "general";
+if (title.includes("apps")) return "apps";
+return "generic";
+}
 
-	try {
-		let settings = JSON.parse(await window.parent.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-		setState(settings.showFPS ?? false, false);
-	} catch (err) {
-		console.error("Failed to load FPS counter settings:", err);
-		setState(false, false);
-	}
+function updateDetailTitle() {
+if (!detailTitleEl) return;
+if (currentSearchTerm) {
+detailTitleEl.textContent = `Searching for: ${currentSearchTerm}`;
+return;
+}
+detailTitleEl.textContent = currentCategory?.title || "Settings";
+}
 
-	fpsCounterCheckbox.addEventListener("mousedown", async () => {
-		await setState(!realCheckbox.checked, true);
-	});
-};
-setupFPSCounter();
+function scoreTextMatch(textValue, searchTerm) {
+const text = String(textValue || "").toLowerCase();
+const term = String(searchTerm || "").toLowerCase();
+if (!text || !term) return 0;
+if (text === term) return 120;
+if (text.startsWith(term)) return 90;
+if (text.includes(term)) return 65;
+return 0;
+}
 
-const realCheckbox = animationCheckbox.querySelector("input[type='checkbox']");
-realCheckbox.checked = !realCheckbox.checked;
-const checkIcon = animationCheckbox.querySelector(".checkIcon");
-if (realCheckbox.checked) {
-	checkIcon.classList.remove("opacity-0", "scale-85");
+function findBestMatches(searchTerm) {
+const term = String(searchTerm || "").trim().toLowerCase();
+if (!term) return [];
+
+const hits = [];
+for (const category of categoryModels) {
+for (const quick of category.quickLinks) {
+const quickScore = scoreTextMatch(quick.label, term);
+const viewScore = scoreTextMatch(quick.view, term);
+const catScore = scoreTextMatch(category.title, term);
+const score = quickScore + Math.floor(viewScore / 3) + Math.floor(catScore / 3);
+if (!score) continue;
+hits.push({
+score,
+kind: "Recommended",
+label: quick.label || quick.id || "Setting",
+categoryId: category.id,
+categoryTitle: category.title,
+viewId: quick.view || category.views[0]?.id || "",
+icon: category.icon,
+});
+}
+
+for (const view of category.views) {
+const viewTitle = view.title || view.id || "";
+const viewScore = scoreTextMatch(viewTitle, term);
+let sectionBoost = 0;
+for (const section of view.sections || []) {
+sectionBoost = Math.max(sectionBoost, Math.floor(scoreTextMatch(section.title, term) / 2));
+for (const control of section.controls || []) {
+sectionBoost = Math.max(sectionBoost, Math.floor(scoreTextMatch(control.label, term) / 2));
+}
+}
+const catScore = Math.floor(scoreTextMatch(category.title, term) / 3);
+const score = viewScore + sectionBoost + catScore;
+if (!score) continue;
+hits.push({
+score,
+kind: "View",
+label: viewTitle,
+categoryId: category.id,
+categoryTitle: category.title,
+viewId: view.id || category.views[0]?.id || "",
+icon: category.icon,
+});
+}
+}
+
+return hits
+.sort((a, b) => b.score - a.score || a.label.localeCompare(b.label))
+.filter((hit, index, arr) => arr.findIndex(other => other.categoryId === hit.categoryId && other.viewId === hit.viewId && other.label === hit.label) === index)
+.slice(0, 12);
+}
+
+async function openSearchResults(searchTerm, reverse = false, shouldPushHistory = true) {
+const normalized = String(searchTerm || "").trim();
+if (!normalized) {
+currentSearchTerm = "";
+return;
+}
+currentCategory = null;
+currentViewId = "";
+currentSearchTerm = normalized;
+updateDetailTitle();
+
+const matches = findBestMatches(normalized);
+if (detailSidebarEl) {
+detailSidebarEl.innerHTML = `
+<div class="search-side-panel">
+<div class="search-side-label">Best Matches</div>
+<div class="search-side-count">${matches.length} result${matches.length === 1 ? "" : "s"}</div>
+</div>
+`;
+}
+
+if (detailContentEl) {
+if (!matches.length) {
+detailContentEl.innerHTML = `<p class="detail-control-value">No settings matched "${normalized}".</p>`;
 } else {
-	checkIcon.classList.add("opacity-0", "scale-85");
+detailContentEl.innerHTML = matches
+.map(match => `
+<button type="button" class="search-result-card" data-open-category="${match.categoryId}" data-open-view="${match.viewId}">
+<span class="search-result-icon">${iconSet[match.icon] || iconSet.settings}</span>
+<span class="search-result-body">
+<span class="search-result-title">${match.label}</span>
+<span class="search-result-meta">${match.kind} in ${match.categoryTitle}</span>
+</span>
+</button>
+`)
+.join("");
+
+detailContentEl.querySelectorAll("[data-open-category]").forEach(btn => {
+btn.addEventListener("click", async () => {
+const categoryId = btn.getAttribute("data-open-category") || "";
+const viewId = btn.getAttribute("data-open-view") || "";
+if (!categoryId) return;
+await navigateToRoute({ screen: "detail", categoryId, viewId }, { push: true, reverse: false });
+});
+});
 }
+}
+
+openDetailScreen(reverse);
+if (shouldPushHistory) pushRoute(currentRoute());
+}
+
+async function loadWispServers() {
+try {
+const raw = await readFileFs(WISP_PATH, "utf8");
+const data = JSON.parse(String(raw || "[]"));
+return Array.isArray(data) ? data : [];
+} catch {
+return [];
+}
+}
+
+async function saveWispServers(list) {
+await writeFileFs(WISP_PATH, JSON.stringify(list, null, 2), "utf8");
+}
+
+function renderGenericView(view) {
+const sections = Array.isArray(view?.sections) ? view.sections : [];
+if (!sections.length) return `<p class="detail-control-value">No controls for this view yet.</p>`;
+return sections
+.map(section => {
+const controls = Array.isArray(section.controls) ? section.controls : [];
+const controlHtml = controls
+.map(control => {
+const ctype = String(control.type || "").toLowerCase();
+if (ctype === "button") return `<button type="button" class="detail-action">${control.label || "Run Action"}</button>`;
+if (ctype === "text") return `<div><div class="detail-control-text">${control.label || "Text"}</div><div class="detail-control-value">${control.bind || "No binding"}</div></div>`;
+if (ctype === "toggle" || ctype === "select" || ctype === "slider" || ctype === "list") return `<div><div class="detail-control-text">${control.label || control.type}</div><div class="detail-control-value">${control.bind || "No binding"}</div></div>`;
+return `<div><div class="detail-control-text">${control.label || control.type}</div></div>`;
+})
+.join("");
+return `<section><h3 class="detail-section-title">${section.title || "Section"}</h3><div class="flex flex-col gap-3">${controlHtml}</div></section>`;
+})
+.join("");
+}
+
+function serverStatusFromLatency(latency) {
+if (latency === null || typeof latency === "undefined") return { online: false, label: "999ms" };
+if (latency > 800) return { online: false, label: `${latency}ms` };
+return { online: true, label: `${latency}ms` };
+}
+
+async function measureWsLatency(url) {
+return new Promise(resolve => {
+try {
+const ws = new WebSocket(url);
+const started = Date.now();
+const finish = val => {
+try { ws.close(); } catch { /* ignore */ }
+resolve(val);
+};
+const timer = window.setTimeout(() => finish(null), 1800);
+ws.addEventListener("open", () => {
+window.clearTimeout(timer);
+finish(Date.now() - started);
+});
+ws.addEventListener("error", () => {
+window.clearTimeout(timer);
+finish(null);
+});
+} catch {
+resolve(null);
+}
+});
+}
+
+async function renderInternetWispView() {
+const list = await loadWispServers();
+const rows = await Promise.all(
+list.map(async item => {
+const latency = await measureWsLatency(item.id);
+const state = serverStatusFromLatency(latency);
+const name = item.name || "Server Name";
+const address = item.id || "wss://example.com/wisp";
+return `
+<div class="server-card-wrap">
+<div class="server-card ${state.online ? "is-online" : "is-offline"}">
+<span class="server-icon">${iconSet.wifi}</span>
+<div>
+<div class="server-main-title">${name}</div>
+<div class="server-latency">${state.label}</div>
+<div class="server-subtext">${address}</div>
+</div>
+</div>
+<button type="button" class="server-delete" data-del-wisp="${name}">${iconSet.trash}</button>
+</div>
+`;
+}),
+);
+return `${rows.join("")}<button type="button" class="detail-action" data-add-wisp="true"><span class="link-icon">${iconSet.settings}</span><span>Add Wisp Server</span></button>`;
+}
+
+async function renderDetailContent(category, viewId) {
+if (!detailContentEl) return;
+const view = category.views.find(v => v.id === viewId) || category.views[0];
+if (!view) {
+detailContentEl.innerHTML = `<p class="detail-control-value">No view available.</p>`;
+return;
+}
+const context = parseCategoryContext(category);
+if (context === "internet" && String(view.id || "") === "wisp") {
+detailContentEl.innerHTML = await renderInternetWispView();
+wireWispActions(category, view);
+return;
+}
+detailContentEl.innerHTML = renderGenericView(view);
+}
+
+function wireWispActions(category, view) {
+if (!detailContentEl) return;
+detailContentEl.querySelectorAll("[data-del-wisp]").forEach(btn => {
+btn.addEventListener("click", async () => {
+const target = btn.getAttribute("data-del-wisp") || "";
+if (!target) return;
+const list = await loadWispServers();
+const next = list.filter(item => item.name !== target);
+await saveWispServers(next);
+await renderDetailContent(category, view.id || "");
+});
+});
+
+const addBtn = detailContentEl.querySelector("[data-add-wisp='true']");
+if (addBtn) {
+addBtn.addEventListener("click", async () => {
+if (!window.tb?.dialog?.Message) return;
+const name = await new Promise(resolve => window.tb.dialog.Message({ title: "Enter Wisp server name", onOk: value => resolve(value) }));
+if (!name) return;
+const addr = await new Promise(resolve => window.tb.dialog.Message({ title: "Enter Wisp socket URL", onOk: value => resolve(value) }));
+if (!addr) return;
+const list = await loadWispServers();
+list.push({ id: String(addr), name: String(name) });
+await saveWispServers(list);
+await renderDetailContent(category, view.id || "");
+});
+}
+}
+
+function renderDetailSidebar(category, activeViewId) {
+if (!detailSidebarEl) return;
+detailSidebarEl.innerHTML = category.views
+.map(
+view => `
+<button type="button" class="detail-nav-btn ${view.id === activeViewId ? "active" : ""}" data-view-id="${view.id}">${view.title || view.id}</button>
+`,
+)
+.join("");
+
+detailSidebarEl.querySelectorAll(".detail-nav-btn").forEach(btn => {
+btn.addEventListener("click", async () => {
+const viewId = btn.getAttribute("data-view-id") || "";
+if (!viewId || !currentCategory) return;
+currentViewId = viewId;
+selectViewInSidebar(viewId);
+await renderDetailContent(currentCategory, viewId);
+pushRoute(currentRoute());
+});
+});
+}
+
+async function openCategoryDetail(categoryId, preferredViewId, reverse = false, shouldPushHistory = true) {
+const category = getCategoryById(categoryId);
+if (!category) return;
+const selectedView = category.views.find(v => v.id === preferredViewId) ? preferredViewId : category.views[0]?.id || "";
+if (!selectedView) return;
+currentCategory = category;
+currentViewId = selectedView;
+currentSearchTerm = "";
+updateDetailTitle();
+renderDetailSidebar(category, selectedView);
+await renderDetailContent(category, selectedView);
+openDetailScreen(reverse);
+if (shouldPushHistory) pushRoute(currentRoute());
+await pushRecent({ categoryId: category.id, optionId: "", viewId: selectedView, label: category.title, icon: category.icon });
+}
+
+async function loadTslCategories() {
+if (!parser || typeof parser.parseTSL !== "function") throw new Error("window.tb.system.TSLParser unavailable");
+const entries = await readDirFs(SETTINGS_DIR);
+const tslFiles = entries.filter(name => typeof name === "string" && name.toLowerCase().endsWith(".tsl") && name.toLowerCase() !== "recent.json").sort();
+const docs = await Promise.all(
+tslFiles.map(async file => {
+const fullPath = `${SETTINGS_DIR}/${file}`;
+const doc = await parser.parseTSL(fullPath);
+return normalizeCategoryFromDoc(doc, fullPath);
+}),
+);
+categoryModels = docs.filter(cat => cat.quickLinks.length > 0 && cat.views.length > 0).sort(orderCategory);
+}
+
+async function init() {
+try {
+await loadTslCategories();
+await ensureRecentFile();
+buildRecentlyVisited();
+buildCategoryGrid();
+pushRoute({ screen: "home" });
+bindTitlebarNav();
+window.setTimeout(bindTitlebarNav, 250);
+window.setTimeout(bindTitlebarNav, 1000);
+} catch (err) {
+console.error("Failed to initialize settings UI", err);
+}
+}
+
+void init();

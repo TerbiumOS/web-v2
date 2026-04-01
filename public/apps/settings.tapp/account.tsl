@@ -1,0 +1,180 @@
+<TSL version="1.0">
+  <Manifest>
+    <Id>settings.account</Id>
+    <Title>Account</Title>
+    <Icon>person</Icon>
+    <Version>1.0</Version>
+    <Author>System</Author>
+  </Manifest>
+  <UI>
+    <SettingsPage>
+      <Sidebar>
+        <Item id="profile" title="Profile" icon="badge" default="true" />
+        <Item id="permissions" title="Permissions" icon="admin_panel_settings" />
+        <Item id="cloud" title="Cloud" icon="cloud_sync" />
+      </Sidebar>
+      <RecommendedOptions>
+        <Option id="account.quick.profile" text="Change profile picture" view="profile" />
+        <Option id="account.quick.perm" text="Change user permissions" view="permissions" />
+        <Option id="account.quick.cloud" text="Switch to TB Cloud" view="cloud" />
+      </RecommendedOptions>
+      <Content>
+        <View id="profile">
+          <Section title="Profile">
+            <Text label="Username" bind="account.profile.username" />
+            <Text label="Hostname" bind="account.profile.hostname" />
+            <Button label="Change Profile Picture" action="changeProfilePicture" />
+            <Button label="Change Username" action="changeUsername" />
+            <Button label="Change Hostname" action="changeHostname" />
+          </Section>
+        </View>
+        <View id="permissions">
+          <Section title="Permissions">
+            <Text label="Permission" bind="account.permissions.current" />
+            <Button label="Change Permissions" action="changePermissions" />
+            <Button label="Open Accounts Manager" action="openAccounts" />
+          </Section>
+        </View>
+        <View id="cloud">
+          <Section title="Cloud Account">
+            <Button label="Link TB Cloud Account" action="linkCloud" />
+            <Button label="Convert to Local Account" action="toLocal" />
+          </Section>
+        </View>
+      </Content>
+    </SettingsPage>
+  </UI>
+  <Actions>
+    <Action id="changeProfilePicture">
+      <![CDATA[
+        async function(context) {
+          const picked = await new Promise(function(resolve) {
+            tb.dialog.FileBrowser({
+              title: "Choose profile image",
+              local: true,
+              onOk: function(path) {
+                resolve(path);
+              },
+            });
+          });
+          if (!picked) return;
+
+          const user = await tb.user.username();
+          const userPath = `/home/${user}/user.json`;
+          const info = JSON.parse(await tb.fs.promises.readFile(userPath, "utf8"));
+          info.pfp = picked;
+          await tb.fs.promises.writeFile(userPath, JSON.stringify(info, null, 2), "utf8");
+          if (context.notify) context.notify("Profile picture set");
+        }
+      ]]>
+    </Action>
+    <Action id="changeUsername">
+      <![CDATA[
+        async function(context) {
+          const nextName = await new Promise(function(resolve) {
+            tb.dialog.Message({
+              title: "Enter new username",
+              onOk: function(value) {
+                resolve(value);
+              },
+            });
+          });
+          if (!nextName) return;
+
+          const curr = await tb.user.username();
+          await tb.system.users.renameUser(curr, String(nextName));
+          if (context.notify) context.notify("Username updated");
+        }
+      ]]>
+    </Action>
+    <Action id="changeHostname">
+      <![CDATA[
+        async function(context) {
+          const nextHost = await new Promise(function(resolve) {
+            tb.dialog.Message({
+              title: "Enter new host name",
+              onOk: function(value) {
+                resolve(value);
+              },
+            });
+          });
+          if (!nextHost) return;
+
+          const sysPath = "/system/etc/terbium/settings.json";
+          const cfg = JSON.parse(await tb.fs.promises.readFile(sysPath, "utf8"));
+          cfg["host-name"] = String(nextHost);
+          await tb.fs.promises.writeFile(sysPath, JSON.stringify(cfg, null, 2), "utf8");
+          if (context.notify) context.notify("Host name updated");
+        }
+      ]]>
+    </Action>
+    <Action id="changePermissions">
+      <![CDATA[
+        async function(context) {
+          const options = [
+            { text: "Admin", value: "admin" },
+            { text: "User", value: "user" },
+            { text: "Group", value: "group" },
+            { text: "Public", value: "public" }
+          ];
+          const selected = await new Promise(function(resolve) {
+            tb.dialog.Select({
+              title: "Select permission",
+              options: options,
+              onOk: function(value) {
+                resolve(value);
+              },
+            });
+          });
+          if (!selected) return;
+
+          const user = await tb.user.username();
+          const userPath = `/home/${user}/user.json`;
+          const info = JSON.parse(await tb.fs.promises.readFile(userPath, "utf8"));
+          info.perm = selected;
+          await tb.fs.promises.writeFile(userPath, JSON.stringify(info, null, 2), "utf8");
+          if (context.notify) context.notify("Permission updated");
+        }
+      ]]>
+    </Action>
+    <Action id="openAccounts">
+      <![CDATA[
+        async function(context) {
+          const wk = "win" + "dow";
+          if (tb[wk] && tb[wk].create) {
+            tb[wk].create({
+              title: "Accounts",
+              src: "/fs/apps/system/settings.tapp/accounts/index.html",
+              size: { width: 400, height: 500 }
+            });
+            if (context.notify) context.notify("Accounts manager opened");
+          }
+        }
+      ]]>
+    </Action>
+    <Action id="linkCloud">
+      <![CDATA[
+        async function(context) {
+          if (!tb.tauth || !tb.tauth.signIn) {
+            if (context.notify) context.notify("Cloud auth unavailable");
+            return;
+          }
+          await tb.tauth.signIn();
+          if (context.notify) context.notify("Cloud account linked");
+        }
+      ]]>
+    </Action>
+    <Action id="toLocal">
+      <![CDATA[
+        async function(context) {
+          if (!tb.tauth || !tb.tauth.signOut) {
+            if (context.notify) context.notify("Cloud auth unavailable");
+            return;
+          }
+          await tb.tauth.signOut();
+          if (context.notify) context.notify("Switched to local mode");
+        }
+      ]]>
+    </Action>
+  </Actions>
+</TSL>

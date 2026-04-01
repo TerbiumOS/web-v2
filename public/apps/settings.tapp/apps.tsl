@@ -1,0 +1,76 @@
+<TSL version="1.0">
+  <Manifest>
+    <Id>settings.apps</Id>
+    <Title>Apps</Title>
+    <Icon>apps</Icon>
+    <Version>1.0</Version>
+    <Author>System</Author>
+  </Manifest>
+  <UI>
+    <SettingsPage>
+      <Sidebar>
+        <Item id="installed" title="Installed Apps" icon="inventory_2" default="true" />
+        <Item id="storage" title="Storage" icon="storage" />
+        <Item id="defaults" title="Default Apps" icon="app_settings_alt" />
+      </Sidebar>
+      <RecommendedOptions>
+        <Option id="apps.quick.manage" text="Manage installed apps" view="installed" />
+        <Option id="apps.quick.storage" text="Manage storage" view="storage" />
+        <Option id="apps.quick.defaults" text="Change default apps" view="defaults" />
+      </RecommendedOptions>
+      <Content>
+        <View id="installed">
+          <Section title="Installed Apps">
+            <Text label="Status" bind="apps.installed.status" />
+            <Button label="Open App Store" action="openAppStore" />
+          </Section>
+        </View>
+        <View id="storage">
+          <Section title="Storage">
+            <Text label="Status" bind="apps.storage.status" />
+            <Button label="Open File Manager" action="openFileManager" />
+          </Section>
+        </View>
+        <View id="defaults">
+          <Section title="Default Apps">
+            <Text label="Status" bind="apps.defaults.status" />
+            <Button label="Configure Defaults" action="configureDefaults" />
+          </Section>
+        </View>
+      </Content>
+    </SettingsPage>
+  </UI>
+  <Actions>
+    <Action id="openAppStore">
+      <![CDATA[
+        async function(context) {
+          if (tb.app && tb.app.open) {
+            await tb.app.open("app store.tapp");
+            if (context.notify) context.notify("App Store opened");
+            return;
+          }
+          if (context.notify) context.notify("App management is a stub for now");
+        }
+      ]]>
+    </Action>
+    <Action id="openFileManager">
+      <![CDATA[
+        async function(context) {
+          if (tb.app && tb.app.open) {
+            await tb.app.open("files.tapp");
+            if (context.notify) context.notify("File manager opened");
+            return;
+          }
+          if (context.notify) context.notify("Storage tools are a stub for now");
+        }
+      ]]>
+    </Action>
+    <Action id="configureDefaults">
+      <![CDATA[
+        async function(context) {
+          if (context.notify) context.notify("Default app management is not implemented yet");
+        }
+      ]]>
+    </Action>
+  </Actions>
+</TSL>

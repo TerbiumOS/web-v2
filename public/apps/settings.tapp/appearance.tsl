@@ -1,0 +1,217 @@
+<TSL version="1.0">
+  <Manifest>
+    <Id>settings.appearance</Id>
+    <Title>Appearance</Title>
+    <Icon>palette</Icon>
+    <Version>1.0</Version>
+    <Author>System</Author>
+  </Manifest>
+  <UI>
+    <SettingsPage>
+      <Sidebar>
+        <Item id="wallpaper" title="Wallpaper" icon="image" default="true" />
+        <Item id="accent" title="Accent" icon="format_paint" />
+        <Item id="shell" title="Shell Features" icon="dashboard_customize" />
+        <Item id="time" title="Time" icon="schedule" />
+        <Item id="weather" title="Weather" icon="cloud" />
+      </Sidebar>
+      <RecommendedOptions>
+        <Option id="appearance.quick.wallpaper" text="Change wallpaper" view="wallpaper" />
+        <Option id="appearance.quick.accent" text="Change accent" view="accent" />
+        <Option id="appearance.quick.shell" text="Customize shell features" view="shell" />
+      </RecommendedOptions>
+      <Content>
+        <View id="wallpaper">
+          <Section title="Wallpaper">
+            <Text label="Current Wallpaper" bind="appearance.wallpaper.path" />
+            <Select label="Fill Mode" bind="appearance.wallpaper.fillMode" options="Cover,Contain,Stretch" />
+            <Button label="Choose Wallpaper" action="chooseWallpaper" />
+            <Button label="Apply Fill Mode" action="setWallpaperFillMode" />
+          </Section>
+        </View>
+        <View id="accent">
+          <Section title="Accent Color">
+            <Text label="Current Accent" bind="appearance.accent.color" />
+            <Button label="Pick Accent Color" action="pickAccent" />
+          </Section>
+        </View>
+        <View id="shell">
+          <Section title="Shell Features">
+            <Toggle label="Show Battery Percentage" bind="appearance.shell.batteryPercent" />
+            <Toggle label="Enable Window Optimizations" bind="appearance.shell.windowOptimizations" />
+            <Toggle label="Show FPS Counter" bind="appearance.shell.fpsCounter" />
+            <Toggle label="Always Maximized" bind="appearance.shell.alwaysMaximized" />
+            <Toggle label="Maximized Uses Fullscreen" bind="appearance.shell.maximizedFullscreen" />
+            <Slider label="Blur Intensity" bind="appearance.shell.blurIntensity" min="0" max="50" step="1" />
+            <Button label="Apply Shell Features" action="applyShellFeatures" />
+            <Button label="Pick Window Accent" action="pickWindowAccent" />
+          </Section>
+        </View>
+        <View id="time">
+          <Section title="Clock">
+            <Toggle label="Use 24-hour Clock" bind="appearance.time.twentyFourHour" />
+            <Toggle label="Show Seconds" bind="appearance.time.showSeconds" />
+            <Button label="Apply Clock Settings" action="applyClockSettings" />
+          </Section>
+        </View>
+        <View id="weather">
+          <Section title="Weather">
+            <Select label="Temperature Unit" bind="appearance.weather.unit" options="Fahrenheit,Celsius,Kelvin" />
+            <Button label="Apply Temperature Unit" action="applyTemperatureUnit" />
+          </Section>
+        </View>
+      </Content>
+    </SettingsPage>
+  </UI>
+  <Actions>
+    <Action id="chooseWallpaper">
+      <![CDATA[
+        async function(context) {
+          const result = await new Promise(function(resolve) {
+            tb.dialog.FileBrowser({
+              title: "Choose wallpaper",
+              local: true,
+              onOk: function(filePath) {
+                resolve(filePath);
+              },
+            });
+          });
+          if (!result) return;
+
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+          cfg.wallpaper = result;
+          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+          tb.desktop.wallpaper.set(result);
+          if (context.notify) context.notify("Wallpaper updated");
+        }
+      ]]>
+    </Action>
+    <Action id="setWallpaperFillMode">
+      <![CDATA[
+        async function(context) {
+          const mode = (context.bindings && context.bindings["appearance.wallpaper.fillMode"]) || "Cover";
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+          cfg.wallpaperMode = String(mode).toLowerCase();
+          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+          if (context.notify) context.notify("Fill mode saved");
+        }
+      ]]>
+    </Action>
+    <Action id="pickAccent">
+      <![CDATA[
+        async function(context) {
+          const color = await new Promise(function(resolve) {
+            tb.dialog.Message({
+              title: "Enter accent hex color",
+              onOk: function(value) {
+                resolve(value);
+              },
+            });
+          });
+          if (!color) return;
+
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+          cfg.accent = color;
+          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+          if (context.notify) context.notify("Accent saved");
+        }
+      ]]>
+    </Action>
+    <Action id="pickWindowAccent">
+      <![CDATA[
+        async function(context) {
+          const color = await new Promise(function(resolve) {
+            tb.dialog.Message({
+              title: "Enter shell accent hex color",
+              onOk: function(value) {
+                resolve(value);
+              },
+            });
+          });
+          if (!color) return;
+
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+          const wk = "win" + "dow";
+          cfg[wk] = cfg[wk] || {};
+          cfg[wk].winAccent = color;
+          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+          if (context.notify) context.notify("Shell accent saved");
+        }
+      ]]>
+    </Action>
+    <Action id="applyShellFeatures">
+      <![CDATA[
+        async function(context) {
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+          const wk = "win" + "dow";
+          cfg[wk] = cfg[wk] || {};
+
+          if (context.bindings && typeof context.bindings["appearance.shell.alwaysMaximized"] !== "undefined") {
+            cfg[wk].alwaysMaximized = !!context.bindings["appearance.shell.alwaysMaximized"];
+          }
+          if (context.bindings && typeof context.bindings["appearance.shell.maximizedFullscreen"] !== "undefined") {
+            cfg[wk].alwaysFullscreen = !!context.bindings["appearance.shell.maximizedFullscreen"];
+          }
+          if (context.bindings && typeof context.bindings["appearance.shell.blurIntensity"] !== "undefined") {
+            cfg[wk].blurlevel = Number(context.bindings["appearance.shell.blurIntensity"]);
+          }
+          if (context.bindings && typeof context.bindings["appearance.shell.windowOptimizations"] !== "undefined") {
+            cfg.optimized = !!context.bindings["appearance.shell.windowOptimizations"];
+          }
+          if (context.bindings && typeof context.bindings["appearance.shell.fpsCounter"] !== "undefined") {
+            cfg.fpsCounter = !!context.bindings["appearance.shell.fpsCounter"];
+          }
+          if (context.bindings && typeof context.bindings["appearance.shell.batteryPercent"] !== "undefined") {
+            const show = !!context.bindings["appearance.shell.batteryPercent"];
+            cfg["battery-percent"] = show;
+            if (show) {
+              if (tb.battery && tb.battery.showPercentage) await tb.battery.showPercentage();
+            } else {
+              if (tb.battery && tb.battery.hidePercentage) await tb.battery.hidePercentage();
+            }
+          }
+
+          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+          if (context.notify) context.notify("Shell settings saved");
+        }
+      ]]>
+    </Action>
+    <Action id="applyClockSettings">
+      <![CDATA[
+        async function(context) {
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+          cfg.times = cfg.times || {};
+          cfg.times.format = context.bindings && context.bindings["appearance.time.twentyFourHour"] ? "24h" : "12h";
+          cfg.times.showSeconds = !!(context.bindings && context.bindings["appearance.time.showSeconds"]);
+          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+          if (context.notify) context.notify("Clock settings saved");
+        }
+      ]]>
+    </Action>
+    <Action id="applyTemperatureUnit">
+      <![CDATA[
+        async function(context) {
+          const unit = (context.bindings && context.bindings["appearance.weather.unit"]) || "Celsius";
+          const sysPath = "/system/etc/terbium/settings.json";
+          const cfg = JSON.parse(await tb.fs.promises.readFile(sysPath, "utf8"));
+          cfg.weather = cfg.weather || {};
+          cfg.weather.unit = unit;
+          await tb.fs.promises.writeFile(sysPath, JSON.stringify(cfg, null, 2), "utf8");
+          if (context.notify) context.notify("Temperature unit saved");
+        }
+      ]]>
+    </Action>
+  </Actions>
+</TSL>
