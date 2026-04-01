@@ -59,11 +59,15 @@ body {
 	padding: 0.7rem 1rem;
 	border-radius: 0.95rem;
 	background: var(--chip-bg);
-	box-shadow: inset 0 0 0 1px var(--glass-edge), 0 8px 18px rgba(0, 0, 0, 0.16);
+	box-shadow:
+		inset 0 0 0 1px var(--glass-edge),
+		0 8px 18px rgba(0, 0, 0, 0.16);
 	font-size: 1.08rem;
 	font-weight: 800;
 	line-height: 1;
-	transition: transform 120ms ease, background 120ms ease;
+	transition:
+		transform 120ms ease,
+		background 120ms ease;
 }
 
 .recent-chip:hover {
@@ -75,7 +79,9 @@ body {
 	padding: 1rem;
 	border-radius: 1rem;
 	background: var(--card-bg);
-	box-shadow: inset 0 0 0 1px var(--glass-edge), 0 10px 24px rgba(0, 0, 0, 0.2);
+	box-shadow:
+		inset 0 0 0 1px var(--glass-edge),
+		0 10px 24px rgba(0, 0, 0, 0.2);
 	min-height: 230px;
 	cursor: pointer;
 }
@@ -112,7 +118,10 @@ body {
 	text-overflow: ellipsis;
 	overflow: hidden;
 	white-space: nowrap;
-	transition: transform 120ms ease, background 120ms ease, color 120ms ease;
+	transition:
+		transform 120ms ease,
+		background 120ms ease,
+		color 120ms ease;
 }
 
 .quick-link:hover {
@@ -142,14 +151,15 @@ body {
 	margin-right: auto;
 }
 
-
 .detail-shell {
 	display: grid;
 	grid-template-columns: 300px 1fr;
 	gap: 0;
 	border-radius: 1rem;
 	background: var(--panel-bg);
-	box-shadow: inset 0 0 0 1px var(--panel-edge), 0 10px 28px rgba(0, 0, 0, 0.22);
+	box-shadow:
+		inset 0 0 0 1px var(--panel-edge),
+		0 10px 28px rgba(0, 0, 0, 0.22);
 	overflow: hidden;
 	min-height: 540px;
 }
@@ -175,7 +185,9 @@ body {
 	background: rgba(255, 255, 255, 0.16);
 	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.11);
 	line-height: 1;
-	transition: transform 120ms ease, background 120ms ease;
+	transition:
+		transform 120ms ease,
+		background 120ms ease;
 }
 
 .detail-nav-btn:hover {
@@ -226,7 +238,9 @@ body {
 	text-align: left;
 	background: rgba(255, 255, 255, 0.16);
 	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-	transition: transform 120ms ease, background 120ms ease;
+	transition:
+		transform 120ms ease,
+		background 120ms ease;
 }
 
 .search-result-card:hover {
@@ -301,7 +315,9 @@ body {
 	font-weight: 800;
 	background: rgba(255, 255, 255, 0.2);
 	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-	transition: transform 120ms ease, background 120ms ease;
+	transition:
+		transform 120ms ease,
+		background 120ms ease;
 }
 
 .detail-action:hover {
