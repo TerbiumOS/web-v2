@@ -769,7 +769,7 @@ export const StartItem: FC<TStartItem> = ({ icon, title, onClick, inPins, classN
 	// @ts-expect-error
 	const chars = typeof title === "string" ? title.split("") : title?.text.split("");
 	const [resolvedIcon, setResolvedIcon] = useState<string | boolean | undefined>(false);
-	let sysapps = [{ title: { text: "Terminal" } }, { title: "Files" }, { title: "Settings" }, { title: { text: "App Store" } }, { title: "Browser" }, { title: "Calculator" }, { title: "Feedback" }, { title: "About" }, { title: "Text Editor" }, { title: "Task Manager" }, { title: "Anura File Manager" }];
+	let sysapps = [{ title: { text: "Terminal" } }, { title: "Files" }, { title: { text: "Settings" } }, { title: { text: "App Store" } }, { title: "Browser" }, { title: "Calculator" }, { title: "Feedback" }, { title: "About" }, { title: "Text Editor" }, { title: "Task Manager" }, { title: "Anura File Manager" }];
 	// @ts-expect-error
 	const isSystemApp = sysapps.map(app => (typeof app.title === "string" ? app.title : app.title.text)).includes(typeof title === "string" ? title : title?.text);
 

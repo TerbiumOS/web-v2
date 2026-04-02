@@ -75,45 +75,16 @@ export async function init() {
 		await window.tb.fs.promises.mkdir("/apps/anura/");
 		let dockPins = [
 			{
-				title: {
-					text: "Terminal",
-					html: '<div class="term-tab-container">\n<style>.term-tabs{display:flex;align-items:center;gap:6px;width:100%;height:100%;}.term-tab-list{display:flex;gap:6px;align-items:center;overflow:hidden;white-space:nowrap}.term-tab{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:8px;background:transparent;color:#fff;font-weight:700;cursor:pointer;user-select:none;border:1px solid transparent}.term-tab.active{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.08)}.term-tab .close{opacity:0.6;font-weight:600;margin-left:8px}.term-tab-controls{display:flex;gap:6px;align-items:center}.term-add{background:#ffffff0f;color:#fff;border-radius:6px;padding:2px 6px;border:none;font-weight:700;cursor:pointer}</style>\n<div class="term-tabs">\n<div class="term-tab-list" aria-hidden="false"></div>\n<div class="term-tab-controls">\n<button class="term-add" title="New tab">+</button>\n</div>\n</div>\n</div>',
-				},
-				icon: "/fs/apps/system/terminal.tapp/icon.svg",
-				isPinnable: true,
-				src: "/fs/apps/system/terminal.tapp/index.html",
-				size: {
-					width: 612,
-					height: 415,
-				},
+				...apps.find(app => app.name === "Terminal")?.config
 			},
 			{
-				title: "Files",
-				icon: "/fs/apps/system/files.tapp/icon.svg",
-				isPinnable: true,
-				src: "/fs/apps/system/files.tapp/index.html",
-				size: {
-					width: 600,
-					height: 500,
-				},
+				...apps.find(app => app.name === "Files")?.config
 			},
 			{
-				title: "Settings",
-				icon: "/fs/apps/system/settings.tapp/icon.svg",
-				isPinnable: true,
-				src: "/fs/apps/system/settings.tapp/index.html",
-				single: true,
+				...apps.find(app => app.name === "Settings")?.config
 			},
 			{
-				title: "Feedback",
-				icon: "/fs/apps/system/feedback.tapp/icon.svg",
-				proxy: true,
-				isPinnable: true,
-				src: "https://forms.gle/m664xxmrugWQADQt9",
-				size: {
-					width: 600,
-					height: 500,
-				},
+				...apps.find(app => app.name === "Feedback")?.config
 			},
 		];
 		await window.tb.fs.promises.writeFile("/system/var/terbium/dock.json", JSON.stringify(dockPins));
