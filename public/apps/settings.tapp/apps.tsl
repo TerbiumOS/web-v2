@@ -429,7 +429,7 @@ ${mountedRows}
           const value = String(path || "").trim();
           if (!value) return "";
           if (isExternalUrl(value) || value.startsWith("data:") || value.startsWith("blob:")) return value;
-          const rr = ^\/apps\/(user\/|system\/|anura)(\/|$)
+          const rr = /apps\/(user\/|system\/|anura)(\/|$)/
           if (rr.test(value) && !value.includes("/fs/")) return `/fs${value}`;
           return value;
         }
