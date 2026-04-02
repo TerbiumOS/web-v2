@@ -75,16 +75,16 @@ export async function init() {
 		await window.tb.fs.promises.mkdir("/apps/anura/");
 		let dockPins = [
 			{
-				...apps.find(app => app.name === "Terminal")?.config
+				...apps.find(app => app.name === "Terminal")?.config,
 			},
 			{
-				...apps.find(app => app.name === "Files")?.config
+				...apps.find(app => app.name === "Files")?.config,
 			},
 			{
-				...apps.find(app => app.name === "Settings")?.config
+				...apps.find(app => app.name === "Settings")?.config,
 			},
 			{
-				...apps.find(app => app.name === "Feedback")?.config
+				...apps.find(app => app.name === "Feedback")?.config,
 			},
 		];
 		await window.tb.fs.promises.writeFile("/system/var/terbium/dock.json", JSON.stringify(dockPins));
