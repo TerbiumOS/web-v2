@@ -41,6 +41,11 @@ export interface TSLRecommendedOption {
 	action?: string;
 	attributes: AttrMap;
 }
+export interface TSLScript {
+	id: string;
+	source: string;
+	attributes: AttrMap;
+}
 export interface TSLUI {
 	sidebar: TSLSidebarItem[];
 	views: TSLView[];
@@ -51,6 +56,7 @@ export interface TSLDocument {
 	raw: string;
 	manifest: TSLManifest;
 	ui: TSLUI;
+	scripts: Record<string, string>;
 	actions: Record<string, string>;
 }
 export interface TSLValidationResult {
@@ -86,6 +92,7 @@ export class TSLParser {
 		}
 		const manifestNode = root.querySelector(":scope > Manifest");
 		const uiNode = root.querySelector(":scope > UI > SettingsPage");
+		const scriptsNode = root.querySelector(":scope > Scripts");
 		const actionsNode = root.querySelector(":scope > Actions");
 		if (!manifestNode) {
 			throw new Error("Invalid TSL: missing <Manifest> element.");
@@ -95,12 +102,14 @@ export class TSLParser {
 		}
 		const manifest = this.parseManifest(manifestNode);
 		const ui = this.parseUI(uiNode);
+		const scripts = this.parseScripts(scriptsNode);
 		const actions = this.parseActions(actionsNode);
 		return {
 			path,
 			raw: contents,
 			manifest,
 			ui,
+			scripts,
 			actions,
 		};
 	}
@@ -321,6 +330,20 @@ return action(context);`,
 			actions[id] = (actionNode.textContent || "").trim();
 		});
 		return actions;
+	}
+
+	private parseScripts(scriptsNode: Element | null): Record<string, string> {
+		const scripts: Record<string, string> = {};
+		if (!scriptsNode) {
+			return scripts;
+		}
+		Array.from(scriptsNode.querySelectorAll(":scope > Script")).forEach(scriptNode => {
+			const id = scriptNode.getAttribute("id")?.trim();
+			if (!id) return;
+
+			scripts[id] = (scriptNode.textContent || "").trim();
+		});
+		return scripts;
 	}
 
 	private getAttributes(node: Element): AttrMap {

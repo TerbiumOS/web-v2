@@ -31,7 +31,6 @@
         <View id="permissions">
           <Section title="Permissions">
             <Text label="Permission" bind="account.permissions.current" />
-            <Button label="Change Permissions" action="changePermissions" />
             <Button label="Open Accounts Manager" action="openAccounts" />
           </Section>
         </View>
@@ -177,4 +176,505 @@
       ]]>
     </Action>
   </Actions>
+  <Scripts>
+    <Script id="settings.account">
+      <![CDATA[
+        const tb = api.tb;
+        const windowRef = api.window;
+
+        function escHtml(value) {
+          return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function safeText(value, fallback = "") {
+          const text = String(value ?? "").trim();
+          return text || fallback;
+        }
+
+        async function readJson(path, fallbackValue) {
+          try {
+            const raw = await tb.fs.promises.readFile(path, "utf8");
+            return JSON.parse(String(raw || ""));
+          } catch {
+            return fallbackValue;
+          }
+        }
+
+        async function writeJson(path, value) {
+          await tb.fs.promises.writeFile(path, JSON.stringify(value, null, 2), "utf8");
+        }
+
+        async function currentUsername() {
+          return await tb.user.username();
+        }
+
+        async function loadUserInfo() {
+          const user = await currentUsername();
+          return await readJson(`/home/${user}/user.json`, {});
+        }
+
+        async function loadSystemSettings() {
+          return await readJson("/system/etc/terbium/settings.json", {});
+        }
+
+        async function loadTaccEntries() {
+          const entries = await readJson("/system/etc/terbium/taccs.json", []);
+          return Array.isArray(entries) ? entries : [];
+        }
+
+        function isCloudEntry(entries, username) {
+          return entries.some(entry => entry && entry.username === username);
+        }
+
+        function toRenderableSrc(value) {
+          const text = String(value || "").trim();
+          if (!text) return "";
+          if (text.startsWith("data:") || text.startsWith("blob:") || text.startsWith("http://") || text.startsWith("https://") || text.startsWith("/fs/")) return text;
+          if (text.startsWith("/")) return `/fs${text}`;
+          return text;
+        }
+
+        function accountTypeLabel(isCloud) {
+          return isCloud ? "Terbium Cloud™ Account" : "Local Account";
+        }
+
+        function makeAvatarMarkup(info, username) {
+          const pfp = toRenderableSrc(info.pfp);
+          const initial = safeText(username, "?").slice(0, 1).toUpperCase();
+          if (pfp) {
+            return `<img class="account-avatar-image" src="${escHtml(pfp)}" alt="Profile picture" />`;
+          }
+          return `<span class="account-avatar-fallback">${escHtml(initial)}</span>`;
+        }
+
+        async function chooseProfilePicture(root, context) {
+          if (!tb.dialog?.FileBrowser) return;
+          const picked = await new Promise(resolve => {
+            tb.dialog.FileBrowser({
+              title: "Choose profile image",
+              local: true,
+              onOk: path => resolve(path),
+            });
+          });
+          if (!picked) return;
+
+          const bytes = await tb.fs.promises.readFile(picked, "arraybuffer");
+          const blobUrl = URL.createObjectURL(new Blob([bytes]));
+          let imageSource = blobUrl;
+
+          if (tb.dialog?.Cropper) {
+            imageSource = await new Promise(resolve => {
+              tb.dialog.Cropper({
+                title: "Resize your Profile picture",
+                img: blobUrl,
+                onOk: value => resolve(value),
+              });
+            });
+          }
+
+          try {
+            URL.revokeObjectURL(blobUrl);
+          } catch {
+            /* ignore */
+          }
+
+          const user = await currentUsername();
+          const userPath = `/home/${user}/user.json`;
+          const info = await readJson(userPath, {});
+          info.pfp = imageSource;
+          await writeJson(userPath, info);
+
+          if (await tb.tauth?.isTACC?.()) {
+            const shouldUpload = await new Promise(resolve => {
+              if (!tb.dialog?.Select) return resolve(false);
+              tb.dialog.Select({
+                title: "Do you want to upload this profile picture to your Terbium Account?",
+                options: [
+                  { text: "Yes", value: "yes" },
+                  { text: "No", value: "no" },
+                ],
+                onOk: value => resolve(value === "yes"),
+              });
+            });
+            if (shouldUpload && tb.tauth?.updateInfo) {
+              await tb.tauth.updateInfo({ pfp: imageSource });
+            }
+          }
+
+          if (typeof rerenderView === "function") await rerenderView(root, context);
+          if (context.notify) context.notify("Profile picture set");
+        }
+
+        async function commitUsername(root, context, nextName) {
+          const value = safeText(nextName);
+          if (!value) return;
+
+          const curr = await currentUsername();
+          if (curr === value) return;
+          await tb.system.users.renameUser(curr, value);
+          if (typeof rerenderView === "function") await rerenderView(root, context);
+          if (context.notify) context.notify("Username updated");
+        }
+
+        async function commitHostname(root, context, nextHost) {
+          const value = safeText(nextHost);
+          if (!value) return;
+
+          const sysPath = "/system/etc/terbium/settings.json";
+          const cfg = await loadSystemSettings();
+          if (cfg["host-name"] === value) return;
+          cfg["host-name"] = value;
+          await writeJson(sysPath, cfg);
+          if (typeof rerenderView === "function") await rerenderView(root, context);
+          if (context.notify) context.notify("Host name updated");
+        }
+
+        async function commitPermissions(root, context, nextPerm) {
+          const user = await currentUsername();
+          const userPath = `/home/${user}/user.json`;
+          const info = await readJson(userPath, {});
+          const selected = safeText(nextPerm, info.perm || "user");
+          if (!selected || info.perm === selected) return;
+
+          const applySelection = async () => {
+            info.perm = selected;
+            await writeJson(userPath, info);
+            if (typeof rerenderView === "function") await rerenderView(root, context);
+            if (context.notify) context.notify("Permission updated");
+          };
+
+          if (info.password === false) {
+            await applySelection();
+            return;
+          }
+
+          await tb.dialog.Auth({
+            sudo: true,
+            title: "Authenticate to change your permissions",
+            defaultUsername: user,
+            onOk: async (_username, password) => {
+              const pass = await tb.crypto(password);
+              if (pass !== info.password) {
+                throw new Error("Incorrect Password");
+              }
+              await applySelection();
+            },
+          });
+        }
+
+        async function openAccountsManager() {
+          if (tb.window?.create) {
+            tb.window.create({
+              title: "Accounts",
+              src: "/fs/apps/system/settings.tapp/accounts/index.html",
+              icon: "/fs/apps/system/settings.tapp/accounts/icon.svg",
+              size: { width: 400, height: 500 },
+            });
+          }
+        }
+
+        async function linkCloud(root, context) {
+          if (!tb.tauth?.signIn) {
+            if (context.notify) context.notify("Cloud auth unavailable");
+            return;
+          }
+
+          const currentUser = await currentUsername();
+          const result = await tb.tauth.signIn();
+          const cloudUser = result?.data?.user?.name;
+
+          if (cloudUser && tb.tauth?.sync?.retreive && tb.system?.users?.renameUser) {
+            const previous = sessionStorage.getItem("currAcc");
+            sessionStorage.setItem("currAcc", cloudUser);
+            await tb.tauth.sync.retreive();
+            sessionStorage.setItem("currAcc", previous || currentUser);
+
+            const info = await readJson(`/home/${currentUser}/user.json`, {});
+            if (result?.data?.user?.password) {
+              info.password = await tb.crypto(result.data.user.password);
+            }
+            info.perm = "admin";
+            await writeJson(`/home/${currentUser}/user.json`, info);
+            await tb.system.users.renameUser(currentUser, cloudUser);
+          }
+
+          if (typeof rerenderView === "function") await rerenderView(root, context);
+          if (context.notify) context.notify("Cloud account linked");
+        }
+
+        async function toLocal(root, context) {
+          if (!tb.tauth?.signOut) {
+            if (context.notify) context.notify("Cloud auth unavailable");
+            return;
+          }
+
+          const uploadFirst = await new Promise(resolve => {
+            if (!tb.dialog?.Select) return resolve(false);
+            tb.dialog.Select({
+              title: "Save current settings to cloud before converting to local?",
+              options: [
+                { text: "Yes", value: "yes" },
+                { text: "No", value: "no" },
+              ],
+              onOk: value => resolve(value === "yes"),
+            });
+          });
+
+          if (uploadFirst && tb.tauth?.sync?.upload) {
+            await tb.tauth.sync.upload();
+          }
+
+          await tb.tauth.signOut();
+          if (typeof rerenderView === "function") await rerenderView(root, context);
+          if (context.notify) context.notify("Switched to local mode");
+        }
+
+        async function buildState() {
+          const user = await currentUsername();
+          const info = await loadUserInfo();
+          const sys = await loadSystemSettings();
+          const entries = await loadTaccEntries();
+          const cloud = isCloudEntry(entries, user);
+
+          return {
+            user,
+            info,
+            sys,
+            cloud,
+            typeLabel: accountTypeLabel(cloud),
+          };
+        }
+
+        function profileMarkup(state) {
+          const usernameValue = safeText(state.info.username, state.user);
+          const hostnameValue = safeText(state.sys["host-name"], "terbium");
+          const permValue = safeText(state.info.perm, "user");
+          const pfp = makeAvatarMarkup(state.info, state.user);
+          return `
+<section class="account-page">
+  <article class="account-panel">
+    <div class="account-header">
+      <button type="button" class="account-avatar-button" data-account-pfp>
+        ${pfp}
+      </button>
+      <div class="account-header-body">
+        <div class="account-title">Profile</div>
+        <div class="account-subtitle">Manage your local identity and cloud-linked avatar.</div>
+        <div class="account-note">Username and hostname changes save automatically when you leave the field.</div>
+        <div class="account-badges">
+          <span class="account-badge ${state.cloud ? "is-cloud" : "is-local"}" data-account-type-switch>${escHtml(state.typeLabel)}</span>
+          <span class="account-badge is-muted">${escHtml(permValue.charAt(0).toUpperCase() + permValue.slice(1))}</span>
+        </div>
+      </div>
+    </div>
+    <div class="account-grid">
+      <label class="account-field">
+        <span class="account-field-label">Username</span>
+        <input type="text" class="account-field-input" value="${escHtml(usernameValue)}" data-account-username />
+      </label>
+      <label class="account-field">
+        <span class="account-field-label">Hostname</span>
+        <input type="text" class="account-field-input" value="${escHtml(hostnameValue)}" data-account-hostname />
+      </label>
+    </div>
+    <div class="account-actions">
+      <button type="button" class="detail-action account-action" data-account-pfp>Change Profile Picture</button>
+    </div>
+  </article>
+</section>
+`;
+        }
+
+        function permissionsMarkup(state) {
+          const permValue = safeText(state.info.perm, "user");
+          const permissionText = permValue.charAt(0).toUpperCase() + permValue.slice(1);
+          return `
+<section class="account-page">
+  <article class="account-panel">
+    <div class="account-header">
+      <div class="account-header-icon is-locked">${escHtml(permissionText.slice(0, 1))}</div>
+      <div class="account-header-body">
+        <div class="account-title">Permissions</div>
+        <div class="account-subtitle">Your current permission level controls what this account can change.</div>
+        <div class="account-note">Permission changes save automatically after authentication when required.</div>
+        <div class="account-badges">
+          <span class="account-badge is-muted">Current: ${escHtml(permissionText)}</span>
+        </div>
+      </div>
+    </div>
+    <label class="account-field account-field-wide">
+      <span class="account-field-label">Permission</span>
+      <select class="account-field-select" data-account-perm-select>
+        <option value="admin" ${permValue === "admin" ? "selected" : ""}>Admin</option>
+        <option value="user" ${permValue === "user" ? "selected" : ""}>User</option>
+        <option value="group" ${permValue === "group" ? "selected" : ""}>Group</option>
+        <option value="public" ${permValue === "public" ? "selected" : ""}>Public</option>
+      </select>
+    </label>
+    <div class="account-actions">
+      <button type="button" class="detail-action account-action" data-account-accounts>Open Accounts Manager</button>
+    </div>
+  </article>
+</section>
+`;
+        }
+
+        function cloudMarkup(state) {
+          return `
+<section class="account-page">
+  <article class="account-panel">
+    <div class="account-header">
+      <div class="account-header-icon ${state.cloud ? "is-cloud" : "is-local"}">${state.cloud ? "☁" : "L"}</div>
+      <div class="account-header-body">
+        <div class="account-title">Cloud Account</div>
+        <div class="account-subtitle">Link this user to Terbium Cloud or convert back to local mode.</div>
+        <div class="account-badges">
+          <span class="account-badge ${state.cloud ? "is-cloud" : "is-local"}" data-account-type-switch>${escHtml(state.typeLabel)}</span>
+        </div>
+      </div>
+    </div>
+    <div class="account-actions">
+      <button type="button" class="detail-action account-action" data-account-link>Link TB Cloud Account</button>
+      <button type="button" class="detail-action account-action" data-account-local>Convert to Local Account</button>
+    </div>
+  </article>
+</section>
+`;
+        }
+
+        async function render(context) {
+          const viewId = String(context?.viewId || api.viewId || "profile");
+          const state = await buildState();
+          if (viewId === "permissions") return permissionsMarkup(state);
+          if (viewId === "cloud") return cloudMarkup(state);
+          return profileMarkup(state);
+        }
+
+        function rerenderView(root, context) {
+          if (!root) return Promise.resolve();
+          return render(context).then(html => {
+            root.innerHTML = html;
+            wire(root, context);
+          });
+        }
+
+        function wireProfile(root, context) {
+          const scope = root || document;
+          const usernameInput = scope.querySelector("[data-account-username]");
+          const hostnameInput = scope.querySelector("[data-account-hostname]");
+          const avatarBtn = scope.querySelector("[data-account-pfp]");
+          const typeSwitch = scope.querySelector("[data-account-type-switch]");
+
+          if (avatarBtn) avatarBtn.addEventListener("click", async () => chooseProfilePicture(root, context));
+          if (typeSwitch) typeSwitch.addEventListener("click", async () => {
+            const cloudItem = await new Promise(resolve => {
+              if (!tb.dialog?.Select) return resolve("cloud");
+              tb.dialog.Select({
+                title: "Select Option",
+                options: [
+                  { text: "Link Terbium Cloud™ Account", value: "cloud" },
+                  { text: "Convert to Local Account", value: "local" },
+                ],
+                onOk: value => resolve(value),
+              });
+            });
+            if (cloudItem === "cloud") await linkCloud(root, context);
+            if (cloudItem === "local") await toLocal(root, context);
+          });
+
+          if (usernameInput) {
+            usernameInput.addEventListener("change", async () => {
+              try {
+                await commitUsername(root, context, usernameInput.value);
+              } catch {
+                await rerenderView(root, context);
+              }
+            });
+            usernameInput.addEventListener("keydown", async ev => {
+              if (ev.key === "Enter") {
+                ev.preventDefault();
+                usernameInput.blur();
+              }
+            });
+          }
+
+          if (hostnameInput) {
+            hostnameInput.addEventListener("change", async () => {
+              try {
+                await commitHostname(root, context, hostnameInput.value);
+              } catch {
+                await rerenderView(root, context);
+              }
+            });
+            hostnameInput.addEventListener("keydown", async ev => {
+              if (ev.key === "Enter") {
+                ev.preventDefault();
+                hostnameInput.blur();
+              }
+            });
+          }
+        }
+
+        function wirePermissions(root, context) {
+          const scope = root || document;
+          const permSelect = scope.querySelector("[data-account-perm-select]");
+          const accountsBtn = scope.querySelector("[data-account-accounts]");
+
+          if (permSelect) {
+            permSelect.addEventListener("change", async () => {
+              try {
+                await commitPermissions(root, context, permSelect.value);
+              } catch {
+                await rerenderView(root, context);
+              }
+            });
+          }
+          if (accountsBtn) accountsBtn.addEventListener("click", async () => openAccountsManager());
+        }
+
+        function wireCloud(root, context) {
+          const scope = root || document;
+          const linkBtn = scope.querySelector("[data-account-link]");
+          const localBtn = scope.querySelector("[data-account-local]");
+          const typeSwitch = scope.querySelector("[data-account-type-switch]");
+
+          if (linkBtn) linkBtn.addEventListener("click", async () => linkCloud(root, context));
+          if (localBtn) localBtn.addEventListener("click", async () => toLocal(root, context));
+          if (typeSwitch) typeSwitch.addEventListener("click", async () => {
+            const choice = await new Promise(resolve => {
+              if (!tb.dialog?.Select) return resolve("cloud");
+              tb.dialog.Select({
+                title: "Select Option",
+                options: [
+                  { text: "Link Terbium Cloud™ Account", value: "cloud" },
+                  { text: "Convert to Local Account", value: "local" },
+                ],
+                onOk: value => resolve(value),
+              });
+            });
+            if (choice === "cloud") await linkCloud(root, context);
+            if (choice === "local") await toLocal(root, context);
+          });
+        }
+
+        function wire(root, context) {
+          const viewId = String(context?.viewId || api.viewId || "profile");
+          if (viewId === "permissions") return wirePermissions(root, context);
+          if (viewId === "cloud") return wireCloud(root, context);
+          return wireProfile(root, context);
+        }
+
+        return {
+          loadingText: "Loading account...",
+          render,
+          wire,
+        };
+      ]]>
+    </Script>
+  </Scripts>
 </TSL>

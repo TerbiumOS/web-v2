@@ -73,4 +73,597 @@
       ]]>
     </Action>
   </Actions>
+  <Scripts>
+    <Script id="storage" view="storage">
+      <![CDATA[
+        const tb = api.tb;
+        const windowRef = api.window;
+        const session = api.sessionStorage;
+        const local = api.localStorage;
+        const nav = api.navigator;
+
+        function formatBytes(bytes) {
+          const value = Number(bytes) || 0;
+          if (value < 1024) return `${value} B`;
+          if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+          if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+          if (value < 1024 * 1024 * 1024 * 1024) return `${(value / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+          return `${(value / (1024 * 1024 * 1024 * 1024)).toFixed(1)} TB`;
+        }
+
+        function joinPath(base, entry) {
+          const normalizedBase = String(base || "/").replace(/\/+$/g, "") || "/";
+          if (normalizedBase === "/") return `/${entry}`;
+          return `${normalizedBase}/${entry}`;
+        }
+
+        function storageColor(index) {
+          const palette = ["#5cc8ff", "#7bd88f", "#f4c55a", "#f08a5d", "#9c8cff", "#67d3c2"];
+          return palette[index % palette.length];
+        }
+
+        async function safeReadDir(path) {
+          try {
+            const entries = await tb.fs.promises.readdir(path);
+            return Array.isArray(entries) ? entries : [];
+          } catch {
+            return [];
+          }
+        }
+
+        async function safeStat(path) {
+          try {
+            return await tb.fs.promises.stat(path);
+          } catch {
+            return null;
+          }
+        }
+
+        async function measureTreeSize(path, cache = new Map(), stack = new Set()) {
+          const normalized = String(path || "/").replace(/\/+$/g, "") || "/";
+          if (cache.has(normalized)) return cache.get(normalized);
+          if (stack.has(normalized)) return 0;
+          stack.add(normalized);
+
+          const stat = await safeStat(normalized);
+          if (!stat) {
+            cache.set(normalized, 0);
+            stack.delete(normalized);
+            return 0;
+          }
+
+          if (typeof stat.isSymbolicLink === "function" && stat.isSymbolicLink()) {
+            cache.set(normalized, 0);
+            stack.delete(normalized);
+            return 0;
+          }
+
+          if (typeof stat.isFile === "function" && stat.isFile()) {
+            const size = Number(stat.size) || 0;
+            cache.set(normalized, size);
+            stack.delete(normalized);
+            return size;
+          }
+
+          if (typeof stat.isDirectory !== "function" || !stat.isDirectory()) {
+            const size = Number(stat.size) || 0;
+            cache.set(normalized, size);
+            stack.delete(normalized);
+            return size;
+          }
+
+          const entries = await safeReadDir(normalized);
+          const total = (await Promise.all(entries.map(entry => measureTreeSize(joinPath(normalized, entry), cache, stack)))).reduce((sum, size) => sum + size, 0);
+          cache.set(normalized, total);
+          stack.delete(normalized);
+          return total;
+        }
+
+        function measureLocalStorageSize() {
+          return Object.keys(local).reduce((total, key) => {
+            const item = local.getItem(key);
+            const itemSize = JSON.stringify(item).length * 2;
+            const keySize = key.length * 2;
+            return total + itemSize + keySize;
+          }, 0);
+        }
+
+        async function openFilesAtPath(path) {
+          const target = String(path || "/").trim() || "/";
+          const normalized = target === "//" ? "/" : target;
+          try {
+            session.setItem("ldir", normalized);
+            try {
+              windowRef.parent.sessionStorage.setItem("ldir", normalized);
+            } catch {
+              /* ignore */
+            }
+            try {
+              windowRef.top?.sessionStorage?.setItem("ldir", normalized);
+            } catch {
+              /* ignore */
+            }
+            if (windowRef.parent?.tb?.app?.open) {
+              await windowRef.parent.tb.app.open("files.tapp");
+              return true;
+            }
+            if (windowRef.parent?.tb?.system?.openApp) {
+              await windowRef.parent.tb.system.openApp("Files");
+              return true;
+            }
+          } catch (error) {
+            console.error(error);
+          }
+          return false;
+        }
+
+        async function buildStorageModel() {
+          const cache = new Map();
+          const rootEntries = new Set(await safeReadDir("/"));
+          const trackedCategories = [
+            { key: "apps", label: "Apps", path: "/apps" },
+            { key: "user", label: "User Files", path: "/home" },
+            { key: "system", label: "System", path: "/system" },
+          ];
+
+          const categories = [];
+          for (const category of trackedCategories) {
+            const size = category.path === "/home" && !rootEntries.has("home") ? 0 : await measureTreeSize(category.path, cache);
+            categories.push({ ...category, size });
+          }
+
+          let otherSize = 0;
+          for (const entry of rootEntries) {
+            if (entry === "mnt" || entry === "apps" || entry === "home" || entry === "system") continue;
+            otherSize += await measureTreeSize(`/${entry}`, cache);
+          }
+
+          const estimate = "storage" in nav ? await nav.storage.estimate() : null;
+          const browserUsage = Number(estimate?.usage) || 0;
+          const browserQuota = Number(estimate?.quota) || 0;
+          const measuredUsed = categories.reduce((sum, category) => sum + category.size, 0) + otherSize;
+          const used = Math.max(measuredUsed, browserUsage);
+          const extraOther = Math.max(0, used - measuredUsed);
+          const localSize = measureLocalStorageSize();
+          const drives = Array.from(windowRef.parent?.tb?.vfs?.servers?.entries?.() || []).map(([name, server]) => ({
+            name,
+            url: server?.url || `/mnt/${name}/`,
+            connected: !!server?.connected,
+          }));
+
+          return {
+            used,
+            quota: browserQuota,
+            free: browserQuota > used ? browserQuota - used : 0,
+            localSize,
+            categories: [
+              ...categories,
+              ...(otherSize + extraOther > 0 ? [{ key: "other", label: "Other", path: "/", size: otherSize + extraOther }] : []),
+            ],
+            drives,
+          };
+        }
+
+        async function renderStorageView() {
+          const model = await buildStorageModel();
+          const totalLabel = model.quota && model.quota > model.used ? formatBytes(model.quota) : formatBytes(model.used);
+          const usageLabel = model.quota ? `${formatBytes(model.used)} used of ${formatBytes(model.quota)}` : `${formatBytes(model.used)} used`;
+          const freeLabel = model.quota ? `${formatBytes(model.free)} free` : "Browser quota unavailable";
+          const barTotal = model.quota && model.quota > model.used ? model.quota : (model.categories.reduce((sum, category) => sum + category.size, 0) || 1);
+          const usedSegments = model.categories
+            .map((category, index) => {
+              const width = (category.size / barTotal) * 100;
+              return `<span class="storage-segment" style="width:${width}%;background:${storageColor(index)}" title="${category.label}: ${formatBytes(category.size)}"></span>`;
+            })
+            .join("");
+          const freeSegment = model.quota && model.free > 0 ? `<span class="storage-segment storage-free" style="width:${(model.free / model.quota) * 100}%" title="Free: ${formatBytes(model.free)}"></span>` : "";
+          const categoryRows = model.categories
+            .map((category, index) => {
+              const percent = model.used ? ((category.size / model.used) * 100).toFixed(1) : "0.0";
+              return `
+<div class="storage-category-row">
+<span class="storage-category-key"><span class="storage-dot" style="background:${storageColor(index)}"></span>${category.label}</span>
+<span class="storage-category-value">${formatBytes(category.size)} ${model.used ? `(${percent}%)` : ""}</span>
+</div>
+`;
+            })
+            .join("");
+          const mountedRows = model.drives.length
+            ? model.drives
+                .map(
+                  drive => `
+<article class="storage-mini-card">
+<div class="storage-mini-title-row">
+<div>
+<div class="storage-mini-title">${drive.name}</div>
+<div class="storage-mini-subtitle">${drive.connected ? "Mounted VFS drive" : "Not mounted"}</div>
+</div>
+<span class="storage-mini-pill ${drive.connected ? "is-mounted" : "is-offline"}">${drive.connected ? "Mounted" : "Offline"}</span>
+</div>
+<div class="storage-mini-url">${drive.url}</div>
+<button type="button" class="storage-open-btn" data-open-files-path="/mnt/${drive.name}/" ${drive.connected ? "" : "disabled"}>Open in File Manager</button>
+</article>
+`,
+                )
+                .join("")
+            : `<p class="detail-control-value">No mounted VFS drives detected.</p>`;
+
+          return `
+<section class="storage-dashboard">
+<article class="storage-main-card">
+<div class="storage-main-header">
+<div>
+<div class="storage-main-title">File System</div>
+<div class="storage-main-capacity">${totalLabel}</div>
+</div>
+<button type="button" class="storage-open-btn" data-open-files-path="/">Open in File Manager</button>
+</div>
+<div class="storage-main-usage">${usageLabel}</div>
+<div class="storage-bar" role="img" aria-label="Storage usage breakdown">${usedSegments}${freeSegment}</div>
+<div class="storage-main-foot">${freeLabel}</div>
+<div class="storage-category-list">${categoryRows}</div>
+</article>
+
+<section class="storage-secondary-group">
+<article class="storage-secondary-card">
+<div>
+<div class="storage-secondary-title">Local Storage</div>
+<div class="storage-secondary-subtitle">${formatBytes(model.localSize)} of 10.0 MB</div>
+</div>
+<button type="button" class="storage-open-btn" data-open-files-path="local storage">Open in File Manager</button>
+</article>
+
+<div class="storage-mini-grid">
+${mountedRows}
+</div>
+</section>
+</section>
+`;
+        }
+
+        function wireStorageViewActions(root) {
+          const scope = root || document;
+          scope.querySelectorAll("[data-open-files-path]").forEach(btn => {
+            btn.addEventListener("click", async ev => {
+              ev.preventDefault();
+              const path = btn.getAttribute("data-open-files-path") || "";
+              if (!path) return;
+              await openFilesAtPath(path);
+            });
+          });
+        }
+
+        return {
+          loadingText: "Loading storage...",
+          render: renderStorageView,
+          wire: wireStorageViewActions,
+        };
+      ]]>
+    </Script>
+    <Script id="installed" view="installed">
+      <![CDATA[
+        const tb = api.tb;
+
+        function escHtml(value) {
+          return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function dirname(path) {
+          const input = String(path || "").replace(/\\/g, "/");
+          if (!input) return "/";
+          const normalized = input.endsWith("/") && input.length > 1 ? input.slice(0, -1) : input;
+          const idx = normalized.lastIndexOf("/");
+          if (idx <= 0) return "/";
+          return normalized.slice(0, idx);
+        }
+
+        function joinPath(base, next) {
+          const left = String(base || "/").replace(/\/+$/g, "") || "/";
+          const right = String(next || "").replace(/^\/+/, "");
+          return left === "/" ? `/${right}` : `${left}/${right}`;
+        }
+
+        function normalizeName(value) {
+          return String(value || "").trim();
+        }
+
+        function installerName(entry) {
+          return normalizeName(entry?.installedBy || entry?.installed_by || entry?.installedby || entry?.installer || entry?.user);
+        }
+
+        function toKey(entry) {
+          return `${normalizeName(entry?.name)}|${normalizeName(entry?.config)}`;
+        }
+
+        async function readJson(path, fallbackValue) {
+          try {
+            const raw = await tb.fs.promises.readFile(path, "utf8");
+            const parsed = JSON.parse(String(raw || ""));
+            return parsed == null ? fallbackValue : parsed;
+          } catch {
+            return fallbackValue;
+          }
+        }
+
+        async function writeJson(path, value) {
+          await tb.fs.promises.writeFile(path, JSON.stringify(value, null, 2), "utf8");
+        }
+
+        function isExternalUrl(value) {
+          const text = String(value || "").trim().toLowerCase();
+          return text.startsWith("http://") || text.startsWith("https://");
+        }
+
+        async function fetchExternalIconAsBlobUrl(url) {
+          const target = String(url || "").trim();
+          if (!target || !tb?.libcurl?.fetch) return "";
+          try {
+            const response = await tb.libcurl.fetch(target);
+            const blob = await response.blob();
+            return URL.createObjectURL(blob);
+          } catch {
+            return "";
+          }
+        }
+
+        function normalizeIcon(icon, configPath) {
+          const value = String(icon || "").trim();
+          if (!value) return "";
+          if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("data:")) return value;
+          if (value.startsWith("/")) return value;
+          return joinPath(dirname(configPath), value);
+        }
+
+        function resolveTitle(value) {
+          if (typeof value === "string") return normalizeName(value);
+          if (value && typeof value === "object") return normalizeName(value.text || value.label || "");
+          return "";
+        }
+
+        function toRenderableFsPath(path) {
+          const value = String(path || "").trim();
+          if (!value) return "";
+          if (isExternalUrl(value) || value.startsWith("data:") || value.startsWith("blob:")) return value;
+          const rr = ^\/apps\/(user\/|system\/|anura)(\/|$)
+          if (rr.test(value) && !value.includes("/fs/")) return `/fs${value}`;
+          return value;
+        }
+
+        async function readAppMeta(entry) {
+          const fallbackConfig = `/apps/${normalizeName(entry?.name)}/index.json`;
+          const configPath = normalizeName(entry?.config || fallbackConfig);
+          let config = {};
+          try {
+            const raw = await tb.fs.promises.readFile(configPath, "utf8");
+            config = JSON.parse(String(raw || "{}"));
+          } catch {
+            config = {};
+          }
+
+          const appConfig = config && typeof config.config === "object" ? config.config : config;
+
+          const displayName = normalizeName(resolveTitle(appConfig?.title) || config?.name || appConfig?.name || entry?.name || "Unknown App");
+          const src = normalizeName(appConfig?.wmArgs?.src || appConfig?.src || appConfig?.entry || "");
+          const installer = installerName(entry);
+          const isSystem = installer.toLowerCase() === "system" || String(entry?.user).toLowerCase() === "false";
+          const rawIcon = normalizeIcon(appConfig?.icon || appConfig?.wmArgs?.icon, configPath);
+          const icon = !isSystem && isExternalUrl(rawIcon) ? await fetchExternalIconAsBlobUrl(rawIcon) || rawIcon : toRenderableFsPath(rawIcon);
+          const installDir = dirname(configPath);
+
+          return {
+            key: toKey(entry),
+            name: normalizeName(entry?.name || displayName),
+            displayName,
+            configPath,
+            installDir,
+            src,
+            icon,
+            isSystem,
+            installer,
+          };
+        }
+
+        function matchesAppByPath(value, app) {
+          const text = String(value || "");
+          if (!text) return false;
+          return (
+            text.includes(app.configPath) ||
+            text.includes(app.installDir) ||
+            (app.src && text.includes(app.src)) ||
+            text.includes(`/apps/${app.name}/`)
+          );
+        }
+
+        function matchesAppByName(value, app) {
+          const text = String(value || "").trim().toLowerCase();
+          if (!text) return false;
+          return text === app.name.toLowerCase() || text === app.displayName.toLowerCase();
+        }
+
+        async function removeFromDockAndStart(app) {
+          const dockData = await readJson("/system/var/terbium/dock.json", []);
+          const dockList = Array.isArray(dockData) ? dockData : [];
+          const dockNext = dockList.filter(entry => {
+            if (typeof entry === "string") return !matchesAppByPath(entry, app) && !matchesAppByName(entry, app);
+            return !matchesAppByPath(entry?.src, app) && !matchesAppByPath(entry?.icon, app) && !matchesAppByName(entry?.name, app);
+          });
+          await writeJson("/system/var/terbium/dock.json", dockNext);
+
+          const startData = await readJson("/system/var/terbium/start.json", { system_apps: [], pinned_apps: [] });
+          const systemApps = Array.isArray(startData?.system_apps) ? startData.system_apps : [];
+          const pinnedApps = Array.isArray(startData?.pinned_apps) ? startData.pinned_apps : [];
+
+          const filterStartEntry = entry => !matchesAppByPath(entry?.src, app) && !matchesAppByPath(entry?.icon, app) && !matchesAppByName(entry?.name, app);
+
+          await writeJson("/system/var/terbium/start.json", {
+            ...startData,
+            system_apps: systemApps.filter(filterStartEntry),
+            pinned_apps: pinnedApps.filter(filterStartEntry),
+          });
+        }
+
+        async function killAppProcesses(app) {
+          let procs = [];
+          try {
+            procs = await tb.process.list();
+          } catch {
+            procs = [];
+          }
+
+          await Promise.all(
+            procs.map(async proc => {
+              const procName = String(proc?.name || "");
+              const procSrc = String(proc?.src || "");
+              const matches = matchesAppByPath(procSrc, app) || matchesAppByName(procName, app);
+              if (!matches) return;
+              try {
+                await tb.process.kill(proc?.pid);
+              } catch {
+                /* ignore */
+              }
+            }),
+          );
+        }
+
+        async function removeInstalledRecord(app) {
+          const installed = await readJson("/apps/installed.json", []);
+          const list = Array.isArray(installed) ? installed : [];
+          const next = list.filter(entry => toKey(entry) !== app.key);
+          await writeJson("/apps/installed.json", next);
+        }
+
+        async function removeAppFiles(app) {
+          if (!app.installDir || app.installDir === "/" || app.installDir === "/apps" || app.installDir.startsWith("/apps/system/")) return;
+          const rm = tb.shell?.promises?.rm || tb.sh?.promises?.rm;
+          if (!rm) return;
+          try {
+            await rm(app.installDir, { recursive: true, force: true });
+          } catch {
+            try {
+              await rm(app.installDir, { recursive: true });
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+
+        async function uninstallApp(app) {
+          if (app.isSystem) return false;
+          await killAppProcesses(app);
+          try {
+            await tb.launcher.removeApp(app.name);
+          } catch {
+            /* ignore */
+          }
+          await removeFromDockAndStart(app);
+          await removeInstalledRecord(app);
+          await removeAppFiles(app);
+          return true;
+        }
+
+        function buildCard(app) {
+          const iconHtml = app.icon
+            ? `<img class="installed-app-icon-image" src="${escHtml(app.icon)}" alt="" />`
+            : `<span class="installed-app-icon-fallback">${escHtml(app.displayName.slice(0, 1) || "?")}</span>`;
+
+          const actionHtml = app.isSystem
+            ? `<span class="installed-app-system-pill">System</span>`
+            : `<button type="button" class="server-delete installed-app-delete" data-uninstall-key="${escHtml(app.key)}" aria-label="Uninstall ${escHtml(app.displayName)}">
+<svg viewBox="0 0 18 21" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M13.5 2.98V3.2c1.3.12 2.59.29 3.88.51a.75.75 0 0 1-.25 1.48l-.21-.03-1 13.07a3 3 0 0 1-2.99 2.77H5.08a3 3 0 0 1-2.99-2.77l-1-13.07-.21.03a.75.75 0 0 1-.25-1.48c1.29-.22 2.58-.39 3.88-.51v-.22A2.96 2.96 0 0 1 7.32.03c1.12-.04 2.24-.04 3.36 0A2.96 2.96 0 0 1 13.5 2.98ZM7.36 1.53a16.7 16.7 0 0 1 3.28 0c.75.02 1.36.66 1.36 1.45v.11a32.6 32.6 0 0 0-6 0v-.11c0-.79.61-1.43 1.36-1.45ZM7.01 7.47a.75.75 0 0 0-1.5.06l.35 9a.75.75 0 1 0 1.5-.06l-.35-9Zm5.48.06a.75.75 0 1 0-1.5-.06l-.35 9a.75.75 0 1 0 1.5.06l.35-9Z" fill="currentColor"/></svg>
+</button>`;
+
+          return `
+<article class="server-card-wrap installed-app-wrap" data-app-card="${escHtml(app.key)}">
+<div class="server-card installed-app-card ${app.isSystem ? "is-system" : "is-user"}">
+<span class="installed-app-icon">${iconHtml}</span>
+<div>
+<div class="server-main-title">${escHtml(app.displayName)}</div>
+<div class="server-subtext">${escHtml(app.installDir)}</div>
+</div>
+</div>
+${actionHtml}
+</article>
+`;
+        }
+
+        let currentApps = [];
+        let iconBlobUrls = [];
+
+        function cleanupIconBlobUrls() {
+          iconBlobUrls.forEach(url => {
+            try {
+              URL.revokeObjectURL(url);
+            } catch {
+              /* ignore */
+            }
+          });
+          iconBlobUrls = [];
+        }
+
+        async function renderInstalledAppsView() {
+          cleanupIconBlobUrls();
+          const installed = await readJson("/apps/installed.json", []);
+          const list = Array.isArray(installed) ? installed : [];
+          currentApps = await Promise.all(list.map(readAppMeta));
+          iconBlobUrls = currentApps.map(app => app.icon).filter(icon => String(icon || "").startsWith("blob:"));
+
+          if (!currentApps.length) {
+            return `<p class="detail-control-value">No installed apps were found.</p>`;
+          }
+
+          const systemApps = currentApps.filter(app => app.isSystem).sort((a, b) => a.displayName.localeCompare(b.displayName));
+          const userApps = currentApps.filter(app => !app.isSystem).sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+          const section = (title, apps) => {
+            if (!apps.length) return "";
+            return `
+<section class="installed-app-section">
+<h3 class="detail-section-title">${escHtml(title)}</h3>
+<div class="installed-app-list">
+${apps.map(buildCard).join("")}
+</div>
+</section>
+`;
+          };
+
+          return `${section("Installed Apps", userApps)}${section("System Apps", systemApps)}`;
+        }
+
+        function wireInstalledAppsActions(root) {
+          const scope = root || document;
+          scope.querySelectorAll("[data-uninstall-key]").forEach(btn => {
+            btn.addEventListener("click", async ev => {
+              ev.preventDefault();
+              const key = String(btn.getAttribute("data-uninstall-key") || "");
+              if (!key) return;
+              const app = currentApps.find(item => item.key === key);
+              if (!app || app.isSystem) return;
+
+              btn.setAttribute("disabled", "true");
+              try {
+                const removed = await uninstallApp(app);
+                if (!removed) return;
+                const host = scope.closest("#detailContent") || scope;
+                host.innerHTML = await renderInstalledAppsView();
+                wireInstalledAppsActions(host);
+              } finally {
+                btn.removeAttribute("disabled");
+              }
+            });
+          });
+        }
+
+        return {
+          loadingText: "Loading installed apps...",
+          render: renderInstalledAppsView,
+          wire: wireInstalledAppsActions,
+        };
+      ]]>
+    </Script>
+  </Scripts>
 </TSL>

@@ -12,6 +12,7 @@
         <Item id="wallpaper" title="Wallpaper" icon="image" default="true" />
         <Item id="accent" title="Accent" icon="format_paint" />
         <Item id="shell" title="Shell Features" icon="dashboard_customize" />
+        <Item id="window" title="Window Features" icon="window" />
         <Item id="time" title="Time" icon="schedule" />
         <Item id="weather" title="Weather" icon="cloud" />
       </Sidebar>
@@ -19,6 +20,7 @@
         <Option id="appearance.quick.wallpaper" text="Change wallpaper" view="wallpaper" />
         <Option id="appearance.quick.accent" text="Change accent" view="accent" />
         <Option id="appearance.quick.shell" text="Customize shell features" view="shell" />
+        <Option id="appearance.quick.window" text="Customize window features" view="window" />
       </RecommendedOptions>
       <Content>
         <View id="wallpaper">
@@ -40,10 +42,15 @@
             <Toggle label="Show Battery Percentage" bind="appearance.shell.batteryPercent" />
             <Toggle label="Enable Window Optimizations" bind="appearance.shell.windowOptimizations" />
             <Toggle label="Show FPS Counter" bind="appearance.shell.fpsCounter" />
-            <Toggle label="Always Maximized" bind="appearance.shell.alwaysMaximized" />
-            <Toggle label="Maximized Uses Fullscreen" bind="appearance.shell.maximizedFullscreen" />
-            <Slider label="Blur Intensity" bind="appearance.shell.blurIntensity" min="0" max="50" step="1" />
             <Button label="Apply Shell Features" action="applyShellFeatures" />
+          </Section>
+        </View>
+        <View id="window">
+          <Section title="Window Features">
+            <Toggle label="Always Maximized" bind="appearance.window.alwaysMaximized" />
+            <Toggle label="Maximized Uses Fullscreen" bind="appearance.window.maximizedFullscreen" />
+            <Slider label="Blur Intensity" bind="appearance.window.blurIntensity" min="0" max="50" step="1" />
+            <Button label="Apply Window Features" action="applyWindowFeatures" />
             <Button label="Pick Window Accent" action="pickWindowAccent" />
           </Section>
         </View>
@@ -214,4 +221,893 @@
       ]]>
     </Action>
   </Actions>
+  <Scripts>
+    <Script id="settings.appearance" view="wallpaper">
+      <![CDATA[
+        const tb = api.tb;
+        const windowRef = api.window;
+        const nav = api.navigator;
+        const defaultWallpaper = "/assets/wallpapers/1.png";
+        const defaultAccent = "#32ae62";
+        const defaultWindowAccent = "#ffffff";
+        const wallpaperDir = "/system/etc/terbium/wallpapers";
+        let activeBlobUrls = [];
+
+        function cleanupBlobUrls() {
+          activeBlobUrls.forEach(url => {
+            try {
+              URL.revokeObjectURL(url);
+            } catch {
+              /* ignore */
+            }
+          });
+          activeBlobUrls = [];
+        }
+
+        function escHtml(value) {
+          return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function username() {
+          return tb.user.username();
+        }
+
+        async function readJson(path, fallbackValue) {
+          try {
+            const raw = await tb.fs.promises.readFile(path, "utf8");
+            const parsed = JSON.parse(String(raw || ""));
+            return parsed == null ? fallbackValue : parsed;
+          } catch {
+            return fallbackValue;
+          }
+        }
+
+        async function writeJson(path, value) {
+          await tb.fs.promises.writeFile(path, JSON.stringify(value, null, 2), "utf8");
+        }
+
+        function mergeUserSettings(settings) {
+          const next = settings && typeof settings === "object" ? settings : {};
+          next.window = next.window && typeof next.window === "object" ? next.window : {};
+          next.times = next.times && typeof next.times === "object" ? next.times : {};
+          if (typeof next.wallpaper !== "string") next.wallpaper = defaultWallpaper;
+          if (typeof next.wallpaperMode !== "string") next.wallpaperMode = "cover";
+          if (typeof next.accent !== "string") next.accent = defaultAccent;
+          if (typeof next.optimized === "undefined") next.optimized = true;
+          if (typeof next.showFPS === "undefined") next.showFPS = false;
+          if (typeof next["battery-percent"] === "undefined") next["battery-percent"] = false;
+          if (typeof next.window.blurlevel === "undefined") next.window.blurlevel = 9;
+          if (typeof next.window.winAccent !== "string") next.window.winAccent = defaultWindowAccent;
+          if (typeof next.window.alwaysMaximized === "undefined") next.window.alwaysMaximized = false;
+          if (typeof next.window.alwaysFullscreen === "undefined") next.window.alwaysFullscreen = false;
+          if (typeof next.times.format !== "string") next.times.format = "12h";
+          if (typeof next.times.showSeconds === "undefined") next.times.showSeconds = false;
+          return next;
+        }
+
+        async function readUserSettings() {
+          const file = `/home/${await username()}/settings.json`;
+          return mergeUserSettings(await readJson(file, {}));
+        }
+
+        async function saveUserSettings(settings) {
+          const file = `/home/${await username()}/settings.json`;
+          await writeJson(file, mergeUserSettings(settings));
+        }
+
+        async function updateUserSettings(mutator) {
+          const settings = await readUserSettings();
+          const next = await mutator(settings) || settings;
+          await saveUserSettings(next);
+          return next;
+        }
+
+        async function readSystemSettings() {
+          return await readJson("/system/etc/terbium/settings.json", {});
+        }
+
+        async function saveSystemSettings(settings) {
+          await writeJson("/system/etc/terbium/settings.json", settings || {});
+        }
+
+        async function updateSystemSettings(mutator) {
+          const settings = await readSystemSettings();
+          const next = await mutator(settings) || settings;
+          await saveSystemSettings(next);
+          return next;
+        }
+
+        function isExternalUrl(value) {
+          const text = String(value || "").trim().toLowerCase();
+          return text.startsWith("http://") || text.startsWith("https://");
+        }
+
+        function isBase64Wallpaper(value) {
+          const text = String(value || "").trim();
+          if (!text) return false;
+          if (text.startsWith("data:")) return true;
+          const stripped = text.replace(/\s+/g, "");
+          return stripped.length > 200 && /^[A-Za-z0-9+/=]+$/.test(stripped);
+        }
+
+        function resolveWallpaperSrc(value) {
+          const text = String(value || "").trim();
+          if (!text) return defaultWallpaper;
+          if (text.startsWith("data:") || text.startsWith("blob:") || text.startsWith("http://") || text.startsWith("https://")) return text;
+          if (isBase64Wallpaper(text)) return text.startsWith("data:") ? text : `data:image/png;base64,${text}`;
+          return text;
+        }
+
+        function normalizeWallpaperPath(value) {
+          const text = String(value || "").trim();
+          if (!text) return defaultWallpaper;
+          return text;
+        }
+
+        function wallpaperNameFromPath(path) {
+          const name = String(path || "").split("/").filter(Boolean).pop() || "Wallpaper";
+          return name.replace(/\.[^.]+$/, "");
+        }
+
+        function colorPreviewStyle(color) {
+          const value = String(color || "").trim() || defaultAccent;
+          return `style="--preview-accent:${escHtml(value)}"`;
+        }
+
+        async function ensureWallpaperDir() {
+          try {
+            await tb.fs.promises.mkdir(wallpaperDir, { recursive: true });
+          } catch {
+            /* ignore */
+          }
+        }
+
+        async function listCustomWallpapers() {
+          try {
+            const files = await tb.fs.promises.readdir(wallpaperDir);
+            return (Array.isArray(files) ? files : []).filter(file => typeof file === "string").sort();
+          } catch {
+            return [];
+          }
+        }
+
+        async function applyWallpaper(path) {
+          const value = normalizeWallpaperPath(path);
+          const current = await readUserSettings();
+          if (normalizeWallpaperPath(current.wallpaper) === value) return;
+          await updateUserSettings(settings => {
+            settings.wallpaper = value;
+            return settings;
+          });
+          if (tb.desktop?.wallpaper?.set) {
+            tb.desktop.wallpaper.set(value);
+          }
+        }
+
+        async function importWallpaperFromSystemFile(rerender) {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = "image/*";
+          input.addEventListener("change", async () => {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const buffer = await file.arrayBuffer();
+            await ensureWallpaperDir();
+            const target = `${wallpaperDir}/${file.name}`;
+            await tb.fs.promises.writeFile(target, tb.buffer.from(buffer), "arraybuffer");
+            await applyWallpaper(target);
+            if (typeof rerender === "function") await rerender();
+          });
+          input.click();
+        }
+
+        async function importWallpaperFromFs(rerender) {
+          if (!tb.dialog?.FileBrowser) return;
+          tb.dialog.FileBrowser({
+            title: "Select a wallpaper from the file system",
+            local: true,
+            onOk: async filePath => {
+              if (!filePath) return;
+              const fileName = String(filePath).split("/").filter(Boolean).pop() || `wallpaper-${Date.now()}.png`;
+              const target = `${wallpaperDir}/${fileName}`;
+              const data = await tb.fs.promises.readFile(filePath, "arraybuffer");
+              await ensureWallpaperDir();
+              await tb.fs.promises.writeFile(target, data, "arraybuffer");
+              await applyWallpaper(target);
+              if (typeof rerender === "function") await rerender();
+            },
+          });
+        }
+
+        async function importWallpaperFromUrl(rerender) {
+          if (!tb.dialog?.Message) return;
+          tb.dialog.Message({
+            title: "Enter a URL of the wallpaper",
+            onOk: async value => {
+              const url = String(value || "").trim();
+              if (!url) return;
+              const fileName = url.split("/").filter(Boolean).pop() || `wallpaper-${Date.now()}.png`;
+              const target = `${wallpaperDir}/${fileName}`;
+              await ensureWallpaperDir();
+              await tb.system.download(url, target);
+              await applyWallpaper(target);
+              if (typeof rerender === "function") await rerender();
+            },
+          });
+        }
+
+        async function customWallpaperPrompt(rerender) {
+          if (!tb.dialog?.Select) return;
+          tb.dialog.Select({
+            title: "Where do you want to load the wallpaper from?",
+            options: [
+              { text: "System Storage", value: "sys" },
+              { text: "Terbium File System", value: "fs" },
+              { text: "Internet Url", value: "url" },
+            ],
+            onOk: async choice => {
+              if (choice === "sys") {
+                await importWallpaperFromSystemFile(rerender);
+                return;
+              }
+              if (choice === "fs") {
+                await importWallpaperFromFs(rerender);
+                return;
+              }
+              if (choice === "url") {
+                await importWallpaperFromUrl(rerender);
+              }
+            },
+          });
+        }
+
+        async function deleteCustomWallpaper(path, rerender) {
+          const current = await readUserSettings();
+          if (current.wallpaper === path) {
+            await applyWallpaper(defaultWallpaper);
+          }
+          try {
+            await tb.fs.promises.unlink(path);
+          } catch {
+            /* ignore */
+          }
+          if (typeof rerender === "function") await rerender();
+        }
+
+        async function setAccent(value) {
+          const current = await readUserSettings();
+          if (String(current.accent || defaultAccent) === String(value || defaultAccent)) return;
+          await updateUserSettings(settings => {
+            settings.accent = value;
+            return settings;
+          });
+          windowRef.dispatchEvent(new Event("upd-accent"));
+        }
+
+        async function setWindowAccent(value) {
+          const current = await readUserSettings();
+          if (String(current.window?.winAccent || defaultWindowAccent) === String(value || defaultWindowAccent)) return;
+          await updateUserSettings(settings => {
+            settings.window = settings.window || {};
+            settings.window.winAccent = value;
+            return settings;
+          });
+          windowRef.dispatchEvent(new Event("upd-accent"));
+        }
+
+        async function applyShellState(root) {
+          const scope = root || document;
+          const battery = scope.querySelector("[data-shell-battery]");
+          const optimizations = scope.querySelector("[data-shell-optimizations]");
+          const fps = scope.querySelector("[data-shell-fps]");
+          const current = await readUserSettings();
+          const nextBattery = battery ? !!battery.checked : !!current["battery-percent"];
+          const nextOptimizations = optimizations ? !!optimizations.checked : current.optimized !== false;
+          const nextFps = fps ? !!fps.checked : !!current.showFPS;
+
+          if (
+            !!current["battery-percent"] === nextBattery &&
+            (current.optimized !== false) === nextOptimizations &&
+            !!current.showFPS === nextFps
+          ) {
+            return;
+          }
+
+          await updateUserSettings(settings => {
+            settings.window = settings.window || {};
+            if (battery) settings["battery-percent"] = !!battery.checked;
+            if (optimizations) settings.optimized = !!optimizations.checked;
+            if (fps) settings.showFPS = !!fps.checked;
+            return settings;
+          });
+
+          if (battery) {
+            if (battery.checked && tb.battery?.showPercentage) await tb.battery.showPercentage();
+            if (!battery.checked && tb.battery?.hidePercentage) await tb.battery.hidePercentage();
+          }
+          windowRef.dispatchEvent(new Event("upd-accent"));
+          windowRef.dispatchEvent(new CustomEvent("settings-changed", { detail: { showFPS: !!fps?.checked } }));
+        }
+
+        async function applyWindowState(root) {
+          const scope = root || document;
+          const maximized = scope.querySelector("[data-window-maximized]");
+          const fullscreen = scope.querySelector("[data-window-fullscreen]");
+          const blur = scope.querySelector("[data-window-blur]");
+          const blurValue = Number(blur?.value || 0);
+          const current = await readUserSettings();
+          const nextMaximized = maximized ? !!maximized.checked : !!current.window?.alwaysMaximized;
+          const nextFullscreen = fullscreen ? !!fullscreen.checked : !!current.window?.alwaysFullscreen;
+          const nextBlur = blur ? blurValue : Number(current.window?.blurlevel ?? 9);
+
+          if (
+            !!current.window?.alwaysMaximized === nextMaximized &&
+            !!current.window?.alwaysFullscreen === nextFullscreen &&
+            Number(current.window?.blurlevel ?? 9) === nextBlur
+          ) {
+            return;
+          }
+
+          await updateUserSettings(settings => {
+            settings.window = settings.window || {};
+            if (maximized) settings.window.alwaysMaximized = !!maximized.checked;
+            if (fullscreen) settings.window.alwaysFullscreen = !!fullscreen.checked;
+            if (blur) settings.window.blurlevel = blurValue;
+            return settings;
+          });
+
+          windowRef.dispatchEvent(new Event("upd-accent"));
+        }
+
+        async function applyClockState(root) {
+          const scope = root || document;
+          const format = scope.querySelector("[data-time-format]");
+          const seconds = scope.querySelector("[data-time-seconds]");
+          const current = await readUserSettings();
+          const nextFormat = format && format.value === "24h" ? "24h" : "12h";
+          const nextSeconds = !!seconds?.checked;
+          if ((current.times?.format || "12h") === nextFormat && !!current.times?.showSeconds === nextSeconds) {
+            return;
+          }
+          await updateUserSettings(settings => {
+            settings.times = settings.times || {};
+            settings.times.format = format && format.value === "24h" ? "24h" : "12h";
+            settings.times.showSeconds = !!seconds?.checked;
+            return settings;
+          });
+        }
+
+        async function updateWeatherLocation(root) {
+          const scope = root || document;
+          const coordsEl = scope.querySelector("[data-weather-coords]");
+          if (!nav?.geolocation) return;
+          navigator.geolocation.getCurrentPosition(
+            async position => {
+              const latitude = position.coords.latitude;
+              const longitude = position.coords.longitude;
+              const value = `${latitude},${longitude}`;
+              await updateSystemSettings(settings => {
+                settings.location = value;
+                return settings;
+              });
+              if (coordsEl) coordsEl.textContent = value;
+              windowRef.dispatchEvent(new Event("updWeather"));
+            },
+            error => {
+              console.error(`Error Occured: ${error.code}`);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 0,
+            },
+          );
+        }
+
+        async function applyWeatherState(root) {
+          const scope = root || document;
+          const unit = scope.querySelector("[data-weather-unit]");
+          const current = await readSystemSettings();
+          const nextUnit = unit ? unit.value : "Celsius";
+          if ((current.weather?.unit || "Celsius") === nextUnit) {
+            return;
+          }
+          await updateSystemSettings(settings => {
+            settings.weather = settings.weather || {};
+            settings.weather.unit = unit ? unit.value : "Celsius";
+            return settings;
+          });
+          windowRef.dispatchEvent(new Event("updWeather"));
+        }
+
+        function wallpaperTileMarkup(path, label, active, removable, selectedSrc) {
+          const src = resolveWallpaperSrc(path);
+          return `
+<article class="appearance-tile ${active ? "is-active" : ""}" data-wallpaper-path="${escHtml(path)}">
+  <button type="button" class="appearance-tile-preview" data-wallpaper-select="${escHtml(path)}" aria-label="Use ${escHtml(label)} wallpaper">
+    <img src="${escHtml(src)}" alt="${escHtml(label)}" />
+    <span class="appearance-tile-label">${escHtml(label)}</span>
+    ${active ? `<span class="appearance-pill">Active</span>` : ""}
+  </button>
+  ${removable ? `<button type="button" class="appearance-delete" data-wallpaper-delete="${escHtml(path)}" aria-label="Delete ${escHtml(label)}">${selectedSrc}</button>` : ""}
+</article>
+`;
+        }
+
+        async function renderWallpaperView() {
+          const settings = await readUserSettings();
+          await ensureWallpaperDir();
+          const currentWallpaper = normalizeWallpaperPath(settings.wallpaper);
+          const currentFillMode = String(settings.wallpaperMode || "cover").toLowerCase();
+          const stock = [1, 2, 3, 4, 5, 6, 7].map(num => `/assets/wallpapers/${num}.png`);
+          const custom = await listCustomWallpapers();
+          const currentSrc = resolveWallpaperSrc(currentWallpaper);
+          const syncedCard = isBase64Wallpaper(currentWallpaper)
+            ? `<article class="appearance-tile is-active"><button type="button" class="appearance-tile-preview" data-wallpaper-select="${escHtml(currentWallpaper)}" aria-label="Use synced wallpaper"><img src="${escHtml(currentSrc)}" alt="Synced Wallpaper" /><span class="appearance-tile-label">Synced Wallpaper</span><span class="appearance-pill">Synced</span></button></article>`
+            : "";
+
+          return `
+<section class="appearance-page">
+  <article class="appearance-panel">
+    <div class="appearance-panel-head">
+      <div>
+        <div class="appearance-title">Wallpaper</div>
+        <div class="appearance-subtitle">Current: ${escHtml(isBase64Wallpaper(currentWallpaper) ? "Synced Wallpaper" : wallpaperNameFromPath(currentWallpaper))}</div>
+      </div>
+      <button type="button" class="detail-action appearance-primary-btn" data-wallpaper-open-picker>Custom Wallpaper</button>
+    </div>
+    <div class="appearance-row">
+      <label class="appearance-label" for="appearance-wallpaper-fill">Fill Mode</label>
+      <select id="appearance-wallpaper-fill" class="appearance-select" data-wallpaper-fill>
+        <option value="cover" ${currentFillMode === "cover" ? "selected" : ""}>Cover</option>
+        <option value="contain" ${currentFillMode === "contain" ? "selected" : ""}>Contain</option>
+        <option value="stretch" ${currentFillMode === "stretch" ? "selected" : ""}>Stretch</option>
+      </select>
+    </div>
+    <div class="appearance-grid-title">Stock Wallpapers</div>
+    <div class="appearance-grid">
+      ${stock.map(path => wallpaperTileMarkup(path, wallpaperNameFromPath(path), currentWallpaper === path, false, "")).join("")}
+      ${syncedCard}
+    </div>
+    <div class="appearance-grid-title">Custom Wallpapers</div>
+    <div class="appearance-grid">
+      ${custom
+        .map(file => {
+          const full = `/fs/${wallpaperDir}/${file}`;
+          return wallpaperTileMarkup(full, file, currentWallpaper === full, true, "×");
+        })
+        .join("")}
+      <article class="appearance-tile appearance-add-tile">
+        <button type="button" class="appearance-tile-preview appearance-add-btn" data-wallpaper-open-picker aria-label="Add wallpaper">
+          <span class="appearance-add-plus">+</span>
+          <span class="appearance-tile-label">Add Wallpaper</span>
+        </button>
+      </article>
+    </div>
+  </article>
+</section>
+`;
+        }
+
+        async function renderAccentView() {
+          const settings = await readUserSettings();
+          const current = String(settings.accent || defaultAccent);
+          const isDefault = current === defaultAccent;
+          return `
+<section class="appearance-page">
+  <article class="appearance-panel">
+    <div class="appearance-panel-head">
+      <div>
+        <div class="appearance-title">Accent</div>
+        <div class="appearance-subtitle">Current accent: ${escHtml(current)}</div>
+      </div>
+      <button type="button" class="detail-action appearance-primary-btn" data-accent-pick>Custom Color</button>
+    </div>
+    <div class="appearance-accent-row">
+      <button type="button" class="appearance-swatch ${isDefault ? "" : "is-resettable"}" data-accent-reset aria-label="Reset accent color" ${colorPreviewStyle(current)}>
+        <span class="appearance-swatch-mark">×</span>
+      </button>
+      <div class="appearance-note">Click the swatch to reset to the default accent. Use the button to pick a custom color.</div>
+    </div>
+  </article>
+</section>
+`;
+        }
+
+        async function renderShellView() {
+          const settings = await readUserSettings();
+          const batteryEnabled = !!settings["battery-percent"];
+          const optimizationsEnabled = settings.optimized !== false;
+          const fpsEnabled = !!settings.showFPS;
+          const batterySupported = await tb.battery?.canUse?.();
+
+          return `
+<section class="appearance-page">
+  <article class="appearance-panel">
+    <div class="appearance-panel-head">
+      <div>
+        <div class="appearance-title">Shell Features</div>
+        <div class="appearance-subtitle">Tune how windows and shell surfaces behave.</div>
+      </div>
+    </div>
+    ${batterySupported ? `
+    <label class="appearance-switch-row">
+      <span>
+        <span class="appearance-switch-title">Show Battery Percentage</span>
+        <span class="appearance-switch-subtitle">Display battery percentage in the top bar.</span>
+      </span>
+      <input type="checkbox" class="appearance-switch-input" data-shell-battery ${batteryEnabled ? "checked" : ""} />
+    </label>
+    ` : ""}
+    <label class="appearance-switch-row">
+      <span>
+        <span class="appearance-switch-title">Enable Window Optimizations</span>
+        <span class="appearance-switch-subtitle">Improves drag and resize performance.</span>
+      </span>
+      <input type="checkbox" class="appearance-switch-input" data-shell-optimizations ${optimizationsEnabled ? "checked" : ""} />
+    </label>
+    <label class="appearance-switch-row">
+      <span>
+        <span class="appearance-switch-title">Show FPS Counter</span>
+        <span class="appearance-switch-subtitle">Display real-time frames per second.</span>
+      </span>
+      <input type="checkbox" class="appearance-switch-input" data-shell-fps ${fpsEnabled ? "checked" : ""} />
+    </label>
+  </article>
+</section>
+`;
+        }
+
+        async function renderWindowView() {
+          const settings = await readUserSettings();
+          const maximizedEnabled = !!settings.window.alwaysMaximized;
+          const fullscreenEnabled = !!settings.window.alwaysFullscreen;
+          const blurValue = Number(settings.window.blurlevel ?? 9);
+          const blurPercent = Math.round((Math.max(0, Math.min(50, blurValue)) / 50) * 100);
+          const winAccent = String(settings.window.winAccent || defaultWindowAccent);
+
+          return `
+<section class="appearance-page">
+  <article class="appearance-panel">
+    <div class="appearance-panel-head">
+      <div>
+        <div class="appearance-title">Window Features</div>
+        <div class="appearance-subtitle">Tune maximize behavior, blur, and the window accent.</div>
+      </div>
+    </div>
+    <label class="appearance-switch-row">
+      <span>
+        <span class="appearance-switch-title">Always Maximized</span>
+        <span class="appearance-switch-subtitle">Launch windows maximized by default.</span>
+      </span>
+      <input type="checkbox" class="appearance-switch-input" data-window-maximized ${maximizedEnabled ? "checked" : ""} />
+    </label>
+    <label class="appearance-switch-row">
+      <span>
+        <span class="appearance-switch-title">Maximized Uses Fullscreen</span>
+        <span class="appearance-switch-subtitle">Force maximized windows into fullscreen mode.</span>
+      </span>
+      <input type="checkbox" class="appearance-switch-input" data-window-fullscreen ${fullscreenEnabled ? "checked" : ""} />
+    </label>
+    <div class="appearance-slider-wrap">
+      <div class="appearance-slider-head">
+        <span class="appearance-switch-title">Blur Intensity</span>
+        <span class="appearance-slider-value" data-window-blur-value>${blurPercent}%</span>
+      </div>
+      <input type="range" class="appearance-range" min="0" max="50" step="1" value="${blurValue}" data-window-blur />
+    </div>
+    <div class="appearance-panel-head appearance-inline-head">
+      <div>
+        <div class="appearance-title-sm">Window Accent Color</div>
+        <div class="appearance-subtitle">Click the swatch to reset the window accent.</div>
+      </div>
+      <button type="button" class="detail-action appearance-primary-btn" data-window-pick>Custom Color</button>
+    </div>
+    <div class="appearance-accent-row">
+      <button type="button" class="appearance-swatch ${winAccent === defaultWindowAccent ? "" : "is-resettable"}" data-window-reset aria-label="Reset window accent" ${colorPreviewStyle(winAccent)}>
+        <span class="appearance-swatch-mark">×</span>
+      </button>
+      <div class="appearance-note">Default window accent is white.</div>
+    </div>
+  </article>
+</section>
+`;
+        }
+
+        async function renderTimeView() {
+          const settings = await readUserSettings();
+          const format = String(settings.times.format || "12h");
+          const showSeconds = !!settings.times.showSeconds;
+          return `
+<section class="appearance-page">
+  <article class="appearance-panel">
+    <div class="appearance-panel-head">
+      <div>
+        <div class="appearance-title">Clock</div>
+        <div class="appearance-subtitle">Adjust the time display used across the shell.</div>
+      </div>
+    </div>
+    <div class="appearance-row">
+      <label class="appearance-label" for="appearance-time-format">24-hour Clock</label>
+      <select id="appearance-time-format" class="appearance-select" data-time-format>
+        <option value="12h" ${format === "12h" ? "selected" : ""}>No</option>
+        <option value="24h" ${format === "24h" ? "selected" : ""}>Yes</option>
+      </select>
+    </div>
+    <label class="appearance-switch-row">
+      <span>
+        <span class="appearance-switch-title">Show Seconds</span>
+        <span class="appearance-switch-subtitle">Display seconds in the clock.</span>
+      </span>
+      <input type="checkbox" class="appearance-switch-input" data-time-seconds ${showSeconds ? "checked" : ""} />
+    </label>
+  </article>
+</section>
+`;
+        }
+
+        async function renderWeatherView() {
+          const user = await readUserSettings();
+          const sys = await readSystemSettings();
+          const unit = String(sys.weather?.unit || "Celsius");
+          const coords = String(sys.location || "");
+          return `
+<section class="appearance-page">
+  <article class="appearance-panel">
+    <div class="appearance-panel-head">
+      <div>
+        <div class="appearance-title">Weather</div>
+        <div class="appearance-subtitle">Update the weather unit and location used by the system.</div>
+      </div>
+    </div>
+    <div class="appearance-row">
+      <label class="appearance-label" for="appearance-weather-unit">Temperature Unit</label>
+      <select id="appearance-weather-unit" class="appearance-select" data-weather-unit>
+        <option value="Fahrenheit" ${unit === "Fahrenheit" ? "selected" : ""}>Fahrenheit</option>
+        <option value="Celsius" ${unit === "Celsius" ? "selected" : ""}>Celsius</option>
+        <option value="Kelvin" ${unit === "Kelvin" ? "selected" : ""}>Kelvin</option>
+      </select>
+    </div>
+    <div class="appearance-location-card">
+      <div class="appearance-title-sm">Location</div>
+      <div class="appearance-location-row">
+        <span class="appearance-location-value ${coords ? "" : "is-empty"}" data-weather-coords>${escHtml(coords || "Location not set")}</span>
+        <button type="button" class="appearance-icon-btn" data-weather-toggle-coords>Show</button>
+      </div>
+      <button type="button" class="detail-action appearance-primary-btn" data-weather-update-location>Update Location</button>
+    </div>
+  </article>
+</section>
+`;
+        }
+
+        async function render(context) {
+          cleanupBlobUrls();
+          const viewId = String(context?.viewId || api.viewId || "wallpaper");
+          if (viewId === "accent") return renderAccentView();
+          if (viewId === "shell") return renderShellView();
+          if (viewId === "window") return renderWindowView();
+          if (viewId === "time") return renderTimeView();
+          if (viewId === "weather") return renderWeatherView();
+          return renderWallpaperView();
+        }
+
+        function updateBlurPercent(root) {
+          const scope = root || document;
+          const range = scope.querySelector("[data-window-blur]");
+          const value = scope.querySelector("[data-window-blur-value]");
+          if (!range || !value) return;
+          const mapped = Math.round((Number(range.value || 0) / 50) * 100);
+          value.textContent = `${mapped}%`;
+          range.style.background = `linear-gradient(90deg,#60a5fa ${mapped}%, rgba(255,255,255,0.12) ${mapped}%)`;
+        }
+
+        function wireWallpaper(root, context) {
+          const scope = root || document;
+          const rerender = async () => {
+            if (!root) return;
+            root.innerHTML = await render(context);
+            wire(root, context);
+          };
+          scope.querySelectorAll("[data-wallpaper-select]").forEach(btn => {
+            btn.addEventListener("click", async () => {
+              const path = btn.getAttribute("data-wallpaper-select") || "";
+              if (!path) return;
+              await applyWallpaper(path);
+              await rerender();
+            });
+          });
+
+          scope.querySelectorAll("[data-wallpaper-delete]").forEach(btn => {
+            btn.addEventListener("click", async ev => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              const path = btn.getAttribute("data-wallpaper-delete") || "";
+              if (!path) return;
+              await deleteCustomWallpaper(path, rerender);
+              windowRef.dispatchEvent(new Event("upd-accent"));
+            });
+          });
+
+          scope.querySelectorAll("[data-wallpaper-open-picker]").forEach(pick => {
+            pick.addEventListener("click", () => customWallpaperPrompt(rerender));
+          });
+
+          const fill = scope.querySelector("[data-wallpaper-fill]");
+          if (fill) {
+            fill.addEventListener("change", async () => {
+              const current = await readUserSettings();
+              const nextMode = String(fill.value || "cover").toLowerCase();
+              if (String(current.wallpaperMode || "cover").toLowerCase() === nextMode) return;
+              await updateUserSettings(settings => {
+                settings.wallpaperMode = nextMode;
+                return settings;
+              });
+            });
+          }
+        }
+
+        function wireAccent(root, context) {
+          const scope = root || document;
+          const rerender = async () => {
+            if (!root) return;
+            root.innerHTML = await render(context);
+            wire(root, context);
+          };
+          const pick = scope.querySelector("[data-accent-pick]");
+          if (pick) {
+            pick.addEventListener("click", () => {
+              const input = document.createElement("input");
+              input.type = "color";
+              input.value = defaultAccent;
+              input.click();
+              input.addEventListener("change", async () => {
+                await setAccent(input.value || defaultAccent);
+                await rerender();
+              });
+            });
+          }
+
+          const reset = scope.querySelector("[data-accent-reset]");
+          if (reset) {
+            reset.addEventListener("click", async () => {
+              await setAccent(defaultAccent);
+              await rerender();
+            });
+          }
+        }
+
+        function wireShell(root, context) {
+          const scope = root || document;
+          const battery = scope.querySelector("[data-shell-battery]");
+          const optimizations = scope.querySelector("[data-shell-optimizations]");
+          const fps = scope.querySelector("[data-shell-fps]");
+
+          const saveBatteryState = async () => {
+            await applyShellState(scope);
+          };
+
+          [battery, optimizations, fps].forEach(input => {
+            if (!input) return;
+            input.addEventListener("change", saveBatteryState);
+          });
+
+        }
+
+        function wireWindow(root, context) {
+          const scope = root || document;
+          const rerender = async () => {
+            if (!root) return;
+            root.innerHTML = await render(context);
+            wire(root, context);
+          };
+          const maximized = scope.querySelector("[data-window-maximized]");
+          const fullscreen = scope.querySelector("[data-window-fullscreen]");
+          const blur = scope.querySelector("[data-window-blur]");
+          const pick = scope.querySelector("[data-window-pick]");
+          const reset = scope.querySelector("[data-window-reset]");
+
+          [maximized, fullscreen].forEach(input => {
+            if (!input) return;
+            input.addEventListener("change", async () => {
+              await applyWindowState(scope);
+            });
+          });
+
+          if (blur) {
+            updateBlurPercent(scope);
+            blur.addEventListener("input", async () => {
+              updateBlurPercent(scope);
+              await applyWindowState(scope);
+            });
+          }
+
+          if (pick) {
+            pick.addEventListener("click", () => {
+              const input = document.createElement("input");
+              input.type = "color";
+              input.value = defaultWindowAccent;
+              input.click();
+              input.addEventListener("change", async () => {
+                await setWindowAccent(input.value || defaultWindowAccent);
+                await rerender();
+              });
+            });
+          }
+
+          if (reset) {
+            reset.addEventListener("click", async () => {
+              await setWindowAccent(defaultWindowAccent);
+              await rerender();
+            });
+          }
+        }
+
+        function wireTime(root) {
+          const scope = root || document;
+          const format = scope.querySelector("[data-time-format]");
+          const seconds = scope.querySelector("[data-time-seconds]");
+          if (format) {
+            format.addEventListener("change", async () => {
+              await applyClockState(scope);
+            });
+          }
+          if (seconds) {
+            seconds.addEventListener("change", async () => {
+              await applyClockState(scope);
+            });
+          }
+        }
+
+        function wireWeather(root) {
+          const scope = root || document;
+          const update = scope.querySelector("[data-weather-update-location]");
+          const toggle = scope.querySelector("[data-weather-toggle-coords]");
+          const coords = scope.querySelector("[data-weather-coords]");
+          const unit = scope.querySelector("[data-weather-unit]");
+
+          if (update) {
+            update.addEventListener("click", async () => {
+              await updateWeatherLocation(scope);
+            });
+          }
+
+          if (toggle && coords) {
+            toggle.addEventListener("click", () => {
+              const hidden = coords.classList.toggle("is-hidden");
+              coords.style.display = hidden ? "none" : "inline-flex";
+              toggle.textContent = hidden ? "Show" : "Hide";
+            });
+          }
+
+          if (unit) {
+            unit.addEventListener("change", async () => {
+              await applyWeatherState(scope);
+            });
+          }
+        }
+
+        function wire(root, context) {
+          const viewId = String(context?.viewId || api.viewId || "wallpaper");
+          if (viewId === "accent") return wireAccent(root, context);
+          if (viewId === "shell") return wireShell(root, context);
+          if (viewId === "window") return wireWindow(root, context);
+          if (viewId === "time") return wireTime(root);
+          if (viewId === "weather") return wireWeather(root);
+          return wireWallpaper(root, context);
+        }
+
+        return {
+          loadingText: "Loading appearance...",
+          render,
+          wire,
+        };
+      ]]>
+    </Script>
+  </Scripts>
 </TSL>
