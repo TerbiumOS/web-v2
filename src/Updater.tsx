@@ -7,74 +7,197 @@ export default function Updater() {
 	const [progress, setProgress] = useState(0);
 	const statusref = useRef<HTMLDivElement>(null);
 
-	async function copyDir(inp: string, dest: string, rn?: boolean) {
-		if (rn === true) {
-			if (!(await dirExists(dest))) {
-				await window.tb.fs.promises.mkdir(dest);
-			}
-		}
-		const files = await window.tb.fs.promises.readdir(inp);
-		const totalFiles = files.length;
-		for (const [index, file] of files.entries()) {
-			const stats = await window.tb.fs.promises.stat(`${inp}/${file}`);
-			if (stats && stats.isDirectory()) {
-				await window.tb.fs.promises.mkdir(`${dest}/${file}`);
-				await copyDir(`${inp}/${file}`, `${dest}/${file}`, true);
-			} else {
-				await window.tb.fs.promises.writeFile(`${dest}/${file}`, await window.tb.fs.promises.readFile(`${inp}/${file}`, "utf8"));
-			}
-			statusref.current!.innerText = `Creating a copy of: ${file}...`;
-			setProgress(Math.floor(((index + 1) / totalFiles) * 100));
-		}
-	}
-
 	useEffect(() => {
 		const main = async () => {
+			const canonicalSystemInstalledApps = [
+				{ name: "About", config: "/apps/system/about.tapp/index.json", user: "System" },
+				{ name: "App Store", config: "/apps/system/app store.tapp/index.json", user: "System" },
+				{ name: "Browser", config: "/apps/system/browser.tapp/index.json", user: "System" },
+				{ name: "Calculator", config: "/apps/system/calculator.tapp/index.json", user: "System" },
+				{ name: "Feedback", config: "/apps/system/feedback.tapp/index.json", user: "System" },
+				{ name: "Files", config: "/apps/system/files.tapp/index.json", user: "System" },
+				{ name: "Media Viewer", config: "/apps/system/media viewer.tapp/index.json", user: "System" },
+				{ name: "Settings", config: "/apps/system/settings.tapp/index.json", user: "System" },
+				{ name: "Task Manager", config: "/apps/system/task manager.tapp/index.json", user: "System" },
+				{ name: "Terminal", config: "/apps/system/terminal.tapp/index.json", user: "System" },
+				{ name: "Text Editor", config: "/apps/system/text editor.tapp/index.json", user: "System" },
+				{ name: "Anura File Manager", config: "/system/etc/anura/configs/Anura File Manager.json", user: "System" },
+			];
+			const normalize = (value: string) =>
+				String(value || "")
+					.toLowerCase()
+					.replace(/[^a-z0-9]/g, "");
+
+			const toBytes = (input: any): Uint8Array => {
+				if (input instanceof Uint8Array) return input;
+				if (typeof input === "string") return window.tb.buffer.from(input, "utf8");
+				return window.tb.buffer.from(input);
+			};
+			const bytesEqual = (a: Uint8Array, b: Uint8Array) => {
+				if (a.byteLength !== b.byteLength) return false;
+				for (let i = 0; i < a.byteLength; i++) {
+					if (a[i] !== b[i]) return false;
+				}
+				return true;
+			};
+			const ensureDirForPath = async (path: string) => {
+				const dir = path.slice(0, path.lastIndexOf("/"));
+				if (dir && !(await dirExists(dir))) {
+					// @ts-expect-error recursive option is supported in runtime fs
+					await window.tb.fs.promises.mkdir(dir, { recursive: true });
+				}
+			};
+			const writeFileIfChanged = async (path: string, content: Uint8Array) => {
+				if (await fileExists(path)) {
+					const currentRaw = await window.tb.fs.promises.readFile(path);
+					if (bytesEqual(toBytes(currentRaw), content)) {
+						return false;
+					}
+				}
+				await ensureDirForPath(path);
+				const output = new Uint8Array(content.byteLength);
+				output.set(content);
+				await window.tb.fs.promises.writeFile(path, output.buffer);
+				return true;
+			};
+			const syncDirectoryDiff = async (sourceDir: string, targetDir: string): Promise<{ updated: number; removed: number; skipped: number }> => {
+				if (!(await dirExists(targetDir))) {
+					// @ts-expect-error recursive option is supported in runtime fs
+					await window.tb.fs.promises.mkdir(targetDir, { recursive: true });
+				}
+				let updated = 0;
+				let removed = 0;
+				let skipped = 0;
+				const sourceEntries = await window.tb.fs.promises.readdir(sourceDir);
+				const sourceNames = new Set<string>();
+				for (const entry of sourceEntries) {
+					sourceNames.add(entry);
+					const sourcePath = `${sourceDir}/${entry}`;
+					const targetPath = `${targetDir}/${entry}`;
+					const sourceStat = await window.tb.fs.promises.stat(sourcePath);
+					if (!sourceStat) continue;
+					if (sourceStat.isDirectory()) {
+						if (await fileExists(targetPath)) {
+							await window.tb.fs.promises.unlink(targetPath);
+						}
+						const child = await syncDirectoryDiff(sourcePath, targetPath);
+						updated += child.updated;
+						removed += child.removed;
+						skipped += child.skipped;
+						continue;
+					}
+					if (await dirExists(targetPath)) {
+						await window.tb.sh.promises.rm(targetPath, { recursive: true });
+						removed += 1;
+					}
+					const sourceRaw = await window.tb.fs.promises.readFile(sourcePath);
+					const changed = await writeFileIfChanged(targetPath, toBytes(sourceRaw));
+					if (changed) {
+						updated += 1;
+					} else {
+						skipped += 1;
+					}
+				}
+				const targetEntries = await window.tb.fs.promises.readdir(targetDir);
+				for (const entry of targetEntries) {
+					if (sourceNames.has(entry)) continue;
+					const targetPath = `${targetDir}/${entry}`;
+					await window.tb.sh.promises.rm(targetPath, { recursive: true });
+					removed += 1;
+				}
+				return { updated, removed, skipped };
+			};
+			const migrateInstalledSystemEntries = async () => {
+				if (!(await fileExists("/apps/installed.json"))) return;
+				let installed: Array<any> = [];
+				try {
+					installed = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
+					if (!Array.isArray(installed)) installed = [];
+				} catch {
+					installed = [];
+				}
+				const canonicalByName = new Map(canonicalSystemInstalledApps.map(entry => [normalize(entry.name), entry]));
+				const customEntries = installed.filter(entry => {
+					const name = normalize(entry?.name || "");
+					const config = String(entry?.config || "").toLowerCase();
+					const isSystemUser = String(entry?.user || "").toLowerCase() === "system";
+					const isSystemConfig = config.startsWith("/apps/system/") || config.startsWith("/system/etc/anura/configs/");
+					const matchesCanonical = canonicalByName.has(name);
+					return !(isSystemUser || isSystemConfig || matchesCanonical);
+				});
+				const merged = [...canonicalSystemInstalledApps, ...customEntries];
+				const deduped: Array<any> = [];
+				const seen = new Set<string>();
+				for (const entry of merged) {
+					const key = `${normalize(entry?.name || "")}|${String(entry?.config || "").toLowerCase()}`;
+					if (!key || seen.has(key)) continue;
+					seen.add(key);
+					deduped.push(entry);
+				}
+				const before = JSON.stringify(installed);
+				const after = JSON.stringify(deduped);
+				if (before !== after) {
+					await window.tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify(deduped, null, 2), "utf8");
+					console.log("Migrated installed.json system entries and preserved custom entries");
+				}
+			};
+			const mergeFileIcons = async () => {
+				const response = await fetch("/apps/files.tapp/icons.json");
+				if (!response.ok) {
+					console.warn("Failed to fetch host icons.json for merge");
+					return;
+				}
+				const hostData = await response.json();
+				const hostExtToName = hostData?.["ext-to-name"] ?? {};
+				const hostNameToSvg = hostData?.["name-to-path"] ?? {};
+				if (!(await dirExists("/system/etc/terbium/file-icons"))) {
+					// @ts-expect-error recursive option is supported in runtime fs
+					await window.tb.fs.promises.mkdir("/system/etc/terbium/file-icons", { recursive: true });
+				}
+				let localData: any = { "ext-to-name": {}, "name-to-path": {} };
+				if (await fileExists("/system/etc/terbium/file-icons.json")) {
+					try {
+						localData = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/file-icons.json", "utf8"));
+					} catch {
+						localData = { "ext-to-name": {}, "name-to-path": {} };
+					}
+				}
+				const localExtToName = localData?.["ext-to-name"] ?? {};
+				const localNameToPath = localData?.["name-to-path"] ?? {};
+				const mergedExtToName = { ...hostExtToName, ...localExtToName };
+				const mergedNameToPath: Record<string, string> = {};
+				for (const [name, svg] of Object.entries(hostNameToSvg)) {
+					const iconPath = `/system/etc/terbium/file-icons/${name}.svg`;
+					mergedNameToPath[name] = iconPath;
+					await writeFileIfChanged(iconPath, toBytes(String(svg)));
+				}
+				for (const [name, iconPath] of Object.entries(localNameToPath)) {
+					if (!(name in mergedNameToPath)) {
+						mergedNameToPath[name] = String(iconPath);
+					}
+				}
+				const mergedData = {
+					"ext-to-name": mergedExtToName,
+					"name-to-path": mergedNameToPath,
+				};
+				const previousJson = JSON.stringify(localData);
+				const nextJson = JSON.stringify(mergedData);
+				if (previousJson !== nextJson) {
+					await window.tb.fs.promises.writeFile("/system/etc/terbium/file-icons.json", JSON.stringify(mergedData, null, 2), "utf8");
+				}
+			};
 			window.onbeforeunload = e => {
 				e.preventDefault();
 				e.returnValue = "Terbium is still updating";
 			};
 			let sysapps = ["about.tapp", "app store.tapp", "browser.tapp", "calculator.tapp", "feedback.tapp", "files.tapp", "media viewer.tapp", "settings.tapp", "task manager.tapp", "terminal.tapp", "text editor.tapp"];
-			let sysscripts = [
-				"cat.js",
-				"cd.js",
-				"clear.js",
-				"curl.js",
-				"echo.js",
-				"exit.js",
-				"git.js",
-				"help.js",
-				"info.json",
-				"info.schema.json",
-				"ls.js",
-				"mkdir.js",
-				"node.js",
-				"ping.js",
-				"pkg.js",
-				"pkill.js",
-				"pwd.js",
-				"qwick.js",
-				"qwick_install.js",
-				"rm.js",
-				"rmdir.js",
-				"sysfetch.js",
-				"taskkill.js",
-				"tb.js",
-				"touch.js",
-				"unzip.js",
-				"ssh.js",
-				"ssh-keygen.js",
-				"nano.js",
-			];
 			if (await dirExists("/system/tmp/terb-upd/")) {
 				await window.tb.sh.promises.rm(`/system/tmp/terb-upd/`, { recursive: true });
 			}
 			statusref.current!.innerText = "Installing latest version of TB...";
 			await window.tb.fs.promises.mkdir("/system/tmp/terb-upd/");
-			const apps = await window.tb.fs.promises.readdir("/apps/system/");
-			const scripts = await window.tb.fs.promises.readdir("/apps/system/terminal.tapp/scripts/");
 			setProgress(20);
-			statusref.current!.innerText = "Creating a backup";
+			statusref.current!.innerText = "Preparing update state";
 			if (await fileExists("/apps/system/settings.tapp/wisp-servers.json")) {
 				await window.tb.fs.promises.writeFile("/system/tmp/terb-upd/wisp-servers.json", await window.tb.fs.promises.readFile("/apps/system/settings.tapp/wisp-servers.json"));
 			} else {
@@ -84,66 +207,76 @@ export default function Updater() {
 				];
 				await window.tb.fs.promises.writeFile("/system/tmp/terb-upd/wisp-servers.json", JSON.stringify(stockDat));
 			}
-			for (const item of apps) {
-				setProgress(prevProgress => prevProgress + 1);
-				if (sysapps.includes(item)) {
-					if (item === "terminal.tapp") {
-						for (const item of scripts) {
-							setProgress(prevProgress => prevProgress + 1);
-							if (!sysscripts.includes(item)) {
-								console.log(`Skipping ${item}...`);
-							}
-						}
-					} else {
-						await copyDir(`/apps/system/${item}/`, `/system/tmp/terb-upd/${item}.old`, true);
-						await window.tb.sh.promises.rm(`/apps/system/${item}/`, { recursive: true });
-					}
-				} else {
-					console.log(`Skipping ${item}...`);
-				}
-			}
 			setProgress(50);
-			statusref.current!.innerText = "Updating Terbium...";
-			setProgress(0);
+			statusref.current!.innerText = "Scanning and patching changed system files...";
+			let processedEntries = 0;
+			let changedEntries = 0;
+			let skippedEntries = 0;
+			let removedEntries = 0;
 			for (const item of paths) {
-				setProgress(prevProgress => prevProgress + 1);
-				statusref.current!.innerText = `Installing ${item}...`;
+				processedEntries += 1;
+				const itemText = item.toString();
+				statusref.current!.innerText = `Checking ${itemText}...`;
+				setProgress(20 + Math.floor((processedEntries / paths.length) * 55));
 				const isDir = item.toString().endsWith("/");
 				if (isDir) {
 					try {
 						// @ts-expect-error
-						await window.tb.fs.promises.mkdir(`/apps/system/${item.toString()}`, { recursive: true });
+						await window.tb.fs.promises.mkdir(`/apps/system/${itemText}`, { recursive: true });
 					} catch (err) {
 						console.error(err);
 					}
-				} else if (item.toString().endsWith(".tapp.zip")) {
-					const res = await fetch(`/apps/${item.toString()}`);
+				} else if (itemText.endsWith(".tapp.zip")) {
+					const res = await fetch(`/apps/${itemText}`);
 					if (!res.ok) {
-						console.error(`Failed to fetch /apps/${item.toString()}: ${res.status} ${res.statusText}`);
+						console.error(`Failed to fetch /apps/${itemText}: ${res.status} ${res.statusText}`);
 						continue;
 					}
 					const data = await res.arrayBuffer();
-					await window.tb.fs.promises.writeFile(`/apps/system/${item}`, window.tb.buffer.from(data));
-					await unzip(`/apps/system/${item}`, `/apps/system/${item.slice(0, -4)}`);
-					await window.tb.fs.promises.unlink(`/apps/system/${item}`);
+					const tempZip = `/system/tmp/terb-upd/${itemText}`;
+					const extractedDir = `/system/tmp/terb-upd/extracted/${itemText.slice(0, -4)}`;
+					await ensureDirForPath(tempZip);
+					if (await dirExists(extractedDir)) {
+						await window.tb.sh.promises.rm(extractedDir, { recursive: true });
+					}
+					await window.tb.fs.promises.writeFile(tempZip, window.tb.buffer.from(data));
+					await unzip(tempZip, extractedDir);
+					const targetDir = `/apps/system/${itemText.slice(0, -4)}`;
+					const result = await syncDirectoryDiff(extractedDir, targetDir);
+					changedEntries += result.updated;
+					removedEntries += result.removed;
+					skippedEntries += result.skipped;
+					await window.tb.fs.promises.unlink(tempZip).catch(() => {});
+					await window.tb.sh.promises.rm(extractedDir, { recursive: true }).catch(() => {});
 				} else {
-					const path = `/apps/system/${item.toString()}`;
+					const path = `/apps/system/${itemText}`;
 					const dir = path.substring(0, path.lastIndexOf("/"));
 					try {
 						if (!(await dirExists(dir))) {
 							// @ts-expect-error
 							await window.tb.fs.promises.mkdir(dir, { recursive: true });
 						}
-						const res = await fetch(`/apps/${item.toString()}`);
-						const data = await res.text();
-						await window.tb.fs.promises.writeFile(path, data);
+						const res = await fetch(`/apps/${itemText}`);
+						if (!res.ok) {
+							console.error(`Failed to fetch /apps/${itemText}: ${res.status} ${res.statusText}`);
+							continue;
+						}
+						const data = await res.arrayBuffer();
+						const changed = await writeFileIfChanged(path, window.tb.buffer.from(data));
+						if (changed) {
+							changedEntries += 1;
+						} else {
+							skippedEntries += 1;
+						}
 					} catch (err) {
 						console.error(err);
 					}
 				}
 			}
+			statusref.current!.innerText = `System file scan complete (${changedEntries} updated, ${removedEntries} removed, ${skippedEntries} unchanged)`;
 			await window.tb.fs.promises.writeFile("/apps/system/settings.tapp/wisp-servers.json", await window.tb.fs.promises.readFile("/system/tmp/terb-upd/wisp-servers.json"));
 			await window.tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", hash);
+			await mergeFileIcons();
 			const user = sessionStorage.getItem("currAcc") || JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8")).defaultUser;
 			// v2.0-Beta2 update
 			if (!(await fileExists("/apps/installed.json"))) {
@@ -253,6 +386,7 @@ export default function Updater() {
 				await window.tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify(insapps));
 				await window.tb.fs.promises.writeFile("/system/var/terbium/recent.json", JSON.stringify([]));
 			}
+			await migrateInstalledSystemEntries();
 			// v2.1 update
 			if (!(await fileExists(`/apps/user/${user}/app store/repos.json`))) {
 				await window.tb.fs.promises.mkdir(`/apps/user/${user}/app store/`);
@@ -407,6 +541,7 @@ export default function Updater() {
 					const srcPath = src.endsWith("/") ? src + entry : src + "/" + entry;
 					const destPath = dest.endsWith("/") ? dest + entry : dest + "/" + entry;
 					const stat = await Filer.fs.promises.stat(srcPath);
+					if (!stat) continue;
 					if (stat.isDirectory()) {
 						if (!(await dirExists(destPath))) {
 							await window.tb.fs.promises.mkdir(destPath);
