@@ -25,17 +25,17 @@
 		"@mercuryworkshop/scramjet": "https://cdn.terbiumon.top/scramjet-v2.0-alpha.tgz",
 		"@mercuryworkshop/wisp-js": "^0.4.1",
 		"@paralleldrive/cuid2": "^3.3.0",
-		"@terbiumos/tfs": "1.0.22",
+		"@terbiumos/tfs": "1.0.23",
 		"@titaniumnetwork-dev/ultraviolet": "^3.2.10",
 		"@webcontainer/api": "^1.6.1",
 		"better-auth": "^1.5.6",
 		"compressorjs": "^1.2.1",
 		"cropperjs": "1.6.2",
 		"crypto-js": "^4.2.0",
-		"dotenv": "^17.3.1",
+		"dotenv": "^17.4.0",
 		"fflate": "^0.8.2",
-		"hono": "^4.12.9",
-		"htmlparser2": "^10.1.0",
+		"hono": "^4.12.10",
+		"htmlparser2": "^12.0.0",
 		"libcurl.js": "^0.7.4",
 		"modern-screenshot": "^4.6.8",
 		"path-browserify": "^1.0.1",
@@ -48,7 +48,7 @@
 		"@eslint/js": "^10.0.1",
 		"@tailwindcss/postcss": "^4.2.2",
 		"@types/adm-zip": "^0.5.8",
-		"@types/node": "^25.3.3",
+		"@types/node": "^25.5.2",
 		"@types/path-browserify": "^1.0.3",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
@@ -80,7 +80,18 @@
 		],
 		"ignoredBuiltDependencies": [
 			"@mercuryworkshop/scramjet"
-		]
+		],
+		"overrides": {
+			"lodash@>=4.0.0 <=4.17.22": ">=4.17.23",
+			"hono@<4.11.7": ">=4.11.7",
+			"hono@<4.11.10": ">=4.11.10",
+			"hono@<4.12.4": ">=4.12.4",
+			"@hono/node-server@<1.19.10": ">=1.19.10",
+			"hono@<4.12.7": ">=4.12.7",
+			"effect@<3.20.0": ">=3.20.0",
+			"lodash@>=4.0.0 <=4.17.23": ">=4.18.0",
+			"lodash@<=4.17.23": ">=4.18.0"
+		}
 	},
 	"engines": {
 		"node": ">=20.19.0"
