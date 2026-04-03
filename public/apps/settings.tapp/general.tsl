@@ -9,27 +9,35 @@
   <UI>
     <SettingsPage>
       <Sidebar>
-        <Item id="security" title="Security" icon="security" default="true" />
-        <Item id="coords" title="Geo Data" icon="my_location" />
+        <Item id="debugging" title="Debugging Settings" icon="bug_report" default="true" />
+        <Item id="security" title="Security" icon="security" />
+        <Item id="performance" title="Performance" icon="speed" />
         <Item id="data" title="Import and Export" icon="import_export" />
         <Item id="maintenance" title="Maintenance" icon="build" />
       </Sidebar>
       <RecommendedOptions>
-        <Option id="general.quick.security" text="Security Status" view="security" />
-        <Option id="general.quick.coords" text="Geo Data Settings" view="coords" />
+        <Option id="general.quick.debugging" text="Debugging tool settings" view="debugging" />
+        <Option id="general.quick.security" text="Open Action Center" view="security" />
+        <Option id="general.quick.performance" text="Run performance test" view="performance" />
         <Option id="general.quick.export" text="Export Data (advanced)" view="data" />
       </RecommendedOptions>
       <Content>
-        <View id="security">
-          <Section title="Security and Debug">
-            <Toggle label="Enable Eruda" bind="general.security.eruda" />
-            <Button label="Apply Security Flags" action="applySecurityFlags" />
+        <View id="debugging">
+          <Section title="Debugging Settings">
+            <Toggle label="Enable Eruda" bind="general.debugging.eruda" />
+            <Button label="Apply Debugging Flags" action="applyDebuggingFlags" />
           </Section>
         </View>
-        <View id="coords">
-          <Section title="Geo Data">
-            <Text label="Current Coordinates" bind="general.coords.value" />
-            <Button label="Update Coordinates" action="updateCoords" />
+        <View id="security">
+          <Section title="Action Center">
+            <Text label="Status" bind="general.security.actionCenter" />
+            <Button label="Refresh Action Center" action="openSecurityPreview" />
+          </Section>
+        </View>
+        <View id="performance">
+          <Section title="Performance Index">
+            <Text label="Status" bind="general.performance.status" />
+            <Button label="Run Performance Assessment" action="runPerformanceAssessment" />
           </Section>
         </View>
         <View id="data">
@@ -41,6 +49,8 @@
         </View>
         <View id="maintenance">
           <Section title="System Maintenance">
+            <Button label="Run Integrity Scan" action="openSecurityPreview" />
+            <Button label="Repair Corrupted Files" action="openSecurityPreview" />
             <Button label="Invalidate Cache" action="invalidateCache" />
             <Button label="Export File System" action="exportFs" />
           </Section>
@@ -49,10 +59,10 @@
     </SettingsPage>
   </UI>
   <Actions>
-    <Action id="applySecurityFlags">
+    <Action id="applyDebuggingFlags">
       <![CDATA[
         async function(context) {
-          const enabled = !!(context.bindings && context.bindings["general.security.eruda"]);
+          const enabled = !!(context.bindings && context.bindings["general.debugging.eruda"]);
           const user = await tb.user.username();
           const cfgPath = `/home/${user}/settings.json`;
           const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
@@ -61,24 +71,25 @@
         }
       ]]>
     </Action>
-    <Action id="updateCoords">
+    <Action id="openSecurityPreview">
       <![CDATA[
-        async function(context) {
-          const val = await new Promise(function(resolve) {
-            tb.dialog.Message({
-              title: "Enter coordinates as latitude,longitude",
-              onOk: function(input) {
-                resolve(input);
-              },
-            });
+        async function() {
+          if (!tb.dialog || !tb.dialog.Alert) return;
+          tb.dialog.Alert({
+            title: "Security Center is coming soon",
+            body: "This will evolve into an Action Center style security dashboard.",
           });
-          if (!val) return;
-
-          const sysPath = "/system/etc/terbium/settings.json";
-          const cfg = JSON.parse(await tb.fs.promises.readFile(sysPath, "utf8"));
-          const lk = "loc" + "ation";
-          cfg[lk] = String(val);
-          await tb.fs.promises.writeFile(sysPath, JSON.stringify(cfg, null, 2), "utf8");
+        }
+      ]]>
+    </Action>
+    <Action id="runPerformanceAssessment">
+      <![CDATA[
+        async function() {
+          if (!tb.dialog || !tb.dialog.Alert) return;
+          tb.dialog.Alert({
+            title: "Performance Assessment",
+            body: "Open the Performance tab and click 'Run Assessment' to generate your index.",
+          });
         }
       ]]>
     </Action>
@@ -175,4 +186,860 @@
       ]]>
     </Action>
   </Actions>
+  <Scripts>
+    <Script id="security" view="security">
+      <![CDATA[
+        const tb = api.tb;
+        const AV_PATH = "/apps/system/settings.tapp/av.json";
+        const HW_INDEX_PATH = "/apps/system/settings.tapp/hardwareindex.json";
+        const MAINT_REPORT_PATH = "/apps/system/settings.tapp/maintenance-report.json";
+        const VERSIONS_URL = "https://cdn.terbiumon.top/updates/versions.json";
+
+        function badgeColor(level) {
+          if (level === "red") return "#ef4444";
+          if (level === "yellow") return "#f59e0b";
+          return "#22c55e";
+        }
+
+        function normalizeVersion(v) {
+          return String(v || "")
+            .split("-")[0]
+            .trim();
+        }
+
+        function semverParts(v) {
+          return normalizeVersion(v)
+            .split(".")
+            .map(part => Number(part || 0));
+        }
+
+        function compareSemver(a, b) {
+          const av = semverParts(a);
+          const bv = semverParts(b);
+          const len = Math.max(av.length, bv.length);
+          for (let i = 0; i < len; i++) {
+            const ai = Number(av[i] || 0);
+            const bi = Number(bv[i] || 0);
+            if (ai > bi) return -1;
+            if (ai < bi) return 1;
+          }
+          return 0;
+        }
+
+        async function getVersionsMap() {
+          try {
+            if (tb.libcurl && tb.libcurl.fetch) {
+              const response = await tb.libcurl.fetch(VERSIONS_URL);
+              if (response && response.ok) {
+                const data = await response.json();
+                return data && typeof data === "object" ? data : null;
+              }
+            }
+          } catch {
+            /* ignore */
+          }
+          try {
+            const response = await fetch(VERSIONS_URL, { cache: "no-store" });
+            if (!response.ok) return null;
+            const data = await response.json();
+            return data && typeof data === "object" ? data : null;
+          } catch {
+            return null;
+          }
+        }
+
+        async function readJson(path) {
+          try {
+            const raw = await tb.fs.promises.readFile(path, "utf8");
+            return JSON.parse(String(raw || "null"));
+          } catch {
+            return null;
+          }
+        }
+
+        async function ensureAvConfigFile() {
+          const existing = await readJson(AV_PATH);
+          if (existing) return existing;
+          const fallback = {
+            installed: false,
+            entries: [],
+          };
+          await tb.fs.promises.writeFile(AV_PATH, JSON.stringify(fallback, null, 2), "utf8");
+          return fallback;
+        }
+
+        function hasAntivirusInstalled(avData) {
+          if (!avData) return false;
+          if (Array.isArray(avData)) return avData.length > 0;
+          if (typeof avData === "string") return avData.trim().length > 0;
+          if (typeof avData !== "object") return false;
+          if (avData.installed === true) return true;
+          if (Array.isArray(avData.entries) && avData.entries.length > 0) return true;
+          if (Array.isArray(avData.apps) && avData.apps.length > 0) return true;
+          if (typeof avData.name === "string" && avData.name.trim()) return true;
+          return false;
+        }
+
+        async function buildActionCenterModel() {
+          const currentVersion = tb.system && tb.system.version ? String(tb.system.version()) : "unknown";
+          const avData = await ensureAvConfigFile();
+          const versionsMap = await getVersionsMap();
+          const maintenanceReport = await readJson(MAINT_REPORT_PATH);
+          const perfResult = await readJson(HW_INDEX_PATH);
+
+          const avInstalled = hasAntivirusInstalled(avData);
+          const avStatus = avInstalled
+            ? { level: "green", title: "Antivirus detected", detail: "An antivirus entry is configured in av.json." }
+            : { level: "yellow", title: "No antivirus configured", detail: "Add /apps/system/settings.tapp/av.json with your AV metadata for improved protection checks." };
+
+          let versionStatus = { level: "yellow", title: "Version status unavailable", detail: "Could not fetch hosted versions.json right now." };
+          if (versionsMap) {
+            const supportedEntries = Object.entries(versionsMap)
+              .filter(entry => entry[1] === true)
+              .map(entry => String(entry[0]))
+              .sort(compareSemver);
+            const latestRecommended = supportedEntries.slice(0, 3);
+            const listed = Object.prototype.hasOwnProperty.call(versionsMap, currentVersion);
+            const supported = listed && versionsMap[currentVersion] === true;
+            const latest = latestRecommended.includes(currentVersion);
+
+            if (!supported) {
+              versionStatus = {
+                level: "red",
+                title: "Unsupported or outdated instance",
+                detail: `Version ${currentVersion} is not currently supported. Update this instance as soon as possible.`,
+              };
+            } else if (!latest) {
+              versionStatus = {
+                level: "yellow",
+                title: "Update recommended",
+                detail: `Version ${currentVersion} is supported, but newer supported releases are available (${latestRecommended.join(", ") || "unknown"}).`,
+              };
+            } else {
+              versionStatus = {
+                level: "green",
+                title: "Version is current",
+                detail: `Version ${currentVersion} is in the latest supported set.`,
+              };
+            }
+          }
+
+          const maintenanceStatus = maintenanceReport
+            ? {
+                level: Number(maintenanceReport.mismatched || 0) > 0 ? "yellow" : "green",
+                title: Number(maintenanceReport.mismatched || 0) > 0 ? "Integrity issues detected" : "System integrity healthy",
+                detail: Number(maintenanceReport.mismatched || 0) > 0
+                  ? `${maintenanceReport.mismatched} mismatched file(s) found in last scan. Open Maintenance to repair.`
+                  : `Last scan checked ${maintenanceReport.checked || 0} file(s) and found no mismatches.`,
+              }
+            : {
+                level: "yellow",
+                title: "No maintenance scan yet",
+                detail: "Run an integrity scan in Maintenance to verify system file health.",
+              };
+
+          const perfStatus = perfResult
+            ? {
+                level: perfResult.base >= 5.0 ? "green" : "yellow",
+                title: `Performance index ${Number(perfResult.base || 0).toFixed(1)}`,
+                detail: `Last assessment: ${new Date(perfResult.timestamp || Date.now()).toLocaleString()}`,
+              }
+            : {
+                level: "yellow",
+                title: "No performance assessment yet",
+                detail: "Run the Performance tab benchmark to populate this category.",
+              };
+
+          return {
+            currentVersion,
+            categories: [
+              {
+                id: "security",
+                name: "Security",
+                status: [avStatus, versionStatus].some(item => item.level === "red")
+                  ? "red"
+                  : [avStatus, versionStatus].some(item => item.level === "yellow")
+                    ? "yellow"
+                    : "green",
+                summary: "Antivirus and version trust state",
+                checks: [avStatus, versionStatus],
+              },
+              {
+                id: "maintenance",
+                name: "Maintenance",
+                status: maintenanceStatus.level,
+                summary: "System file integrity and repair readiness",
+                checks: [maintenanceStatus],
+              },
+              {
+                id: "performance",
+                name: "Performance",
+                status: perfStatus.level,
+                summary: "Hardware index and responsiveness signals",
+                checks: [perfStatus],
+              },
+            ],
+          };
+        }
+
+        function renderCard(title, body, badge, color) {
+          return `
+<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+<h3 class="detail-section-title" style="margin:0;">${title}</h3>
+<span style="padding:3px 10px;border-radius:999px;background:${color}22;border:1px solid ${color}66;font-size:11px;color:#f3f4f6;">${badge}</span>
+</div>
+<p class="detail-control-value" style="margin:0;line-height:1.45;">${body}</p>
+</article>
+`;
+        }
+
+        const actionCenterModule = {
+          render: async function() {
+            const model = await buildActionCenterModel();
+            const categoryCards = model.categories
+              .map(category => {
+                const detail = category.checks.map(check => `<li style="margin:4px 0;">${check.title}: ${check.detail}</li>`).join("");
+                const maintenanceAction = category.id === "maintenance"
+                  ? `<div style="margin-top:10px;"><button type="button" class="detail-action" data-action-center-maint-scan="true">Open Maintenance Scan</button></div>`
+                  : "";
+                return renderCard(
+                  category.name,
+                  `${category.summary}<ul style="margin:8px 0 0 16px;padding:0;">${detail}</ul>${maintenanceAction}`,
+                  category.status === "red" ? "Critical" : category.status === "yellow" ? "Attention" : "Healthy",
+                  badgeColor(category.status),
+                );
+              })
+              .join("");
+            return `
+<section class="storage-dashboard" style="gap:10px;">
+<article class="storage-main-card" style="padding:16px 18px;display:flex;flex-direction:column;gap:8px;">
+<h2 style="font-size:18px;font-weight:800;margin:0;">Action Center</h2>
+<p class="detail-control-value" style="margin:0;line-height:1.5;">Live security and health summary for version ${model.currentVersion}.</p>
+<div style="display:flex;gap:8px;flex-wrap:wrap;">
+<button type="button" class="detail-action" data-refresh-action-center="true">Refresh Action Center</button>
+</div>
+</article>
+${categoryCards}
+</section>
+`;
+          },
+          wire: function(root) {
+            const btn = root.querySelector("[data-refresh-action-center='true']");
+            if (btn) {
+              btn.addEventListener("click", async function() {
+                root.innerHTML = await actionCenterModule.render();
+                actionCenterModule.wire(root);
+              });
+            }
+
+            const openMaintenanceBtn = root.querySelector("[data-action-center-maint-scan='true']");
+            if (openMaintenanceBtn) {
+              openMaintenanceBtn.addEventListener("click", function() {
+                const maintenanceNav = api.document && api.document.querySelector
+                  ? api.document.querySelector("#detailSidebar [data-view-id='maintenance']")
+                  : null;
+                if (maintenanceNav && typeof maintenanceNav.click === "function") {
+                  maintenanceNav.click();
+                }
+              });
+            }
+          },
+        };
+        return actionCenterModule;
+      ]]>
+    </Script>
+    <Script id="maintenance" view="maintenance">
+      <![CDATA[
+        const tb = api.tb;
+        const REPORT_PATH = "/apps/system/settings.tapp/maintenance-report.json";
+
+        function toBytes(input) {
+          if (input instanceof Uint8Array) return input;
+          if (input instanceof ArrayBuffer) return new Uint8Array(input);
+          if (typeof input === "string") return new TextEncoder().encode(input);
+          if (input && input.buffer instanceof ArrayBuffer) return new Uint8Array(input.buffer);
+          return new Uint8Array(0);
+        }
+
+        function bytesEqual(a, b) {
+          if (a.byteLength !== b.byteLength) return false;
+          for (let i = 0; i < a.byteLength; i++) {
+            if (a[i] !== b[i]) return false;
+          }
+          return true;
+        }
+
+        async function ensureDir(path) {
+          const dir = path.slice(0, path.lastIndexOf("/"));
+          if (!dir) return;
+          try {
+            await tb.fs.promises.mkdir(dir, { recursive: true });
+          } catch {
+            /* ignore */
+          }
+        }
+
+        async function loadInstallerPaths() {
+          const candidates = ["/installer.json", "/src/installer.json", "/fs/src/installer.json"];
+          for (const url of candidates) {
+            try {
+              const response = await fetch(url, { cache: "no-store" });
+              if (!response.ok) continue;
+              const data = await response.json();
+              if (Array.isArray(data)) return data;
+            } catch {
+              /* ignore */
+            }
+          }
+          return null;
+        }
+
+        async function scanIntegrity(repair) {
+          const paths = await loadInstallerPaths();
+          if (!paths) {
+            throw new Error("Unable to load installer manifest for integrity scanning.");
+          }
+
+          let checked = 0;
+          let mismatched = 0;
+          let repaired = 0;
+          let failed = 0;
+          let packageWarnings = 0;
+          const mismatchedFiles = [];
+          const repairedFiles = [];
+          const failedFiles = [];
+          const packageWarningPaths = [];
+
+          for (const entryRaw of paths) {
+            const entry = String(entryRaw || "");
+            if (!entry || entry.endsWith("/")) continue;
+            if (entry.endsWith(".tapp.zip")) {
+              const targetDir = `/apps/system/${entry.slice(0, -4)}`;
+              const exists = await tb.fs.promises
+                .stat(targetDir)
+                .then(() => true)
+                .catch(() => false);
+              if (!exists) {
+                mismatched += 1;
+                packageWarnings += 1;
+                packageWarningPaths.push(targetDir);
+              }
+              continue;
+            }
+
+            checked += 1;
+            const localPath = `/apps/system/${entry}`;
+            let hostData;
+            try {
+              const response = await fetch(`/apps/${entry}`, { cache: "no-store" });
+              if (!response.ok) {
+                failed += 1;
+                failedFiles.push({
+                  path: localPath,
+                  reason: `Host fetch failed (${response.status})`,
+                });
+                continue;
+              }
+              hostData = new Uint8Array(await response.arrayBuffer());
+            } catch {
+              failed += 1;
+              failedFiles.push({
+                path: localPath,
+                reason: "Host fetch error",
+              });
+              continue;
+            }
+
+            let localData = null;
+            try {
+              localData = toBytes(await tb.fs.promises.readFile(localPath));
+            } catch {
+              localData = null;
+            }
+
+            const match = localData ? bytesEqual(hostData, localData) : false;
+            if (!match) {
+              mismatched += 1;
+              mismatchedFiles.push(localPath);
+              if (repair) {
+                try {
+                  await ensureDir(localPath);
+                  await tb.fs.promises.writeFile(localPath, hostData.buffer, "arraybuffer");
+                  repaired += 1;
+                  repairedFiles.push(localPath);
+                } catch {
+                  failed += 1;
+                  failedFiles.push({
+                    path: localPath,
+                    reason: "Repair write failed",
+                  });
+                }
+              }
+            }
+          }
+
+          if (repair && packageWarnings > 0) {
+            try {
+              await tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", "invalid", "utf8");
+            } catch {
+              /* ignore */
+            }
+          }
+
+          const report = {
+            timestamp: Date.now(),
+            checked,
+            mismatched,
+            repaired,
+            failed,
+            packageWarnings,
+            mismatchedFiles,
+            repairedFiles,
+            failedFiles,
+            packageWarningPaths,
+            mode: repair ? "repair" : "scan",
+          };
+          await tb.fs.promises.writeFile(REPORT_PATH, JSON.stringify(report, null, 2), "utf8");
+          return report;
+        }
+
+        async function loadReport() {
+          try {
+            const raw = await tb.fs.promises.readFile(REPORT_PATH, "utf8");
+            return JSON.parse(String(raw || "null"));
+          } catch {
+            return null;
+          }
+        }
+
+        function renderReport(report) {
+          function renderFileList(title, items) {
+            if (!Array.isArray(items) || items.length === 0) return "";
+            const rows = items
+              .slice(0, 12)
+              .map(item => {
+                if (typeof item === "string") {
+                  return `<li style="margin:2px 0;word-break:break-word;">${item}</li>`;
+                }
+                const path = item && item.path ? item.path : "unknown";
+                const reason = item && item.reason ? ` (${item.reason})` : "";
+                return `<li style="margin:2px 0;word-break:break-word;">${path}${reason}</li>`;
+              })
+              .join("");
+            const extra = items.length > 12 ? `<p class="detail-control-value" style="margin:4px 0 0 0;">+${items.length - 12} more</p>` : "";
+            return `
+<div style="margin-top:8px;">
+<p class="detail-control-value" style="margin:0;font-weight:800;">${title}</p>
+<ul style="margin:4px 0 0 16px;padding:0;max-height:170px;overflow:auto;">${rows}</ul>
+${extra}
+</div>
+`;
+          }
+
+          if (!report) {
+            return `
+<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+<h3 class="detail-section-title" style="margin:0;">No integrity report yet</h3>
+<p class="detail-control-value" style="margin:0;">Run a scan to detect mismatched system files.</p>
+</article>
+`;
+          }
+          return `
+<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+<h3 class="detail-section-title" style="margin:0;">Last integrity report</h3>
+<p class="detail-control-value" style="margin:0;">Mode: ${report.mode}</p>
+<p class="detail-control-value" style="margin:0;">Checked files: ${report.checked}</p>
+<p class="detail-control-value" style="margin:0;">Mismatched: ${report.mismatched}</p>
+<p class="detail-control-value" style="margin:0;">Repaired: ${report.repaired}</p>
+<p class="detail-control-value" style="margin:0;">Fetch/write failures: ${report.failed}</p>
+<p class="detail-control-value" style="margin:0;">Package warnings: ${report.packageWarnings}</p>
+<p class="detail-control-value" style="margin:0;">Timestamp: ${new Date(report.timestamp || Date.now()).toLocaleString()}</p>
+${renderFileList("Corrupted / mismatched files", report.mismatchedFiles)}
+${renderFileList("Repaired files", report.repairedFiles)}
+${renderFileList("Failed files", report.failedFiles)}
+${renderFileList("Package warning paths", report.packageWarningPaths)}
+</article>
+`;
+        }
+
+        const maintenanceModule = {
+          render: async function() {
+            const report = await loadReport();
+            return `
+<section class="storage-dashboard" style="gap:10px;">
+<article class="storage-main-card" style="padding:16px 18px;display:flex;flex-direction:column;gap:8px;">
+<h2 style="font-size:18px;font-weight:800;margin:0;">Maintenance Center</h2>
+<p class="detail-control-value" style="margin:0;line-height:1.5;">Scan for corrupted system files and repair mismatches with hosted files.</p>
+<div style="display:flex;gap:8px;flex-wrap:wrap;">
+<button type="button" class="detail-action" data-run-integrity-scan="true">Run Integrity Scan</button>
+<button type="button" class="detail-action" data-run-integrity-repair="true">Repair Corrupted Files</button>
+<button type="button" class="detail-action" data-mark-update-invalid="true">Mark Cache Invalid</button>
+<button type="button" class="detail-action" data-export-fs="true">Export File System</button>
+</div>
+</article>
+${renderReport(report)}
+</section>
+`;
+          },
+          wire: function(root) {
+            const rerender = async function() {
+              root.innerHTML = await maintenanceModule.render();
+              maintenanceModule.wire(root);
+            };
+
+            const runOp = async function(btn, repair) {
+              const original = btn.textContent;
+              btn.textContent = repair ? "Repairing..." : "Scanning...";
+              btn.setAttribute("disabled", "disabled");
+              try {
+                const report = await scanIntegrity(repair);
+                if (tb.dialog && tb.dialog.Alert) {
+                  tb.dialog.Alert({
+                    title: repair ? "Repair Complete" : "Scan Complete",
+                    body: `Checked ${report.checked} file(s), mismatched ${report.mismatched}, repaired ${report.repaired}, failures ${report.failed}.`,
+                  });
+                }
+              } catch (error) {
+                console.error("Integrity operation failed", error);
+                if (tb.dialog && tb.dialog.Alert) {
+                  tb.dialog.Alert({
+                    title: "Maintenance failed",
+                    body: "Unable to run integrity check. Installer manifest could not be loaded.",
+                  });
+                }
+              } finally {
+                btn.textContent = original;
+                btn.removeAttribute("disabled");
+                await rerender();
+              }
+            };
+
+            const scanBtn = root.querySelector("[data-run-integrity-scan='true']");
+            if (scanBtn) {
+              scanBtn.addEventListener("click", async function() {
+                await runOp(scanBtn, false);
+              });
+            }
+
+            const repairBtn = root.querySelector("[data-run-integrity-repair='true']");
+            if (repairBtn) {
+              repairBtn.addEventListener("click", async function() {
+                await runOp(repairBtn, true);
+              });
+            }
+
+            const invalidateBtn = root.querySelector("[data-mark-update-invalid='true']");
+            if (invalidateBtn) {
+              invalidateBtn.addEventListener("click", async function() {
+                await tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", "invalid", "utf8");
+                if (tb.dialog && tb.dialog.Alert) {
+                  tb.dialog.Alert({
+                    title: "Update cache invalidated",
+                    body: "System will offer an update check on next refresh cycle.",
+                  });
+                }
+              });
+            }
+
+            const exportBtn = root.querySelector("[data-export-fs='true']");
+            if (exportBtn) {
+              exportBtn.addEventListener("click", async function() {
+                if (tb.system && tb.system.exportfs) {
+                  await tb.system.exportfs();
+                }
+              });
+            }
+          },
+        };
+        return maintenanceModule;
+      ]]>
+    </Script>
+    <Script id="performance" view="performance">
+      <![CDATA[
+        const tb = api.tb;
+        const nav = api.navigator;
+        const RESULTS_PATH = "/apps/system/settings.tapp/hardwareindex.json";
+
+        function clamp(value, min, max) {
+          return Math.max(min, Math.min(max, value));
+        }
+
+        function toFixedScore(value) {
+          return Number(clamp(value, 1, 9.9).toFixed(1));
+        }
+
+        function scoreFromRange(value, good, bad) {
+          if (value <= good) return 9.9;
+          if (value >= bad) return 1.0;
+          const ratio = (value - good) / Math.max(1, bad - good);
+          return toFixedScore(9.9 - ratio * 8.9);
+        }
+
+        async function benchmarkCpu() {
+          const loops = 1400000;
+          let sink = 0;
+          const start = performance.now();
+          for (let i = 0; i < loops; i++) {
+            sink += Math.sqrt((i % 1024) + 1);
+          }
+          const elapsed = performance.now() - start;
+          if (sink < 0) console.log("noop", sink);
+          return {
+            elapsed,
+            score: scoreFromRange(elapsed, 90, 580),
+          };
+        }
+
+        async function benchmarkMemory() {
+          const bytes = 16 * 1024 * 1024;
+          const arr = new Uint8Array(bytes);
+          const start = performance.now();
+          for (let i = 0; i < arr.length; i += 4096) {
+            arr[i] = (i / 4096) % 255;
+          }
+          const elapsed = performance.now() - start;
+          const deviceMem = Number(nav.deviceMemory || 4);
+          const memCapacityScore = clamp(deviceMem * 1.4, 1.0, 9.9);
+          const throughputScore = scoreFromRange(elapsed, 8, 120);
+          return {
+            elapsed,
+            score: toFixedScore(memCapacityScore * 0.45 + throughputScore * 0.55),
+          };
+        }
+
+        async function benchmarkGraphics() {
+          const canvas = document.createElement("canvas");
+          canvas.width = 360;
+          canvas.height = 220;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return { elapsed: 999, score: 1.0 };
+          const iterations = 420;
+          const start = performance.now();
+          for (let i = 0; i < iterations; i++) {
+            const hue = i % 360;
+            ctx.fillStyle = `hsl(${hue},70%,55%)`;
+            ctx.fillRect((i * 7) % 360, (i * 5) % 220, 64, 42);
+            ctx.strokeStyle = `hsla(${(hue + 180) % 360},90%,75%,0.85)`;
+            ctx.strokeRect((i * 9) % 360, (i * 6) % 220, 72, 48);
+          }
+          const elapsed = performance.now() - start;
+          return {
+            elapsed,
+            score: scoreFromRange(elapsed, 14, 260),
+          };
+        }
+
+        async function benchmarkStorage() {
+          const dir = "/system/tmp";
+          const path = "/system/tmp/tb-perf-index.bin";
+          const payload = new Uint8Array(320 * 1024);
+          for (let i = 0; i < payload.length; i++) payload[i] = i % 251;
+
+          try {
+            await tb.fs.promises.mkdir(dir, { recursive: true });
+            const writeStart = performance.now();
+            await tb.fs.promises.writeFile(path, payload.buffer, "arraybuffer");
+            const writeElapsed = performance.now() - writeStart;
+
+            const readStart = performance.now();
+            await tb.fs.promises.readFile(path);
+            const readElapsed = performance.now() - readStart;
+
+            await tb.fs.promises.unlink(path).catch(() => {});
+            const elapsed = writeElapsed + readElapsed;
+            return {
+              elapsed,
+              score: scoreFromRange(elapsed, 7, 140),
+            };
+          } catch {
+            return {
+              elapsed: 999,
+              score: 1.0,
+            };
+          }
+        }
+
+        async function benchmarkResponsiveness() {
+          const runs = 12;
+          let totalLag = 0;
+          for (let i = 0; i < runs; i++) {
+            const before = performance.now();
+            await new Promise(resolve => setTimeout(resolve, 0));
+            totalLag += performance.now() - before;
+          }
+          const avgLag = totalLag / runs;
+          return {
+            elapsed: avgLag,
+            score: scoreFromRange(avgLag, 1.3, 22),
+          };
+        }
+
+        function qualityLabel(score) {
+          if (score >= 8.5) return "Excellent";
+          if (score >= 7.0) return "Very Good";
+          if (score >= 5.5) return "Good";
+          if (score >= 4.0) return "Fair";
+          return "Needs Improvement";
+        }
+
+        async function getSavedResult() {
+          try {
+            const raw = await tb.fs.promises.readFile(RESULTS_PATH, "utf8");
+            if (!raw) return null;
+            return JSON.parse(String(raw));
+          } catch {
+            return null;
+          }
+        }
+
+        async function saveResult(result) {
+          await tb.fs.promises.writeFile(RESULTS_PATH, JSON.stringify(result, null, 2), "utf8");
+        }
+
+        function scoreRow(label, value) {
+          const width = Math.max(10, Math.round((Number(value) / 9.9) * 100));
+          return `
+<div style="display:grid;grid-template-columns:minmax(130px,1fr) 1.8fr auto;align-items:center;gap:10px;">
+<span class="detail-control-value" style="font-weight:600;">${label}</span>
+<span style="display:block;height:8px;border-radius:999px;background:#ffffff14;overflow:hidden;"><span style="display:block;height:100%;width:${width}%;background:linear-gradient(90deg,#6ee7b7,#93c5fd,#f9a8d4);"></span></span>
+<span style="font-weight:800;font-size:13px;">${Number(value).toFixed(1)}</span>
+</div>
+`;
+        }
+
+        function renderResult(result) {
+          if (!result) {
+            return `
+<article class="storage-main-card" style="padding:18px;display:flex;flex-direction:column;gap:10px;">
+<h3 class="detail-section-title" style="margin:0;">No assessment yet</h3>
+<p class="detail-control-value" style="margin:0;">Run the assessment to generate a base score and subsystem ratings.</p>
+</article>
+`;
+          }
+          return `
+<article class="storage-main-card" style="padding:18px;display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:start;">
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;border-radius:12px;background:#ffffff10;border:1px solid #ffffff20;">
+<div style="font-size:13px;opacity:0.8;">Base Score</div>
+<div style="font-size:42px;font-weight:900;line-height:1;">${result.base.toFixed(1)}</div>
+<div style="font-size:11px;opacity:0.85;">${qualityLabel(result.base)}</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:9px;">
+${scoreRow("Processor", result.scores.cpu)}
+${scoreRow("Memory (RAM)", result.scores.memory)}
+${scoreRow("Graphics", result.scores.graphics)}
+${scoreRow("Storage", result.scores.storage)}
+${scoreRow("Responsiveness", result.scores.responsiveness)}
+</div>
+</article>
+<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
+<h3 class="detail-section-title" style="margin:0;">System Snapshot</h3>
+<p class="detail-control-value" style="margin:0;">Logical cores: ${result.specs.cores}</p>
+<p class="detail-control-value" style="margin:0;">Estimated memory (GB): ${result.specs.deviceMemory}</p>
+<p class="detail-control-value" style="margin:0;">Platform: ${result.specs.platform}</p>
+<p class="detail-control-value" style="margin:0;">Last run: ${new Date(result.timestamp).toLocaleString()}</p>
+</article>
+`;
+        }
+
+        async function runAssessment() {
+          const [cpu, memory, graphics, storage, responsiveness] = await Promise.all([
+            benchmarkCpu(),
+            benchmarkMemory(),
+            benchmarkGraphics(),
+            benchmarkStorage(),
+            benchmarkResponsiveness(),
+          ]);
+
+          const scores = {
+            cpu: cpu.score,
+            memory: memory.score,
+            graphics: graphics.score,
+            storage: storage.score,
+            responsiveness: responsiveness.score,
+          };
+
+          const base = toFixedScore(Math.min(scores.cpu, scores.memory, scores.graphics, scores.storage, scores.responsiveness));
+          const result = {
+            timestamp: Date.now(),
+            base,
+            scores,
+            raw: {
+              cpuMs: Number(cpu.elapsed.toFixed(2)),
+              memoryMs: Number(memory.elapsed.toFixed(2)),
+              graphicsMs: Number(graphics.elapsed.toFixed(2)),
+              storageMs: Number(storage.elapsed.toFixed(2)),
+              responsivenessMs: Number(responsiveness.elapsed.toFixed(2)),
+            },
+            specs: {
+              cores: Number(nav.hardwareConcurrency || 1),
+              deviceMemory: Number(nav.deviceMemory || 4),
+              platform: String(nav.platform || "unknown"),
+            },
+          };
+          await saveResult(result);
+          return result;
+        }
+
+        const performanceModule = {
+          render: async function() {
+            const saved = await getSavedResult();
+            return `
+<section class="storage-dashboard" style="gap:10px;">
+<article class="storage-main-card" style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+<div>
+<h2 style="font-size:18px;font-weight:800;margin:0;">Terbium Performance Index</h2>
+<p class="detail-control-value" style="margin:4px 0 0 0;">Runs a local benchmark and scores your machine from 1.0 to 9.9.</p>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;">
+<button type="button" class="detail-action" data-run-assessment="true">Run Assessment</button>
+<button type="button" class="detail-action" data-refresh-assessment="true">Refresh View</button>
+</div>
+</article>
+${renderResult(saved)}
+</section>
+`;
+          },
+          wire: function(root) {
+            const rerender = async function() {
+              root.innerHTML = await performanceModule.render();
+              performanceModule.wire(root);
+            };
+
+            const runBtn = root.querySelector("[data-run-assessment='true']");
+            if (runBtn) {
+              runBtn.addEventListener("click", async function() {
+                const original = runBtn.textContent;
+                runBtn.textContent = "Assessing...";
+                runBtn.setAttribute("disabled", "disabled");
+                try {
+                  await runAssessment();
+                } catch (error) {
+                  console.error("Performance assessment failed", error);
+                  if (tb.dialog && tb.dialog.Alert) {
+                    tb.dialog.Alert({
+                      title: "Assessment failed",
+                      body: "Unable to complete the benchmark on this device.",
+                    });
+                  }
+                } finally {
+                  runBtn.textContent = original || "Run Assessment";
+                  runBtn.removeAttribute("disabled");
+                  await rerender();
+                }
+              });
+            }
+
+            const refreshBtn = root.querySelector("[data-refresh-assessment='true']");
+            if (refreshBtn) {
+              refreshBtn.addEventListener("click", async function() {
+                await rerender();
+              });
+            }
+          },
+        };
+        return performanceModule;
+      ]]>
+    </Script>
+  </Scripts>
 </TSL>

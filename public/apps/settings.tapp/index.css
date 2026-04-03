@@ -75,7 +75,7 @@ body {
 #recentlyVisited,
 #categoryGrid {
 	width: 100%;
-	max-width: 72rem;
+	max-width: 100%;
 	margin-left: auto;
 	margin-right: auto;
 	justify-items: stretch;
@@ -86,7 +86,7 @@ body {
 }
 
 #categoryGrid {
-	grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)) !important;
+	grid-template-columns: repeat(auto-fit, minmax(17.35rem, 1fr)) !important;
 }
 
 .recent-chip {
