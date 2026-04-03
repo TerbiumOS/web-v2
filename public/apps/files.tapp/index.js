@@ -86,15 +86,7 @@ const normalizeHandlerAppName = value => {
 
 const isBuiltInOpenWithApp = appName => {
 	const normalized = normalizeHandlerAppName(appName);
-	return (
-		normalized === "texteditor" ||
-		normalized === "texteditortapp" ||
-		normalized === "mediaviewer" ||
-		normalized === "mediaviewertapp" ||
-		normalized === "browser" ||
-		normalized === "browsertapp" ||
-		normalized === "webview"
-	);
+	return normalized === "texteditor" || normalized === "texteditortapp" || normalized === "mediaviewer" || normalized === "mediaviewertapp" || normalized === "browser" || normalized === "browsertapp" || normalized === "webview";
 };
 
 const buildOpenWithHandlerOptions = fileAssociatedApps => {
@@ -103,7 +95,9 @@ const buildOpenWithHandlerOptions = fileAssociatedApps => {
 	const options = [];
 
 	for (const [type, app] of entries) {
-		const handlerType = String(type || "").trim().toLowerCase();
+		const handlerType = String(type || "")
+			.trim()
+			.toLowerCase();
 		const appName = String(app || "").trim();
 		if (!handlerType || !appName) continue;
 		if (isBuiltInOpenWithApp(appName)) continue;
