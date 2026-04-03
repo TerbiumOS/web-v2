@@ -77,6 +77,47 @@ const emptyTrash = async () => {
 	});
 };
 
+const normalizeHandlerAppName = value => {
+	return String(value || "")
+		.trim()
+		.toLowerCase()
+		.replace(/[\s._-]+/g, "");
+};
+
+const isBuiltInOpenWithApp = appName => {
+	const normalized = normalizeHandlerAppName(appName);
+	return (
+		normalized === "texteditor" ||
+		normalized === "texteditortapp" ||
+		normalized === "mediaviewer" ||
+		normalized === "mediaviewertapp" ||
+		normalized === "browser" ||
+		normalized === "browsertapp" ||
+		normalized === "webview"
+	);
+};
+
+const buildOpenWithHandlerOptions = fileAssociatedApps => {
+	const entries = Object.entries(fileAssociatedApps || {});
+	const seenApps = new Set();
+	const options = [];
+
+	for (const [type, app] of entries) {
+		const handlerType = String(type || "").trim().toLowerCase();
+		const appName = String(app || "").trim();
+		if (!handlerType || !appName) continue;
+		if (isBuiltInOpenWithApp(appName)) continue;
+
+		const dedupeKey = normalizeHandlerAppName(appName);
+		if (!dedupeKey || seenApps.has(dedupeKey)) continue;
+		seenApps.add(dedupeKey);
+
+		options.push({ text: appName, value: handlerType });
+	}
+
+	return options;
+};
+
 const createCollapsible = async (title, id, opened, children) => {
 	const collapsible = document.createElement("div");
 	collapsible.classList.add("collapsible-path");
@@ -579,16 +620,22 @@ const cm = async e => {
 					} else {
 						ext = parts.slice(-1).join(".");
 					}
+					const extKey = String(ext || "").toLowerCase();
 					const data = JSON.parse(await window.parent.tb.fs.promises.readFile("/apps/system/files.tapp/extensions.json", "utf8"));
-					if (data["image"].includes(ext)) {
+					const allHandlers = JSON.parse(await window.parent.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"))["fileAssociatedApps"] || {};
+					if (allHandlers[extKey]) {
+						parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), extKey);
+						return;
+					}
+					if (data["image"].includes(extKey)) {
 						parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "image");
-					} else if (data["video"].includes(ext)) {
+					} else if (data["video"].includes(extKey)) {
 						parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "video");
-					} else if (data["audio"].includes(ext)) {
+					} else if (data["audio"].includes(extKey)) {
 						parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "audio");
-					} else if (data["pdf"].includes(ext)) {
+					} else if (data["pdf"].includes(extKey)) {
 						parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "pdf");
-					} else if (ext.toLowerCase() === "tapp.zip") {
+					} else if (extKey === "tapp.zip") {
 						try {
 							const path = e.target.getAttribute("path");
 							await window.parent.tb.dialog.Permissions({
@@ -681,13 +728,13 @@ const cm = async e => {
 								message: `❌ An Unexpected error occurred when trying to install the app: ${path} Error: ${e}`,
 							});
 						}
-					} else if (data["extractables"].includes(ext) || ext.toLowerCase() === "app.zip" || ext.toLowerCase() === "lib.zip") {
+					} else if (data["extractables"].includes(extKey) || extKey === "app.zip" || extKey === "lib.zip") {
 						const zipFilePath = e.target.getAttribute("path");
 						const path = item.getAttribute("path").replace(".zip", "");
 						const targetDirectory = `${path}`;
 						await unzip(zipFilePath, targetDirectory);
 						openPath(document.querySelector(".nav-input.dir").value);
-					} else if (data["text"].includes(ext)) {
+					} else if (data["text"].includes(extKey)) {
 						parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "text");
 					} else {
 						const path = e.target.getAttribute("path");
@@ -699,13 +746,7 @@ const cm = async e => {
 							parent.window.tb.file.handler.openFile(path, extKey);
 							return;
 						}
-						let handlers = Object.entries(allHandlers).filter(([type, app]) => {
-							return !(type === "text" && app === "text-editor") && !(type === "image" && app === "media-viewer") && !(type === "video" && app === "media-viewer") && !(type === "audio" && app === "media-viewer");
-						});
-						let hands = [];
-						for (const [type, app] of handlers) {
-							hands.push({ text: app, value: type });
-						}
+						const hands = buildOpenWithHandlerOptions(allHandlers);
 						await tb.dialog.Select({
 							title: `Select a application to open: ${path.split("/").pop()}`,
 							options: [
@@ -733,7 +774,7 @@ const cm = async e => {
 										parent.window.tb.file.handler.openFile(path, "text");
 										break;
 									case "media":
-										const ext = name.split(".").pop();
+										const ext = String(name.split(".").pop() || "").toLowerCase();
 										if (data["image"].includes(ext)) {
 											parent.window.tb.file.handler.openFile(path, "image");
 										} else if (data["video"].includes(ext)) {
@@ -761,7 +802,7 @@ const cm = async e => {
 										if (hands.length === 0) {
 											parent.window.tb.file.handler.openFile(path, "text");
 										} else {
-											parent.window.tb.file.handler.openFile(path, val);
+											parent.window.tb.file.handler.openFile(path, String(val || "").toLowerCase());
 										}
 										break;
 								}
@@ -773,14 +814,8 @@ const cm = async e => {
 			{
 				text: "Open With",
 				click: async () => {
-					let handlers = JSON.parse(await window.parent.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"))["fileAssociatedApps"];
-					handlers = Object.entries(handlers).filter(([type, app]) => {
-						return !(type === "text" && app === "text-editor") && !(type === "image" && app === "media-viewer") && !(type === "video" && app === "media-viewer") && !(type === "audio" && app === "media-viewer");
-					});
-					let hands = [];
-					for (const [type, app] of handlers) {
-						hands.push({ text: app, value: type });
-					}
+					const allHandlers = JSON.parse(await window.parent.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"))["fileAssociatedApps"] || {};
+					const hands = buildOpenWithHandlerOptions(allHandlers);
 					const data = JSON.parse(await window.parent.window.parent.tb.fs.promises.readFile("/apps/system/files.tapp/extensions.json", "utf8"));
 					await tb.dialog.Select({
 						title: `Select a application to open: ${e.target.getAttribute("path").split("/").pop()}`,
@@ -809,7 +844,7 @@ const cm = async e => {
 									parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "text");
 									break;
 								case "media":
-									const ext = e.target.getAttribute("name").split(".").pop();
+									const ext = String(e.target.getAttribute("name").split(".").pop() || "").toLowerCase();
 									if (data["image"].includes(ext)) {
 										parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "image");
 									} else if (data["video"].includes(ext)) {
@@ -837,7 +872,7 @@ const cm = async e => {
 									if (hands.length === 0) {
 										parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), "text");
 									} else {
-										parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), val);
+										parent.window.tb.file.handler.openFile(e.target.getAttribute("path"), String(val || "").toLowerCase());
 									}
 									break;
 							}
@@ -1533,16 +1568,22 @@ const createPath = async (title, path, type) => {
 			} else {
 				ext = ext.slice(-1).join(".");
 			}
+			const extKey = String(ext || "").toLowerCase();
 			const data = JSON.parse(await window.parent.window.parent.tb.fs.promises.readFile("/apps/system/files.tapp/extensions.json", "utf8"));
-			if (data["image"].includes(ext)) {
+			const allHandlers = JSON.parse(await window.parent.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"))["fileAssociatedApps"] || {};
+			if (allHandlers[extKey]) {
+				parent.window.tb.file.handler.openFile(item.getAttribute("path"), extKey);
+				return;
+			}
+			if (data["image"].includes(extKey)) {
 				parent.window.tb.file.handler.openFile(item.getAttribute("path"), "image");
-			} else if (data["video"].includes(ext)) {
+			} else if (data["video"].includes(extKey)) {
 				parent.window.tb.file.handler.openFile(item.getAttribute("path"), "video");
-			} else if (data["audio"].includes(ext)) {
+			} else if (data["audio"].includes(extKey)) {
 				parent.window.tb.file.handler.openFile(item.getAttribute("path"), "audio");
-			} else if (data["pdf"].includes(ext)) {
+			} else if (data["pdf"].includes(extKey)) {
 				parent.window.tb.file.handler.openFile(item.getAttribute("path"), "pdf");
-			} else if (ext.toLowerCase() === "tapp.zip") {
+			} else if (extKey === "tapp.zip") {
 				try {
 					const path = e.target.getAttribute("path");
 					await window.parent.tb.dialog.Permissions({
@@ -1635,13 +1676,13 @@ const createPath = async (title, path, type) => {
 						message: `❌ An Unexpected error occurred when trying to install the app: ${path} Error: ${e}`,
 					});
 				}
-			} else if (data["extractables"].includes(ext) || ext.toLowerCase() === "app.zip" || ext.toLowerCase() === "lib.zip") {
+			} else if (data["extractables"].includes(extKey) || extKey === "app.zip" || extKey === "lib.zip") {
 				const zipFilePath = e.target.getAttribute("path");
 				const path = item.getAttribute("path").replace(".zip", "");
 				const targetDirectory = `${path}`;
 				await unzip(zipFilePath, targetDirectory);
 				openPath(document.querySelector(".nav-input.dir").value);
-			} else if (data["text"].includes(ext)) {
+			} else if (data["text"].includes(extKey)) {
 				parent.window.tb.file.handler.openFile(item.getAttribute("path"), "text");
 			} else {
 				const path = item.getAttribute("path");
@@ -1653,13 +1694,7 @@ const createPath = async (title, path, type) => {
 					parent.window.tb.file.handler.openFile(path, extKey);
 					return;
 				}
-				let handlers = Object.entries(allHandlers).filter(([type, app]) => {
-					return !(type === "text" && app === "text-editor") && !(type === "image" && app === "media-viewer") && !(type === "video" && app === "media-viewer") && !(type === "audio" && app === "media-viewer");
-				});
-				let hands = [];
-				for (const [type, app] of handlers) {
-					hands.push({ text: app, value: type });
-				}
+				const hands = buildOpenWithHandlerOptions(allHandlers);
 				await tb.dialog.Select({
 					title: `Select a application to open: ${path.split("/").pop()}`,
 					options: [
@@ -1687,7 +1722,7 @@ const createPath = async (title, path, type) => {
 								parent.window.tb.file.handler.openFile(path, "text");
 								break;
 							case "media":
-								const ext = name.split(".").pop();
+								const ext = String(name.split(".").pop() || "").toLowerCase();
 								if (data["image"].includes(ext)) {
 									parent.window.tb.file.handler.openFile(path, "image");
 								} else if (data["video"].includes(ext)) {
@@ -1715,7 +1750,7 @@ const createPath = async (title, path, type) => {
 								if (hands.length === 0) {
 									parent.window.tb.file.handler.openFile(path, "text");
 								} else {
-									parent.window.tb.file.handler.openFile(path, val);
+									parent.window.tb.file.handler.openFile(path, String(val || "").toLowerCase());
 								}
 								break;
 						}
@@ -1985,14 +2020,8 @@ const openPath = async (path, override = false) => {
 					el.addEventListener("dblclick", () => openPath(itemPath.replace(davConfig.url, `/mnt/${davConfig.name}`)));
 				} else {
 					el.addEventListener("dblclick", async () => {
-						let handlers = JSON.parse(await window.parent.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"))["fileAssociatedApps"];
-						handlers = Object.entries(handlers).filter(([type, app]) => {
-							return !(type === "text" && app === "text-editor") && !(type === "image" && app === "media-viewer") && !(type === "video" && app === "media-viewer") && !(type === "audio" && app === "media-viewer");
-						});
-						let hands = [];
-						for (const [type, app] of handlers) {
-							hands.push({ text: app, value: type });
-						}
+						const allHandlers = JSON.parse(await window.parent.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"))["fileAssociatedApps"] || {};
+						const hands = buildOpenWithHandlerOptions(allHandlers);
 						const data = JSON.parse(await window.parent.tb.fs.promises.readFile("/apps/system/files.tapp/extensions.json", "utf8"));
 						await tb.dialog.Select({
 							title: `Select a application to open: ${itemPath.split("/").pop()}`,
@@ -2017,7 +2046,7 @@ const openPath = async (path, override = false) => {
 										parent.window.tb.file.handler.openFile(itemPath, "text");
 										break;
 									case "media":
-										const ext = itemPath.split(".").pop();
+										const ext = String(itemPath.split(".").pop() || "").toLowerCase();
 										if (data["image"].includes(ext)) {
 											parent.window.tb.file.handler.openFile(itemPath, "image");
 										} else if (data["video"].includes(ext)) {
@@ -2045,7 +2074,7 @@ const openPath = async (path, override = false) => {
 										if (hands.length === 0) {
 											parent.window.tb.file.handler.openFile(itemPath, "text");
 										} else {
-											parent.window.tb.file.handler.openFile(itemPath, val);
+											parent.window.tb.file.handler.openFile(itemPath, String(val || "").toLowerCase());
 										}
 										break;
 								}

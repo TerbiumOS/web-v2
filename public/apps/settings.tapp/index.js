@@ -550,15 +550,109 @@ function renderGenericView(view) {
 			const controlHtml = controls
 				.map(control => {
 					const ctype = String(control.type || "").toLowerCase();
-					if (ctype === "button") return `<button type="button" class="detail-action">${control.label || "Run Action"}</button>`;
-					if (ctype === "text") return `<div><div class="detail-control-text">${control.label || "Text"}</div><div class="detail-control-value">${control.bind || "No binding"}</div></div>`;
-					if (ctype === "toggle" || ctype === "select" || ctype === "slider" || ctype === "list") return `<div><div class="detail-control-text">${control.label || control.type}</div><div class="detail-control-value">${control.bind || "No binding"}</div></div>`;
+					if (ctype === "button") {
+						const actionId = String(control.action || "");
+						const disabledAttr = actionId ? "" : " disabled";
+						const actionAttr = actionId ? ` data-action-id="${actionId}"` : "";
+						return `<button type="button" class="detail-action"${actionAttr}${disabledAttr}>${control.label || "Run Action"}</button>`;
+					}
+					if (ctype === "toggle") {
+						const bind = String(control.bind || "");
+						const bindAttr = bind ? ` data-bind-key="${bind}"` : "";
+						return `<label><div class="detail-control-text">${control.label || "Toggle"}</div><input type="checkbox" class="detail-input"${bindAttr}></label>`;
+					}
+					if (ctype === "select") {
+						const bind = String(control.bind || "");
+						const bindAttr = bind ? ` data-bind-key="${bind}"` : "";
+						const options = String(control.attributes?.options || "")
+							.split(",")
+							.map(opt => opt.trim())
+							.filter(Boolean)
+							.map(opt => `<option value="${opt}">${opt}</option>`)
+							.join("");
+						return `<label><div class="detail-control-text">${control.label || "Select"}</div><select class="detail-input"${bindAttr}>${options}</select></label>`;
+					}
+					if (ctype === "slider") {
+						const bind = String(control.bind || "");
+						const bindAttr = bind ? ` data-bind-key="${bind}"` : "";
+						const min = Number(control.attributes?.min ?? 0);
+						const max = Number(control.attributes?.max ?? 100);
+						const step = Number(control.attributes?.step ?? 1);
+						return `<label><div class="detail-control-text">${control.label || "Slider"}</div><input type="range" class="detail-input" min="${min}" max="${max}" step="${step}" value="${min}"${bindAttr}></label>`;
+					}
+					if (ctype === "text") {
+						const bind = String(control.bind || "");
+						if (!bind) return `<div><div class="detail-control-text">${control.label || "Text"}</div><div class="detail-control-value">No binding</div></div>`;
+						return `<label><div class="detail-control-text">${control.label || "Text"}</div><input type="text" class="detail-input" data-bind-key="${bind}"></label>`;
+					}
+					if (ctype === "list") {
+						const bind = String(control.bind || "");
+						if (!bind) return `<div><div class="detail-control-text">${control.label || "List"}</div><div class="detail-control-value">No binding</div></div>`;
+						return `<label><div class="detail-control-text">${control.label || "List"}</div><input type="text" class="detail-input" placeholder="Comma separated values" data-bind-key="${bind}"></label>`;
+					}
 					return `<div><div class="detail-control-text">${control.label || control.type}</div></div>`;
 				})
 				.join("");
 			return `<section><h3 class="detail-section-title">${section.title || "Section"}</h3><div class="flex flex-col gap-3">${controlHtml}</div></section>`;
 		})
 		.join("");
+}
+
+function collectGenericBindings(rootEl) {
+	const bindings = {};
+	if (!rootEl) return bindings;
+	rootEl.querySelectorAll("[data-bind-key]").forEach(el => {
+		const key = String(el.getAttribute("data-bind-key") || "").trim();
+		if (!key) return;
+		if (el instanceof HTMLInputElement) {
+			if (el.type === "checkbox") {
+				bindings[key] = !!el.checked;
+				return;
+			}
+			if (el.type === "range") {
+				bindings[key] = Number(el.value);
+				return;
+			}
+			const value = String(el.value || "").trim();
+			bindings[key] = value;
+			return;
+		}
+		if (el instanceof HTMLSelectElement) {
+			bindings[key] = el.value;
+			return;
+		}
+	});
+	return bindings;
+}
+
+async function executeGenericAction(category, view, actionId) {
+	if (!parser || typeof parser.executeAction !== "function") {
+		console.warn("TSLParser.executeAction unavailable");
+		return;
+	}
+	if (!category?.document || !actionId) return;
+	const bindings = collectGenericBindings(detailContentEl);
+	await parser.executeAction(category.document, actionId, {
+		category,
+		viewId: view?.id || "",
+		bindings,
+	});
+}
+
+function wireGenericActions(category, view) {
+	if (!detailContentEl) return;
+	detailContentEl.querySelectorAll("[data-action-id]").forEach(btn => {
+		btn.addEventListener("click", async () => {
+			const actionId = String(btn.getAttribute("data-action-id") || "").trim();
+			if (!actionId) return;
+			try {
+				await executeGenericAction(category, view, actionId);
+				await renderDetailContent(category, view.id || "");
+			} catch (error) {
+				console.error(`Failed to execute TSL action '${actionId}'`, error);
+			}
+		});
+	});
 }
 
 function serverStatusFromLatency(latency) {
@@ -646,6 +740,7 @@ async function renderDetailContent(category, viewId) {
 		return;
 	}
 	detailContentEl.innerHTML = renderGenericView(view);
+	wireGenericActions(category, view);
 }
 
 function wireWispActions(category, view) {

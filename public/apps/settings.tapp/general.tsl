@@ -58,7 +58,6 @@
           const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
           cfg.eruda = enabled;
           await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
-          if (context.notify) context.notify("Security flags saved");
         }
       ]]>
     </Action>
@@ -80,7 +79,6 @@
           const lk = "loc" + "ation";
           cfg[lk] = String(val);
           await tb.fs.promises.writeFile(sysPath, JSON.stringify(cfg, null, 2), "utf8");
-          if (context.notify) context.notify("Coordinates saved");
         }
       ]]>
     </Action>
@@ -102,7 +100,6 @@
           const user = await tb.user.username();
           const cfgPath = `/home/${user}/settings.json`;
           await tb.fs.promises.writeFile(cfgPath, JSON.stringify(imported, null, 2), "utf8");
-          if (context.notify) context.notify("Settings imported");
         }
       ]]>
     </Action>
@@ -117,7 +114,6 @@
           const stamp = Date.now();
           const outPath = `${outDir}/settings-${stamp}.json`;
           await tb.fs.promises.writeFile(outPath, data, "utf8");
-          if (context.notify) context.notify(`Exported to ${outPath}`);
         }
       ]]>
     </Action>
@@ -158,7 +154,6 @@
 
           await tb.fs.promises.writeFile(userPath, JSON.stringify(userCfg, null, 2), "utf8");
           await tb.fs.promises.writeFile(sysPath, JSON.stringify(sysCfg, null, 2), "utf8");
-          if (context.notify) context.notify("TBS applied");
         }
       ]]>
     </Action>
@@ -166,7 +161,6 @@
       <![CDATA[
         async function(context) {
           await tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", "invalid", "utf8");
-          if (context.notify) context.notify("Cache marked invalid");
         }
       ]]>
     </Action>
@@ -175,10 +169,8 @@
         async function(context) {
           if (tb.system && tb.system.exportfs) {
             await tb.system.exportfs();
-            if (context.notify) context.notify("File system export started");
             return;
           }
-          if (context.notify) context.notify("Export API unavailable");
         }
       ]]>
     </Action>

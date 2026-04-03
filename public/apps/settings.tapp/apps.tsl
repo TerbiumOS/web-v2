@@ -43,33 +43,27 @@
   <Actions>
     <Action id="openAppStore">
       <![CDATA[
-        async function(context) {
+        async function() {
           if (tb.app && tb.app.open) {
             await tb.app.open("app store.tapp");
-            if (context.notify) context.notify("App Store opened");
             return;
           }
-          if (context.notify) context.notify("App management is a stub for now");
         }
       ]]>
     </Action>
     <Action id="openFileManager">
       <![CDATA[
-        async function(context) {
+        async function() {
           if (tb.app && tb.app.open) {
             await tb.app.open("files.tapp");
-            if (context.notify) context.notify("File manager opened");
             return;
           }
-          if (context.notify) context.notify("Storage tools are a stub for now");
         }
       ]]>
     </Action>
     <Action id="configureDefaults">
       <![CDATA[
-        async function(context) {
-          if (context.notify) context.notify("Default app management is not implemented yet");
-        }
+        async function() {}
       ]]>
     </Action>
   </Actions>
@@ -425,6 +419,15 @@ ${mountedRows}
           return "";
         }
 
+        function toRenderableIconPath(value) {
+          const text = String(value || "").trim();
+          if (!text) return "";
+          if (text.startsWith("http://") || text.startsWith("https://") || text.startsWith("data:") || text.startsWith("blob:")) return text;
+          if (text.startsWith("/fs/")) return text;
+          if (text.startsWith("/")) return `/fs${text}`;
+          return text;
+        }
+
         function toRenderableFsPath(path) {
           const value = String(path || "").trim();
           if (!value) return "";
@@ -662,6 +665,464 @@ ${apps.map(buildCard).join("")}
           loadingText: "Loading installed apps...",
           render: renderInstalledAppsView,
           wire: wireInstalledAppsActions,
+        };
+      ]]>
+    </Script>
+    <Script id="defaults" view="defaults">
+      <![CDATA[
+        const tb = api.tb;
+
+        function escHtml(value) {
+          return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function normalizeName(value) {
+          return String(value || "").trim();
+        }
+
+        async function readJson(path, fallbackValue) {
+          try {
+            const raw = await tb.fs.promises.readFile(path, "utf8");
+            const parsed = JSON.parse(String(raw || ""));
+            return parsed == null ? fallbackValue : parsed;
+          } catch {
+            return fallbackValue;
+          }
+        }
+
+        async function readJsonFromPaths(paths, fallbackValue) {
+          for (const path of paths) {
+            try {
+              const raw = await tb.fs.promises.readFile(path, "utf8");
+              const parsed = JSON.parse(String(raw || ""));
+              if (parsed != null) return parsed;
+            } catch {
+              /* ignore */
+            }
+          }
+          return fallbackValue;
+        }
+
+        function dirname(path) {
+          const input = String(path || "").replace(/\\/g, "/");
+          if (!input) return "/";
+          const normalized = input.endsWith("/") && input.length > 1 ? input.slice(0, -1) : input;
+          const idx = normalized.lastIndexOf("/");
+          if (idx <= 0) return "/";
+          return normalized.slice(0, idx);
+        }
+
+        function joinPath(base, next) {
+          const left = String(base || "/").replace(/\/+$/g, "") || "/";
+          const right = String(next || "").replace(/^\/+/, "");
+          return left === "/" ? `/${right}` : `${left}/${right}`;
+        }
+
+        function normalizeIcon(icon, configPath) {
+          const value = String(icon || "").trim();
+          if (!value) return "";
+          if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("data:") || value.startsWith("blob:")) return value;
+          if (value.startsWith("/")) return value;
+          return joinPath(dirname(configPath), value);
+        }
+
+        function resolveTitle(value) {
+          if (typeof value === "string") return normalizeName(value);
+          if (value && typeof value === "object") return normalizeName(value.text || value.label || "");
+          return "";
+        }
+
+        function toRenderableIconPath(value) {
+          const text = String(value || "").trim();
+          if (!text) return "";
+          if (text.startsWith("http://") || text.startsWith("https://") || text.startsWith("data:") || text.startsWith("blob:")) return text;
+          if (text.startsWith("/fs/")) return text;
+          if (text.startsWith("/")) return `/fs${text}`;
+          return text;
+        }
+
+        function extLabel(ext) {
+          const value = String(ext || "").trim().replace(/^\./, "").toLowerCase();
+          return value ? `.${value}` : "Unknown";
+        }
+
+        function humanizeType(type) {
+          const map = {
+            text: "Text Files",
+            image: "Image Files",
+            video: "Video Files",
+            audio: "Audio Files",
+            pdf: "PDF Files",
+            webpage: "Web Pages",
+          };
+          return map[type] || type;
+        }
+
+        function uniqueList(values) {
+          return Array.from(new Set((values || []).map(value => String(value || "").toLowerCase()).filter(Boolean)));
+        }
+
+        async function readInstalledApps() {
+          const installed = await readJson("/apps/installed.json", []);
+          const list = Array.isArray(installed) ? installed : [];
+          const apps = [];
+
+          for (const entry of list) {
+            const fallbackConfig = `/apps/${normalizeName(entry?.name)}/index.json`;
+            const configPath = normalizeName(entry?.config || fallbackConfig);
+            const name = normalizeName(entry?.name || "");
+            if (!name) continue;
+
+            let config = {};
+            try {
+              const raw = await tb.fs.promises.readFile(configPath, "utf8");
+              config = JSON.parse(String(raw || "{}"));
+            } catch {
+              config = {};
+            }
+
+            const appConfig = config && typeof config.config === "object" ? config.config : config;
+            const displayName = normalizeName(resolveTitle(appConfig?.title) || config?.name || appConfig?.name || name);
+            const icon = normalizeIcon(appConfig?.icon || appConfig?.wmArgs?.icon, configPath);
+
+            apps.push({
+              name,
+              displayName: displayName || name,
+              icon,
+            });
+          }
+
+          return apps.sort((a, b) => a.displayName.localeCompare(b.displayName));
+        }
+
+        function resolveDefaultForType(type) {
+          switch (type) {
+            case "text":
+              return { app: "text editor.tapp", label: "Text Editor", system: true };
+            case "image":
+            case "video":
+            case "audio":
+            case "pdf":
+              return { app: "media viewer.tapp", label: "Media Viewer", system: true };
+            case "webpage":
+              return { app: "browser.tapp", label: "Browser", system: true };
+            default:
+              return null;
+          }
+        }
+
+        function resolveFallbackType(ext, extensionKinds) {
+          const value = String(ext || "").toLowerCase();
+          if ((extensionKinds.text || []).includes(value)) return "text";
+          if ((extensionKinds.image || []).includes(value) || (extensionKinds.animated || []).includes(value)) return "image";
+          if ((extensionKinds.video || []).includes(value)) return "video";
+          if ((extensionKinds.audio || []).includes(value)) return "audio";
+          if ((extensionKinds.pdf || []).includes(value)) return "pdf";
+          return null;
+        }
+
+        function getIconMarkup(item, iconCatalog) {
+          const extToName = iconCatalog?.["ext-to-name"] || {};
+          const nameToPath = iconCatalog?.["name-to-path"] || {};
+
+          const lookupExt = item.kind === "extension" ? item.extension : item.fallbackType;
+          const iconName = extToName?.[lookupExt] || (item.fallbackType === "audio" ? "Music" : item.fallbackType === "video" ? "Video" : item.fallbackType === "image" ? "Image" : item.fallbackType === "pdf" ? "Document" : item.fallbackType === "webpage" ? "HTML" : "Document");
+          const iconValue = String(nameToPath?.[iconName] || nameToPath?.Unknown || "");
+
+          if (!iconValue) {
+            return `<span class="installed-app-icon-fallback">${escHtml(item.kind === "extension" ? item.extension.slice(0, 1) : item.label.slice(0, 1))}</span>`;
+          }
+          if (iconValue.trim().startsWith("<svg")) {
+            return `<span class="defaults-inline-icon is-monochrome">${iconValue}</span>`;
+          }
+          const iconPath = toRenderableIconPath(iconValue);
+          return `<img class="installed-app-icon-image" src="${escHtml(iconPath)}" alt="" />`;
+        }
+
+        function resolveCurrentHandler(item, associations, appsByName) {
+          const mapped = normalizeName(associations?.[item.associationKey] || "");
+          if (mapped) {
+            const appMeta = appsByName.get(mapped.toLowerCase());
+            return {
+              label: appMeta?.displayName || mapped,
+              app: mapped,
+              source: "custom",
+            };
+          }
+
+          const fallback = resolveDefaultForType(item.fallbackType);
+          if (fallback) {
+            return {
+              label: `${fallback.label} (System default)`,
+              app: fallback.app,
+              source: "system",
+            };
+          }
+
+          return {
+            label: "Ask every time",
+            app: "",
+            source: "none",
+          };
+        }
+
+        let defaultsModel = {
+          items: [],
+          installedApps: [],
+          iconCatalog: {},
+          associations: {},
+        };
+
+        async function buildDefaultsModel() {
+          const [settings, extensionKinds, iconCatalog, baseIconCatalog, installedApps] = await Promise.all([
+            readJson("/system/etc/terbium/settings.json", {}),
+            readJsonFromPaths(["/apps/system/files.tapp/extensions.json", "/apps/files.tapp/extensions.json"], {}),
+            readJsonFromPaths(["/system/etc/terbium/file-icons.json", "/apps/system/files.tapp/icons.json", "/apps/files.tapp/icons.json"], {}),
+            readJsonFromPaths(["/apps/system/files.tapp/icons.json", "/apps/files.tapp/icons.json"], {}),
+            readInstalledApps(),
+          ]);
+
+          const associations = settings?.fileAssociatedApps && typeof settings.fileAssociatedApps === "object" ? settings.fileAssociatedApps : {};
+          const appsByName = new Map(installedApps.map(app => [String(app.name || "").toLowerCase(), app]));
+          const runtimeExtToName = iconCatalog?.["ext-to-name"] || {};
+          const baseExtToName = baseIconCatalog?.["ext-to-name"] || {};
+          const preferredExtensions = uniqueList([
+            "txt",
+            "text",
+            "md",
+            "json",
+            "js",
+            "ts",
+            "html",
+            "css",
+            "png",
+            "jpg",
+            "jpeg",
+            "gif",
+            "webp",
+            "svg",
+            "bmp",
+            "heic",
+            "mp3",
+            "wav",
+            "flac",
+            "ogg",
+            "mp4",
+            "mkv",
+            "mov",
+            "webm",
+            "avi",
+            "pdf",
+            "zip",
+            "gz",
+          ]);
+
+          const explicitMappings = Object.keys(associations || {}).map(key => String(key || "").toLowerCase()).filter(Boolean);
+          const coreTypes = ["text", "image", "video", "audio", "pdf", "webpage"];
+          const extraMappedExtensions = explicitMappings.filter(key => !coreTypes.includes(key));
+          const customIconExtensions = Object.keys(runtimeExtToName)
+            .map(key => String(key || "").toLowerCase())
+            .filter(key => key && !coreTypes.includes(key) && !(key in baseExtToName));
+          const extensionSet = new Set([...preferredExtensions, ...extraMappedExtensions, ...customIconExtensions]);
+
+          const extensionItems = Array.from(extensionSet)
+            .map(ext => {
+              const fallbackType = resolveFallbackType(ext, extensionKinds || {});
+              return {
+                key: `ext:${ext}`,
+                kind: "extension",
+                label: extLabel(ext),
+                description: fallbackType ? `${humanizeType(fallbackType)} association` : "No system default handler",
+                extension: ext,
+                associationKey: ext,
+                fallbackType,
+              };
+            })
+            .sort((a, b) => a.extension.localeCompare(b.extension));
+
+          const typeItems = coreTypes.map(type => ({
+            key: `type:${type}`,
+            kind: "type",
+            label: humanizeType(type),
+            description: `Base handler for ${type} content`,
+            extension: type,
+            associationKey: type,
+            fallbackType: type,
+          }));
+
+          const hydrate = item => {
+            const current = resolveCurrentHandler(item, associations, appsByName);
+            return {
+              ...item,
+              current,
+            };
+          };
+
+          return {
+            items: [...typeItems.map(hydrate), ...extensionItems.map(hydrate)],
+            installedApps,
+            iconCatalog,
+            associations,
+          };
+        }
+
+        function buildDefaultsCard(item, iconCatalog) {
+          const iconHtml = getIconMarkup(item, iconCatalog);
+          const modePill = item.current.source === "custom"
+            ? `<span class="installed-app-system-pill">Custom</span>`
+            : item.current.source === "system"
+              ? `<span class="installed-app-system-pill">System</span>`
+              : `<span class="installed-app-system-pill">None</span>`;
+
+          return `
+<article class="server-card-wrap installed-app-wrap defaults-app-wrap" data-default-key="${escHtml(item.key)}">
+<div class="server-card installed-app-card defaults-app-card">
+<span class="installed-app-icon">${iconHtml}</span>
+<div>
+<div class="server-main-title">${escHtml(item.label)}</div>
+<div class="server-subtext">${escHtml(item.description)}</div>
+<div class="server-latency">Opens with: ${escHtml(item.current.label)}</div>
+</div>
+</div>
+<div class="defaults-actions">
+${modePill}
+<button type="button" class="detail-action defaults-action-btn" data-default-change="${escHtml(item.key)}">Change</button>
+${item.current.source === "custom" ? `<button type="button" class="server-delete defaults-clear-btn" data-default-clear="${escHtml(item.key)}" aria-label="Clear custom app for ${escHtml(item.label)}">×</button>` : ""}
+</div>
+</article>
+`;
+        }
+
+        async function promptForHandler(item, model) {
+          const defaultChoice = resolveDefaultForType(item.fallbackType);
+          const options = [];
+
+          if (defaultChoice) {
+            options.push({
+              text: `System default (${defaultChoice.label})`,
+              value: "__system__",
+            });
+          }
+
+          for (const app of model.installedApps) {
+            options.push({
+              text: app.displayName,
+              value: app.name,
+            });
+          }
+
+          if (item.current.source === "custom") {
+            options.push({
+              text: "Clear custom mapping",
+              value: "__clear__",
+            });
+          }
+
+          const picked = await new Promise(resolve => {
+            tb.dialog.Select({
+              title: `Choose default app for ${item.label}`,
+              options,
+              onOk: value => {
+                resolve(value);
+              },
+            });
+          });
+
+          return String(picked || "");
+        }
+
+        async function applyHandlerSelection(item, selection) {
+          const value = String(selection || "");
+          if (!value) return false;
+          if (value === "__system__" || value === "__clear__") {
+            await tb.file.handler.removeHandler(item.associationKey);
+            return true;
+          }
+          await tb.file.handler.addHandler(value, item.associationKey);
+          return true;
+        }
+
+        async function renderDefaultsView() {
+          defaultsModel = await buildDefaultsModel();
+          if (!defaultsModel.items.length) {
+            return `<p class="detail-control-value">No configurable defaults were found.</p>`;
+          }
+
+          const typeItems = defaultsModel.items.filter(item => item.kind === "type");
+          const extensionItems = defaultsModel.items.filter(item => item.kind === "extension");
+
+          const section = (title, items) => {
+            if (!items.length) return "";
+            return `
+<section class="installed-app-section">
+<h3 class="detail-section-title">${escHtml(title)}</h3>
+<div class="installed-app-list">
+${items.map(item => buildDefaultsCard(item, defaultsModel.iconCatalog)).join("")}
+</div>
+</section>
+`;
+          };
+
+          return `${section("General File Types", typeItems)}${section("Extensions", extensionItems)}`;
+        }
+
+        function wireDefaultsActions(root) {
+          const scope = root || document;
+
+          scope.querySelectorAll("[data-default-change]").forEach(btn => {
+            btn.addEventListener("click", async ev => {
+              ev.preventDefault();
+              const key = String(btn.getAttribute("data-default-change") || "");
+              if (!key) return;
+              const item = defaultsModel.items.find(entry => entry.key === key);
+              if (!item) return;
+
+              btn.setAttribute("disabled", "true");
+              try {
+                const selected = await promptForHandler(item, defaultsModel);
+                if (!selected) return;
+                const changed = await applyHandlerSelection(item, selected);
+                if (!changed) return;
+
+                const host = scope.closest("#detailContent") || scope;
+                host.innerHTML = await renderDefaultsView();
+                wireDefaultsActions(host);
+              } finally {
+                btn.removeAttribute("disabled");
+              }
+            });
+          });
+
+          scope.querySelectorAll("[data-default-clear]").forEach(btn => {
+            btn.addEventListener("click", async ev => {
+              ev.preventDefault();
+              const key = String(btn.getAttribute("data-default-clear") || "");
+              if (!key) return;
+              const item = defaultsModel.items.find(entry => entry.key === key);
+              if (!item) return;
+
+              btn.setAttribute("disabled", "true");
+              try {
+                await tb.file.handler.removeHandler(item.associationKey);
+                const host = scope.closest("#detailContent") || scope;
+                host.innerHTML = await renderDefaultsView();
+                wireDefaultsActions(host);
+              } finally {
+                btn.removeAttribute("disabled");
+              }
+            });
+          });
+        }
+
+        return {
+          loadingText: "Loading default apps...",
+          render: renderDefaultsView,
+          wire: wireDefaultsActions,
         };
       ]]>
     </Script>

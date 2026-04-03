@@ -91,7 +91,6 @@
           cfg.wallpaper = result;
           await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
           tb.desktop.wallpaper.set(result);
-          if (context.notify) context.notify("Wallpaper updated");
         }
       ]]>
     </Action>
@@ -104,7 +103,6 @@
           const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
           cfg.wallpaperMode = String(mode).toLowerCase();
           await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
-          if (context.notify) context.notify("Fill mode saved");
         }
       ]]>
     </Action>
@@ -126,7 +124,6 @@
           const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
           cfg.accent = color;
           await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
-          if (context.notify) context.notify("Accent saved");
         }
       ]]>
     </Action>
@@ -150,7 +147,6 @@
           cfg[wk] = cfg[wk] || {};
           cfg[wk].winAccent = color;
           await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
-          if (context.notify) context.notify("Shell accent saved");
         }
       ]]>
     </Action>
@@ -189,7 +185,6 @@
           }
 
           await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
-          if (context.notify) context.notify("Shell settings saved");
         }
       ]]>
     </Action>
@@ -203,7 +198,6 @@
           cfg.times.format = context.bindings && context.bindings["appearance.time.twentyFourHour"] ? "24h" : "12h";
           cfg.times.showSeconds = !!(context.bindings && context.bindings["appearance.time.showSeconds"]);
           await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
-          if (context.notify) context.notify("Clock settings saved");
         }
       ]]>
     </Action>
@@ -216,7 +210,6 @@
           cfg.weather = cfg.weather || {};
           cfg.weather.unit = unit;
           await tb.fs.promises.writeFile(sysPath, JSON.stringify(cfg, null, 2), "utf8");
-          if (context.notify) context.notify("Temperature unit saved");
         }
       ]]>
     </Action>

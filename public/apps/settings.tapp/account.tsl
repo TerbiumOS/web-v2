@@ -46,7 +46,7 @@
   <Actions>
     <Action id="changeProfilePicture">
       <![CDATA[
-        async function(context) {
+        async function() {
           const picked = await new Promise(function(resolve) {
             tb.dialog.FileBrowser({
               title: "Choose profile image",
@@ -63,13 +63,12 @@
           const info = JSON.parse(await tb.fs.promises.readFile(userPath, "utf8"));
           info.pfp = picked;
           await tb.fs.promises.writeFile(userPath, JSON.stringify(info, null, 2), "utf8");
-          if (context.notify) context.notify("Profile picture set");
         }
       ]]>
     </Action>
     <Action id="changeUsername">
       <![CDATA[
-        async function(context) {
+        async function() {
           const nextName = await new Promise(function(resolve) {
             tb.dialog.Message({
               title: "Enter new username",
@@ -82,13 +81,12 @@
 
           const curr = await tb.user.username();
           await tb.system.users.renameUser(curr, String(nextName));
-          if (context.notify) context.notify("Username updated");
         }
       ]]>
     </Action>
     <Action id="changeHostname">
       <![CDATA[
-        async function(context) {
+        async function() {
           const nextHost = await new Promise(function(resolve) {
             tb.dialog.Message({
               title: "Enter new host name",
@@ -103,13 +101,12 @@
           const cfg = JSON.parse(await tb.fs.promises.readFile(sysPath, "utf8"));
           cfg["host-name"] = String(nextHost);
           await tb.fs.promises.writeFile(sysPath, JSON.stringify(cfg, null, 2), "utf8");
-          if (context.notify) context.notify("Host name updated");
         }
       ]]>
     </Action>
     <Action id="changePermissions">
       <![CDATA[
-        async function(context) {
+        async function() {
           const options = [
             { text: "Admin", value: "admin" },
             { text: "User", value: "user" },
@@ -132,13 +129,12 @@
           const info = JSON.parse(await tb.fs.promises.readFile(userPath, "utf8"));
           info.perm = selected;
           await tb.fs.promises.writeFile(userPath, JSON.stringify(info, null, 2), "utf8");
-          if (context.notify) context.notify("Permission updated");
         }
       ]]>
     </Action>
     <Action id="openAccounts">
       <![CDATA[
-        async function(context) {
+        async function() {
           const wk = "win" + "dow";
           if (tb[wk] && tb[wk].create) {
             tb[wk].create({
@@ -146,32 +142,27 @@
               src: "/fs/apps/system/settings.tapp/accounts/index.html",
               size: { width: 400, height: 500 }
             });
-            if (context.notify) context.notify("Accounts manager opened");
           }
         }
       ]]>
     </Action>
     <Action id="linkCloud">
       <![CDATA[
-        async function(context) {
+        async function() {
           if (!tb.tauth || !tb.tauth.signIn) {
-            if (context.notify) context.notify("Cloud auth unavailable");
             return;
           }
           await tb.tauth.signIn();
-          if (context.notify) context.notify("Cloud account linked");
         }
       ]]>
     </Action>
     <Action id="toLocal">
       <![CDATA[
-        async function(context) {
+        async function() {
           if (!tb.tauth || !tb.tauth.signOut) {
-            if (context.notify) context.notify("Cloud auth unavailable");
             return;
           }
           await tb.tauth.signOut();
-          if (context.notify) context.notify("Switched to local mode");
         }
       ]]>
     </Action>
@@ -307,7 +298,6 @@
           }
 
           if (typeof rerenderView === "function") await rerenderView(root, context);
-          if (context.notify) context.notify("Profile picture set");
         }
 
         async function commitUsername(root, context, nextName) {
@@ -318,7 +308,6 @@
           if (curr === value) return;
           await tb.system.users.renameUser(curr, value);
           if (typeof rerenderView === "function") await rerenderView(root, context);
-          if (context.notify) context.notify("Username updated");
         }
 
         async function commitHostname(root, context, nextHost) {
@@ -331,7 +320,6 @@
           cfg["host-name"] = value;
           await writeJson(sysPath, cfg);
           if (typeof rerenderView === "function") await rerenderView(root, context);
-          if (context.notify) context.notify("Host name updated");
         }
 
         async function commitPermissions(root, context, nextPerm) {
@@ -345,7 +333,6 @@
             info.perm = selected;
             await writeJson(userPath, info);
             if (typeof rerenderView === "function") await rerenderView(root, context);
-            if (context.notify) context.notify("Permission updated");
           };
 
           if (info.password === false) {
@@ -380,7 +367,6 @@
 
         async function linkCloud(root, context) {
           if (!tb.tauth?.signIn) {
-            if (context.notify) context.notify("Cloud auth unavailable");
             return;
           }
 
@@ -404,12 +390,10 @@
           }
 
           if (typeof rerenderView === "function") await rerenderView(root, context);
-          if (context.notify) context.notify("Cloud account linked");
         }
 
         async function toLocal(root, context) {
           if (!tb.tauth?.signOut) {
-            if (context.notify) context.notify("Cloud auth unavailable");
             return;
           }
 
@@ -431,7 +415,6 @@
 
           await tb.tauth.signOut();
           if (typeof rerenderView === "function") await rerenderView(root, context);
-          if (context.notify) context.notify("Switched to local mode");
         }
 
         async function buildState() {

@@ -362,7 +362,9 @@ return action(context);`,
 
 	private assertActionIsSafe(source: string): void {
 		for (const token of FORBIDDEN_ACTION_TOKENS) {
-			const pattern = new RegExp(`\\b${token.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}`, "i");
+			const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			const isIdentifierToken = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(token);
+			const pattern = isIdentifierToken ? new RegExp(`\\b${escaped}\\b`) : new RegExp(escaped);
 			if (pattern.test(source)) {
 				throw new Error(`Blocked unsafe action token: ${token}`);
 			}

@@ -1410,6 +1410,75 @@ body {
 	cursor: not-allowed;
 }
 
+.defaults-app-wrap {
+	gap: 0.55rem;
+}
+
+.defaults-app-card {
+	min-height: 70px;
+}
+
+.defaults-app-card .installed-app-icon > svg {
+	width: 24px;
+	height: 24px;
+}
+
+.defaults-inline-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+}
+
+.defaults-inline-icon > svg {
+	width: 100%;
+	height: 100%;
+}
+
+.defaults-inline-icon.is-monochrome > svg,
+.defaults-inline-icon.is-monochrome > svg * {
+	fill: rgba(255, 255, 255, 0.95) !important;
+	stroke: rgba(255, 255, 255, 0.95) !important;
+}
+
+.defaults-actions {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	align-self: center;
+}
+
+.defaults-action-btn {
+	width: auto;
+	max-width: none;
+	padding: 0.44rem 0.7rem;
+	font-size: 0.78rem;
+	font-weight: 800;
+	border-radius: 0.58rem;
+	line-height: 1;
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.defaults-action-btn:hover {
+	transform: translateX(1px);
+	background: rgba(255, 255, 255, 0.26);
+}
+
+.defaults-clear-btn {
+	width: 28px;
+	height: 28px;
+	font-size: 1rem;
+	font-weight: 800;
+	line-height: 1;
+	color: rgba(255, 255, 255, 0.88);
+}
+
+.defaults-clear-btn:hover:not(:disabled) {
+	background: #ff8686;
+	color: #2b0909;
+}
+
 .server-delete svg {
 	width: 14px;
 	height: 14px;
