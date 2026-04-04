@@ -44,8 +44,8 @@
     <Action id="openAppStore">
       <![CDATA[
         async function() {
-          if (tb.app && tb.app.open) {
-            await tb.app.open("app store.tapp");
+          if (tb.system && tb.system.openApp) {
+            await tb.system.openApp("app store.tapp");
             return;
           }
         }
@@ -54,8 +54,8 @@
     <Action id="openFileManager">
       <![CDATA[
         async function() {
-          if (tb.app && tb.app.open) {
-            await tb.app.open("files.tapp");
+          if (tb.system && tb.system.openApp) {
+            await tb.system.openApp("files.tapp");
             return;
           }
         }
@@ -177,12 +177,12 @@
             } catch {
               /* ignore */
             }
-            if (windowRef.parent?.tb?.app?.open) {
-              await windowRef.parent.tb.app.open("files.tapp");
+            if (windowRef.parent?.tb?.system?.openApp) {
+              await windowRef.parent.tb.system.openApp("files.tapp");
               return true;
             }
-            if (windowRef.parent?.tb?.system?.openApp) {
-              await windowRef.parent.tb.system.openApp("Files");
+            if (windowRef.parent?.tb?.app?.open) {
+              await windowRef.parent.tb.app.open("files.tapp");
               return true;
             }
           } catch (error) {

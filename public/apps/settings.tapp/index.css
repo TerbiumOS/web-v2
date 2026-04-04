@@ -191,7 +191,7 @@ body {
 
 .detail-shell {
 	display: grid;
-	grid-template-columns: 300px 1fr;
+	grid-template-columns: minmax(180px, 240px) 1fr;
 	gap: 0;
 	border-radius: 1rem;
 	background: var(--panel-bg);
@@ -200,6 +200,18 @@ body {
 		0 10px 28px rgba(0, 0, 0, 0.22);
 	overflow: hidden;
 	min-height: 540px;
+	max-width: 100%;
+}
+
+@media (max-width: 1200px) {
+	.detail-shell {
+		grid-template-columns: minmax(160px, 220px) 1fr;
+	}
+
+	.detail-nav-btn {
+		font-size: 1.35rem;
+		padding: 0.7rem 0.8rem;
+	}
 }
 
 .detail-sidebar {
@@ -210,6 +222,39 @@ body {
 	gap: 0.75rem;
 }
 
+@media (max-width: 960px) {
+	.detail-shell {
+		grid-template-columns: minmax(160px, 220px) 1fr;
+	}
+
+	.detail-sidebar {
+		padding: 1rem;
+	}
+
+	.detail-nav-btn {
+		font-size: 1rem;
+		padding: 0.65rem 0.8rem;
+	}
+}
+
+@media (max-width: 800px) {
+	.detail-shell {
+		grid-template-columns: 1fr;
+	}
+
+	.detail-sidebar {
+		border-right: none;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+		padding: 0.85rem;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.detail-nav-btn {
+		font-size: 0.95rem;
+	}
+}
+
 .detail-nav-btn {
 	display: flex;
 	align-items: center;
@@ -217,7 +262,7 @@ body {
 	width: 100%;
 	padding: 0.72rem 0.85rem;
 	border-radius: 0.78rem;
-	font-size: 2rem;
+	font-size: 1.4rem;
 	font-weight: 700;
 	color: rgba(255, 255, 255, 0.86);
 	background: rgba(255, 255, 255, 0.16);

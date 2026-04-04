@@ -77,7 +77,7 @@
           if (!tb.dialog || !tb.dialog.Alert) return;
           tb.dialog.Alert({
             title: "Security Center is coming soon",
-            body: "This will evolve into an Action Center style security dashboard.",
+            message: "This will evolve into an Action Center style security dashboard.",
           });
         }
       ]]>
@@ -88,7 +88,7 @@
           if (!tb.dialog || !tb.dialog.Alert) return;
           tb.dialog.Alert({
             title: "Performance Assessment",
-            body: "Open the Performance tab and click 'Run Assessment' to generate your index.",
+            message: "Open the Performance tab and click 'Run Assessment' to generate your index.",
           });
         }
       ]]>
@@ -190,7 +190,6 @@
     <Script id="security" view="security">
       <![CDATA[
         const tb = api.tb;
-        const AV_PATH = "/apps/system/settings.tapp/av.json";
         const HW_INDEX_PATH = "/apps/system/settings.tapp/hardwareindex.json";
         const MAINT_REPORT_PATH = "/apps/system/settings.tapp/maintenance-report.json";
         const VERSIONS_URL = "https://cdn.terbiumon.top/updates/versions.json";
@@ -257,40 +256,11 @@
           }
         }
 
-        async function ensureAvConfigFile() {
-          const existing = await readJson(AV_PATH);
-          if (existing) return existing;
-          const fallback = {
-            installed: false,
-            entries: [],
-          };
-          await tb.fs.promises.writeFile(AV_PATH, JSON.stringify(fallback, null, 2), "utf8");
-          return fallback;
-        }
-
-        function hasAntivirusInstalled(avData) {
-          if (!avData) return false;
-          if (Array.isArray(avData)) return avData.length > 0;
-          if (typeof avData === "string") return avData.trim().length > 0;
-          if (typeof avData !== "object") return false;
-          if (avData.installed === true) return true;
-          if (Array.isArray(avData.entries) && avData.entries.length > 0) return true;
-          if (Array.isArray(avData.apps) && avData.apps.length > 0) return true;
-          if (typeof avData.name === "string" && avData.name.trim()) return true;
-          return false;
-        }
-
         async function buildActionCenterModel() {
-          const currentVersion = tb.system && tb.system.version ? String(tb.system.version()) : "unknown";
-          const avData = await ensureAvConfigFile();
+          const currentVersion = tb.system && tb.system.version ? String(typeof tb.system.version === "function" ? tb.system.version() : tb.system.version) : "unknown";
           const versionsMap = await getVersionsMap();
           const maintenanceReport = await readJson(MAINT_REPORT_PATH);
           const perfResult = await readJson(HW_INDEX_PATH);
-
-          const avInstalled = hasAntivirusInstalled(avData);
-          const avStatus = avInstalled
-            ? { level: "green", title: "Antivirus detected", detail: "An antivirus entry is configured in av.json." }
-            : { level: "yellow", title: "No antivirus configured", detail: "Add /apps/system/settings.tapp/av.json with your AV metadata for improved protection checks." };
 
           let versionStatus = { level: "yellow", title: "Version status unavailable", detail: "Could not fetch hosted versions.json right now." };
           if (versionsMap) {
@@ -356,13 +326,9 @@
               {
                 id: "security",
                 name: "Security",
-                status: [avStatus, versionStatus].some(item => item.level === "red")
-                  ? "red"
-                  : [avStatus, versionStatus].some(item => item.level === "yellow")
-                    ? "yellow"
-                    : "green",
-                summary: "Antivirus and version trust state",
-                checks: [avStatus, versionStatus],
+                status: versionStatus.level,
+                summary: "Version trust state",
+                checks: [versionStatus],
               },
               {
                 id: "maintenance",
@@ -697,7 +663,7 @@ ${renderReport(report)}
                 if (tb.dialog && tb.dialog.Alert) {
                   tb.dialog.Alert({
                     title: repair ? "Repair Complete" : "Scan Complete",
-                    body: `Checked ${report.checked} file(s), mismatched ${report.mismatched}, repaired ${report.repaired}, failures ${report.failed}.`,
+                    message: `Checked ${report.checked} file(s), mismatched ${report.mismatched}, repaired ${report.repaired}, failures ${report.failed}.`,
                   });
                 }
               } catch (error) {
@@ -705,7 +671,7 @@ ${renderReport(report)}
                 if (tb.dialog && tb.dialog.Alert) {
                   tb.dialog.Alert({
                     title: "Maintenance failed",
-                    body: "Unable to run integrity check. Installer manifest could not be loaded.",
+                    message: "Unable to run integrity check. Installer manifest could not be loaded.",
                   });
                 }
               } finally {
@@ -736,7 +702,7 @@ ${renderReport(report)}
                 if (tb.dialog && tb.dialog.Alert) {
                   tb.dialog.Alert({
                     title: "Update cache invalidated",
-                    body: "System will offer an update check on next refresh cycle.",
+                    message: "System will offer an update check on next refresh cycle.",
                   });
                 }
               });
@@ -1019,7 +985,7 @@ ${renderResult(saved)}
                   if (tb.dialog && tb.dialog.Alert) {
                     tb.dialog.Alert({
                       title: "Assessment failed",
-                      body: "Unable to complete the benchmark on this device.",
+                      message: "Unable to complete the benchmark on this device.",
                     });
                   }
                 } finally {

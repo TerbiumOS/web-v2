@@ -135,9 +135,17 @@
     <Action id="openAccounts">
       <![CDATA[
         async function() {
-          const wk = "win" + "dow";
-          if (tb[wk] && tb[wk].create) {
-            tb[wk].create({
+          if (tb.window && tb.window.create) {
+            tb.window.create({
+              title: "Accounts",
+              src: "/fs/apps/system/settings.tapp/accounts/index.html",
+              size: { width: 400, height: 500 }
+            });
+            return;
+          }
+          const windowRef = api.window;
+          if (windowRef.parent?.tb?.window?.create) {
+            windowRef.parent.tb.window.create({
               title: "Accounts",
               src: "/fs/apps/system/settings.tapp/accounts/index.html",
               size: { width: 400, height: 500 }
@@ -226,6 +234,7 @@
           const text = String(value || "").trim();
           if (!text) return "";
           if (text.startsWith("data:") || text.startsWith("blob:") || text.startsWith("http://") || text.startsWith("https://") || text.startsWith("/fs/")) return text;
+          if (text.startsWith("/assets/")) return text;
           if (text.startsWith("/")) return `/fs${text}`;
           return text;
         }
@@ -464,9 +473,6 @@
         <span class="account-field-label">Hostname</span>
         <input type="text" class="account-field-input" value="${escHtml(hostnameValue)}" data-account-hostname />
       </label>
-    </div>
-    <div class="account-actions">
-      <button type="button" class="detail-action account-action" data-account-pfp>Change Profile Picture</button>
     </div>
   </article>
 </section>
