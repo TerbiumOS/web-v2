@@ -4,6 +4,7 @@ Welcome to Terbium v2's Documentation. Here is a simple table of contents to hel
 
 - [How to Contribute to Terbium v2](./contributions.md)
 - [Creating Terminal Commands](./creating-terminal-commands.md)
+- [Creating Custom Settings Interfaces](./creating-custom-settings-interfaces.md)
 - [Creating Apps](./creating-apps.md)
 - [Backend Configuration Options](./backend-configuration.md)
 - [Anura Compatability & API Support](./anura-compat.md)
