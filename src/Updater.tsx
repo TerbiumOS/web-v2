@@ -116,16 +116,18 @@ export default function Updater() {
 				} catch {
 					installed = [];
 				}
-				const canonicalByName = new Map(canonicalSystemInstalledApps.map(entry => [normalize(entry.name), entry]));
-				const customEntries = installed.filter(entry => {
-					const name = normalize(entry?.name || "");
+				const canonicalConfigSet = new Set(canonicalSystemInstalledApps.map(entry => String(entry.config || "").toLowerCase()));
+				const canonicalNameSet = new Set(canonicalSystemInstalledApps.map(entry => normalize(entry.name)));
+
+				const preservedEntries = installed.filter(entry => {
 					const config = String(entry?.config || "").toLowerCase();
-					const isSystemUser = String(entry?.user || "").toLowerCase() === "system";
-					const isSystemConfig = config.startsWith("/apps/system/") || config.startsWith("/system/etc/anura/configs/");
-					const matchesCanonical = canonicalByName.has(name);
-					return !(isSystemUser || isSystemConfig || matchesCanonical);
+					const name = normalize(entry?.name || "");
+					const matchesCanonicalConfig = canonicalConfigSet.has(config);
+					const matchesCanonicalName = canonicalNameSet.has(name);
+					return !(matchesCanonicalConfig || matchesCanonicalName);
 				});
-				const merged = [...canonicalSystemInstalledApps, ...customEntries];
+
+				const merged = [...canonicalSystemInstalledApps, ...preservedEntries];
 				const deduped: Array<any> = [];
 				const seen = new Set<string>();
 				for (const entry of merged) {

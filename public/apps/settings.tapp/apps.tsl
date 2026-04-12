@@ -422,6 +422,7 @@ ${mountedRows}
         function toRenderableIconPath(value) {
           const text = String(value || "").trim();
           if (!text) return "";
+          if (text === "/apps/browser.tapp/icon.svg" || text === "/apps/fsapp.app/files.png") return text;
           if (text.startsWith("http://") || text.startsWith("https://") || text.startsWith("data:") || text.startsWith("blob:")) return text;
           if (text.startsWith("/fs/")) return text;
           if (text.startsWith("/")) return `/fs${text}`;
@@ -432,9 +433,12 @@ ${mountedRows}
           const value = String(path || "").trim();
           if (!value) return "";
           if (isExternalUrl(value) || value.startsWith("data:") || value.startsWith("blob:")) return value;
-          const rr = /apps\/(user\/|system\/|anura)(\/|$)/
-          if (rr.test(value) && !value.includes("/fs/")) return `/fs${value}`;
-          return value;
+          const normalized = value.replace(/\\/g, "/");
+          if (normalized === "/apps/browser.tapp/icon.svg" || normalized === "/apps/fsapp.app/files.png") return normalized;
+          if (normalized.startsWith("/fs/")) return normalized;
+          if (normalized.startsWith("/")) return `/fs${normalized}`;
+          if (/^(apps\/(user\/|system\/|anura)(\/|$))/.test(normalized)) return `/fs/${normalized}`;
+          return normalized;
         }
 
         async function readAppMeta(entry) {
@@ -472,14 +476,19 @@ ${mountedRows}
         }
 
         function matchesAppByPath(value, app) {
-          const text = String(value || "");
+          const text = String(value || "").replace(/\\/g, "/").trim();
           if (!text) return false;
-          return (
-            text.includes(app.configPath) ||
-            text.includes(app.installDir) ||
-            (app.src && text.includes(app.src)) ||
-            text.includes(`/apps/${app.name}/`)
-          );
+          const installDir = String(app.installDir || "").replace(/\\/g, "/").trim();
+          const configPath = String(app.configPath || "").replace(/\\/g, "/").trim();
+
+          if (text === installDir || text === configPath) return true;
+          if (installDir && text.startsWith(`${installDir}/`)) return true;
+          if (configPath && text.startsWith(`${configPath}/`)) return true;
+          if (installDir && text.includes(installDir)) return true;
+          if (configPath && text.includes(configPath)) return true;
+          if (app.src && text.includes(String(app.src || "").replace(/\\/g, "/"))) return true;
+          if (app.name && text.includes(`/apps/${app.name}/`)) return true;
+          return false;
         }
 
         function matchesAppByName(value, app) {
@@ -518,14 +527,23 @@ ${mountedRows}
             procs = [];
           }
 
+          if (!Array.isArray(procs) && procs && typeof procs === "object") {
+            procs = Object.values(procs);
+          }
+          if (!Array.isArray(procs)) {
+            procs = [];
+          }
+
           await Promise.all(
             procs.map(async proc => {
               const procName = String(proc?.name || "");
               const procSrc = String(proc?.src || "");
               const matches = matchesAppByPath(procSrc, app) || matchesAppByName(procName, app);
               if (!matches) return;
+              const pid = Number(proc?.pid);
+              if (!Number.isInteger(pid) || pid <= 0) return;
               try {
-                await tb.process.kill(proc?.pid);
+                await tb.process.kill(pid);
               } catch {
                 /* ignore */
               }
@@ -569,10 +587,52 @@ ${mountedRows}
           return true;
         }
 
-        function buildCard(app) {
-          const iconHtml = app.icon
-            ? `<img class="installed-app-icon-image" src="${escHtml(app.icon)}" alt="" />`
-            : `<span class="installed-app-icon-fallback">${escHtml(app.displayName.slice(0, 1) || "?")}</span>`;
+        function resolveFsReadPath(path) {
+          const normalized = String(path || "").trim().replace(/\\/g, "/").replace(/\/\/+/g, "/");
+          if (!normalized) return "";
+          if (normalized.startsWith("/fs/")) return normalized.slice(3);
+          return normalized.startsWith("/") ? normalized : `/${normalized}`;
+        }
+
+        function isInlineSvg(value) {
+          return String(value || "").trim().startsWith("<svg");
+        }
+
+        function isLocalSvgPath(value) {
+          const text = String(value || "").trim();
+          if (!text) return false;
+          if (/^https?:\/\//.test(text) || text.startsWith("data:") || text.startsWith("blob:")) return false;
+          return text.toLowerCase().endsWith(".svg");
+        }
+
+        async function loadSvgMarkup(iconValue) {
+          const rawValue = String(iconValue || "").trim();
+          if (!rawValue) return "";
+          if (isInlineSvg(rawValue)) return rawValue;
+          if (!isLocalSvgPath(rawValue)) return "";
+
+          const fsPath = resolveFsReadPath(rawValue);
+          if (!fsPath) return "";
+
+          try {
+            const raw = await tb.fs.promises.readFile(fsPath, "utf8");
+            const svg = String(raw || "").trim();
+            return isInlineSvg(svg) ? svg : "";
+          } catch {
+            return "";
+          }
+        }
+
+        async function buildCard(app) {
+          let iconHtml = `<span class="installed-app-icon-fallback">${escHtml(app.displayName.slice(0, 1) || "?")}</span>`;
+          if (app.icon) {
+            const svgMarkup = await loadSvgMarkup(app.icon);
+            if (svgMarkup) {
+              iconHtml = `<span class="installed-app-icon installed-app-icon-svg">${svgMarkup}</span>`;
+            } else {
+              iconHtml = `<img class="installed-app-icon-image" src="${escHtml(app.icon)}" alt="" />`;
+            }
+          }
 
           const actionHtml = app.isSystem
             ? `<span class="installed-app-system-pill">System</span>`
@@ -622,19 +682,20 @@ ${actionHtml}
           const systemApps = currentApps.filter(app => app.isSystem).sort((a, b) => a.displayName.localeCompare(b.displayName));
           const userApps = currentApps.filter(app => !app.isSystem).sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-          const section = (title, apps) => {
+          const section = async (title, apps) => {
             if (!apps.length) return "";
+            const cards = await Promise.all(apps.map(buildCard));
             return `
 <section class="installed-app-section">
 <h3 class="detail-section-title">${escHtml(title)}</h3>
 <div class="installed-app-list">
-${apps.map(buildCard).join("")}
+${cards.join("")}
 </div>
 </section>
 `;
           };
 
-          return `${section("Installed Apps", userApps)}${section("System Apps", systemApps)}`;
+          return `${await section("Installed Apps", userApps)}${await section("System Apps", systemApps)}`;
         }
 
         function wireInstalledAppsActions(root) {
@@ -740,6 +801,7 @@ ${apps.map(buildCard).join("")}
         function toRenderableIconPath(value) {
           const text = String(value || "").trim();
           if (!text) return "";
+          if (text === "/apps/browser.tapp/icon.svg" || text === "/apps/fsapp.app/files.png") return text;
           if (text.startsWith("http://") || text.startsWith("https://") || text.startsWith("data:") || text.startsWith("blob:")) return text;
           if (text.startsWith("/fs/")) return text;
           if (text.startsWith("/")) return `/fs${text}`;
@@ -759,6 +821,7 @@ ${apps.map(buildCard).join("")}
             audio: "Audio Files",
             pdf: "PDF Files",
             webpage: "Web Pages",
+            archive: "Archive Files",
           };
           return map[type] || type;
         }
@@ -811,6 +874,8 @@ ${apps.map(buildCard).join("")}
               return { app: "media viewer.tapp", label: "Media Viewer", system: true };
             case "webpage":
               return { app: "browser.tapp", label: "Browser", system: true };
+            case "archive":
+              return { app: "files.tapp", label: "File Manager", system: true };
             default:
               return null;
           }
@@ -823,25 +888,125 @@ ${apps.map(buildCard).join("")}
           if ((extensionKinds.video || []).includes(value)) return "video";
           if ((extensionKinds.audio || []).includes(value)) return "audio";
           if ((extensionKinds.pdf || []).includes(value)) return "pdf";
+          if (value === "zip" || value === "gz" || value === "tar" || value === "rar" || value === "7z") return "archive";
           return null;
         }
 
-        function getIconMarkup(item, iconCatalog) {
+        function resolveFsReadPath(path) {
+          const normalized = String(path || "").trim().replace(/\\/g, "/").replace(/\/\/+/g, "/");
+          if (!normalized) return "";
+          if (normalized.startsWith("/fs/")) return normalized.slice(3);
+          return normalized.startsWith("/") ? normalized : `/${normalized}`;
+        }
+
+        function isInlineSvg(value) {
+          return String(value || "").trim().startsWith("<svg");
+        }
+
+        function isLocalSvgPath(value) {
+          const text = String(value || "").trim();
+          if (!text) return false;
+          if (/^https?:\/\//.test(text) || text.startsWith("data:") || text.startsWith("blob:")) return false;
+          return text.toLowerCase().endsWith(".svg");
+        }
+
+        function forceMonochromeSvg(svg) {
+          return String(svg || "").replace(/<svg([^>]*)>/, (match, attrs) => {
+            const hasFill = /\sfill\s*=/.test(attrs);
+            const hasStroke = /\sstroke\s*=/.test(attrs);
+            return `<svg${attrs}${hasFill ? "" : " fill=\"currentColor\""}${hasStroke ? "" : " stroke=\"currentColor\""}>`;
+          });
+        }
+
+        async function loadSvgMarkup(iconValue) {
+          const rawValue = String(iconValue || "").trim();
+          if (!rawValue) return "";
+          if (isInlineSvg(rawValue)) return forceMonochromeSvg(rawValue);
+          if (!isLocalSvgPath(rawValue)) return "";
+
+          const fsPath = resolveFsReadPath(rawValue);
+          if (!fsPath) return "";
+
+          try {
+            const raw = await tb.fs.promises.readFile(fsPath, "utf8");
+            const svg = String(raw || "").trim();
+            return isInlineSvg(svg) ? forceMonochromeSvg(svg) : "";
+          } catch {
+            return "";
+          }
+        }
+
+        async function getIconMarkup(item, iconCatalog) {
           const extToName = iconCatalog?.["ext-to-name"] || {};
           const nameToPath = iconCatalog?.["name-to-path"] || {};
 
           const lookupExt = item.kind === "extension" ? item.extension : item.fallbackType;
           const iconName = extToName?.[lookupExt] || (item.fallbackType === "audio" ? "Music" : item.fallbackType === "video" ? "Video" : item.fallbackType === "image" ? "Image" : item.fallbackType === "pdf" ? "Document" : item.fallbackType === "webpage" ? "HTML" : "Document");
-          const iconValue = String(nameToPath?.[iconName] || nameToPath?.Unknown || "");
+          const iconValue = String(nameToPath?.[iconName] || nameToPath?.Unknown || "").trim();
 
           if (!iconValue) {
             return `<span class="installed-app-icon-fallback">${escHtml(item.kind === "extension" ? item.extension.slice(0, 1) : item.label.slice(0, 1))}</span>`;
           }
-          if (iconValue.trim().startsWith("<svg")) {
-            return `<span class="defaults-inline-icon is-monochrome">${iconValue}</span>`;
+
+          const svgMarkup = await loadSvgMarkup(iconValue);
+          if (svgMarkup) {
+            return `<span class="defaults-inline-icon is-monochrome">${svgMarkup}</span>`;
           }
+
           const iconPath = toRenderableIconPath(iconValue);
           return `<img class="installed-app-icon-image" src="${escHtml(iconPath)}" alt="" />`;
+        }
+
+        async function buildDefaultsCard(item, iconCatalog) {
+          const iconHtml = await getIconMarkup(item, iconCatalog);
+          const modePill = item.current.source === "custom"
+            ? `<span class="installed-app-system-pill">Custom</span>`
+            : item.current.source === "system"
+              ? `<span class="installed-app-system-pill">System</span>`
+              : `<span class="installed-app-system-pill">None</span>`;
+
+          return `
+<article class="server-card-wrap installed-app-wrap defaults-app-wrap" data-default-key="${escHtml(item.key)}">
+<div class="server-card installed-app-card defaults-app-card">
+<span class="installed-app-icon">${iconHtml}</span>
+<div>
+<div class="server-main-title">${escHtml(item.label)}</div>
+<div class="server-subtext">${escHtml(item.description)}</div>
+<div class="server-latency">Opens with: ${escHtml(item.current.label)}</div>
+</div>
+</div>
+<div class="defaults-actions">
+${modePill}
+<button type="button" class="detail-action defaults-action-btn" data-default-change="${escHtml(item.key)}">Change</button>
+${item.current.source === "custom" ? `<button type="button" class="server-delete defaults-clear-btn" data-default-clear="${escHtml(item.key)}" aria-label="Clear custom app for ${escHtml(item.label)}">×</button>` : ""}
+</div>
+</article>
+`;
+        }
+
+        async function renderDefaultsView() {
+          defaultsModel = await buildDefaultsModel();
+          if (!defaultsModel.items.length) {
+            return `<p class="detail-control-value">No configurable defaults were found.</p>`;
+          }
+
+          const typeItems = defaultsModel.items.filter(item => item.kind === "type");
+          const extensionItems = defaultsModel.items.filter(item => item.kind === "extension");
+
+          const section = async (title, items) => {
+            if (!items.length) return "";
+            const cards = await Promise.all(items.map(item => buildDefaultsCard(item, defaultsModel.iconCatalog)));
+            return `
+<section class="installed-app-section">
+<h3 class="detail-section-title">${escHtml(title)}</h3>
+<div class="installed-app-list">
+${cards.join("")}
+</div>
+</section>
+`;
+          };
+
+          return `${await section("General File Types", typeItems)}${await section("Extensions", extensionItems)}`;
         }
 
         function resolveCurrentHandler(item, associations, appsByName) {
@@ -971,34 +1136,7 @@ ${apps.map(buildCard).join("")}
           };
         }
 
-        function buildDefaultsCard(item, iconCatalog) {
-          const iconHtml = getIconMarkup(item, iconCatalog);
-          const modePill = item.current.source === "custom"
-            ? `<span class="installed-app-system-pill">Custom</span>`
-            : item.current.source === "system"
-              ? `<span class="installed-app-system-pill">System</span>`
-              : `<span class="installed-app-system-pill">None</span>`;
-
-          return `
-<article class="server-card-wrap installed-app-wrap defaults-app-wrap" data-default-key="${escHtml(item.key)}">
-<div class="server-card installed-app-card defaults-app-card">
-<span class="installed-app-icon">${iconHtml}</span>
-<div>
-<div class="server-main-title">${escHtml(item.label)}</div>
-<div class="server-subtext">${escHtml(item.description)}</div>
-<div class="server-latency">Opens with: ${escHtml(item.current.label)}</div>
-</div>
-</div>
-<div class="defaults-actions">
-${modePill}
-<button type="button" class="detail-action defaults-action-btn" data-default-change="${escHtml(item.key)}">Change</button>
-${item.current.source === "custom" ? `<button type="button" class="server-delete defaults-clear-btn" data-default-clear="${escHtml(item.key)}" aria-label="Clear custom app for ${escHtml(item.label)}">×</button>` : ""}
-</div>
-</article>
-`;
-        }
-
-        async function promptForHandler(item, model) {
+        function promptForHandler(item, model) {
           const defaultChoice = resolveDefaultForType(item.fallbackType);
           const options = [];
 
@@ -1023,7 +1161,7 @@ ${item.current.source === "custom" ? `<button type="button" class="server-delete
             });
           }
 
-          const picked = await new Promise(resolve => {
+          return new Promise(resolve => {
             tb.dialog.Select({
               title: `Choose default app for ${item.label}`,
               options,
@@ -1031,9 +1169,7 @@ ${item.current.source === "custom" ? `<button type="button" class="server-delete
                 resolve(value);
               },
             });
-          });
-
-          return String(picked || "");
+          }).then(picked => String(picked || ""));
         }
 
         async function applyHandlerSelection(item, selection) {
@@ -1045,30 +1181,6 @@ ${item.current.source === "custom" ? `<button type="button" class="server-delete
           }
           await tb.file.handler.addHandler(value, item.associationKey);
           return true;
-        }
-
-        async function renderDefaultsView() {
-          defaultsModel = await buildDefaultsModel();
-          if (!defaultsModel.items.length) {
-            return `<p class="detail-control-value">No configurable defaults were found.</p>`;
-          }
-
-          const typeItems = defaultsModel.items.filter(item => item.kind === "type");
-          const extensionItems = defaultsModel.items.filter(item => item.kind === "extension");
-
-          const section = (title, items) => {
-            if (!items.length) return "";
-            return `
-<section class="installed-app-section">
-<h3 class="detail-section-title">${escHtml(title)}</h3>
-<div class="installed-app-list">
-${items.map(item => buildDefaultsCard(item, defaultsModel.iconCatalog)).join("")}
-</div>
-</section>
-`;
-          };
-
-          return `${section("General File Types", typeItems)}${section("Extensions", extensionItems)}`;
         }
 
         function wireDefaultsActions(root) {

@@ -369,9 +369,12 @@
                 const maintenanceAction = category.id === "maintenance"
                   ? `<div style="margin-top:10px;"><button type="button" class="detail-action" data-action-center-maint-scan="true">Open Maintenance Scan</button></div>`
                   : "";
+                const performanceAction = category.id === "performance"
+                  ? `<div style="margin-top:10px;"><button type="button" class="detail-action" data-action-center-perf-run="true">Open Hardware Assessment</button></div>`
+                  : "";
                 return renderCard(
                   category.name,
-                  `${category.summary}<ul style="margin:8px 0 0 16px;padding:0;">${detail}</ul>${maintenanceAction}`,
+                  `${category.summary}<ul style="margin:8px 0 0 16px;padding:0;">${detail}</ul>${maintenanceAction}${performanceAction}`,
                   category.status === "red" ? "Critical" : category.status === "yellow" ? "Attention" : "Healthy",
                   badgeColor(category.status),
                 );
@@ -407,6 +410,18 @@ ${categoryCards}
                   : null;
                 if (maintenanceNav && typeof maintenanceNav.click === "function") {
                   maintenanceNav.click();
+                }
+              });
+            }
+
+            const openPerformanceBtn = root.querySelector("[data-action-center-perf-run='true']");
+            if (openPerformanceBtn) {
+              openPerformanceBtn.addEventListener("click", function() {
+                const performanceNav = api.document && api.document.querySelector
+                  ? api.document.querySelector("#detailSidebar [data-view-id='performance']")
+                  : null;
+                if (performanceNav && typeof performanceNav.click === "function") {
+                  performanceNav.click();
                 }
               });
             }
