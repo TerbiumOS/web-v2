@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+
+. /etc/terbium/kiosk.env
+
+xset s off || true
+xset s noblank || true
+xset -dpms || true
+
+case "${KIOSK_MODE:-chromium}" in
+	chromium)
+		exec chromium --kiosk --no-first-run --noerrdialogs --disable-session-crashed-bubble --disable-infobars --disable-translate --autoplay-policy=no-user-gesture-required "${KIOSK_URL:-http://127.0.0.1:3000}"
+		;;
+	cef)
+		if [ -z "${KIOSK_COMMAND:-}" ]; then
+			echo "Set KIOSK_COMMAND in /etc/terbium/kiosk.env before using cef mode." >&2
+			exit 1
+		fi
+		exec sh -lc "${KIOSK_COMMAND}"
+		;;
+	*)
+		if [ -z "${KIOSK_COMMAND:-}" ]; then
+			echo "Unknown KIOSK_MODE: ${KIOSK_MODE:-}" >&2
+			exit 1
+		fi
+		exec sh -lc "${KIOSK_COMMAND}"
+		;;
+esac

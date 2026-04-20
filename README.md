@@ -47,6 +47,8 @@ If you wish to develop or just learn more about Terbium's components and stuff, 
 
 If you're looking to see what Anura APIs and features are supported in terbium, refer to: [here](/docs/anura-compat.md), if you're looking to see what Electron API's are supported in terbium refer to: [here](/docs/lemonade-compat.md)
 
+If you want to boot Terbium inside a minimal Debian kiosk image, see [the kiosk build recipe](./os/README.md).
+
 ### <span style="color: #32ae62;">Contributors</span>
 
 - [SNOOT](https://github.com/NovaAppsInc)

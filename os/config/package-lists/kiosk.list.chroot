@@ -1,0 +1,9 @@
+chromium
+xinit
+xorg
+xserver-xorg-core
+xserver-xorg-legacy
+x11-xserver-utils
+dbus-x11
+fonts-dejavu-core
+ca-certificates
