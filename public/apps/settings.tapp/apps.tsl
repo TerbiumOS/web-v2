@@ -55,7 +55,7 @@
       <![CDATA[
         async function() {
           if (tb.system && tb.system.openApp) {
-            await tb.system.openApp("files.tapp");
+            await tb.system.openApp("files");
             return;
           }
         }
@@ -178,11 +178,11 @@
               /* ignore */
             }
             if (windowRef.parent?.tb?.system?.openApp) {
-              await windowRef.parent.tb.system.openApp("files.tapp");
+              await windowRef.parent.tb.system.openApp("files");
               return true;
             }
             if (windowRef.parent?.tb?.app?.open) {
-              await windowRef.parent.tb.app.open("files.tapp");
+              await windowRef.parent.tb.app.open("files");
               return true;
             }
           } catch (error) {
@@ -875,7 +875,7 @@ ${cards.join("")}
             case "webpage":
               return { app: "browser.tapp", label: "Browser", system: true };
             case "archive":
-              return { app: "files.tapp", label: "File Manager", system: true };
+              return { app: "files", label: "File Manager", system: true };
             default:
               return null;
           }
@@ -1046,9 +1046,9 @@ ${cards.join("")}
         async function buildDefaultsModel() {
           const [settings, extensionKinds, iconCatalog, baseIconCatalog, installedApps] = await Promise.all([
             readJson("/system/etc/terbium/settings.json", {}),
-            readJsonFromPaths(["/apps/system/files.tapp/extensions.json", "/apps/files.tapp/extensions.json"], {}),
-            readJsonFromPaths(["/system/etc/terbium/file-icons.json", "/apps/system/files.tapp/icons.json", "/apps/files.tapp/icons.json"], {}),
-            readJsonFromPaths(["/apps/system/files.tapp/icons.json", "/apps/files.tapp/icons.json"], {}),
+            readJsonFromPaths(["/apps/system/files/extensions.json", "/apps/files/extensions.json"], {}),
+            readJsonFromPaths(["/system/etc/terbium/file-icons.json", "/apps/system/files/icons.json", "/apps/files/icons.json"], {}),
+            readJsonFromPaths(["/apps/system/files/icons.json", "/apps/files/icons.json"], {}),
             readInstalledApps(),
           ]);
 

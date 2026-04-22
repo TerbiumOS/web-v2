@@ -21,22 +21,16 @@
       <Content>
         <View id="proxy">
           <Section title="Proxy">
-            <Select label="Provider" bind="internet.proxy.provider" options="Ultraviolet,Scramjet" />
-            <Button label="Apply Proxy" action="applyProxy" />
+            <Text label="Current Proxy" bind="internet.proxy.provider" />
           </Section>
         </View>
         <View id="wisp">
           <Section title="Wisp Server">
-            <List label="Servers" bind="internet.wisp.servers" />
-            <Button label="Add Wisp Server" action="addWisp" />
-            <Button label="Remove Wisp Server" action="removeWisp" />
+            <Text label="Status" bind="internet.wisp.status" />
           </Section>
         </View>
         <View id="transport">
-          <Section title="Transport">
-            <Select label="Type" bind="internet.transport.type" options="Default (Epoxy),Libcurl,Anura BCC" />
-            <Button label="Apply Transport" action="applyTransport" />
-          </Section>
+          <Section title="Transport"></Section>
         </View>
       </Content>
     </SettingsPage>
@@ -138,4 +132,506 @@
       ]]>
     </Action>
   </Actions>
+  <Scripts>
+    <Script id="proxy" view="proxy">
+      <![CDATA[
+        const tb = api.tb;
+
+        const proxyOptions = [
+          {
+            id: "Scramjet",
+            title: "Scramjet",
+            description: "Scramjet is an experimental interception-based web proxy designed to evade internet censorship, bypass browser restrictions, and support more websites.",
+            icon: "/assets/img/scramjet.webp",
+            className: "provider-scramjet",
+          },
+          {
+            id: "Ultraviolet",
+            title: "Ultraviolet (Deprecated)",
+            description: "The proxy that was default before Scramjet. Stable, but less secure and doesn't support as many websites. No longer updated and should not be used unless needed.",
+            icon: "/assets/img/uv.png",
+            className: "provider-ultraviolet",
+          },
+        ];
+
+        let currentProvider = "Ultraviolet";
+
+        function escHtml(value) {
+          return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        async function readCurrentProvider() {
+          try {
+            const user = await tb.user.username();
+            const cfgPath = `/home/${user}/settings.json`;
+            const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+            const provider = String(cfg?.proxy || "").trim();
+            if (provider) return provider;
+          } catch {
+            /* ignore */
+          }
+
+          try {
+            const provider = await Promise.resolve(tb.proxy?.get?.());
+            if (provider) return String(provider);
+          } catch {
+            /* ignore */
+          }
+
+          return "Ultraviolet";
+        }
+
+        async function persistProvider(provider) {
+          const value = String(provider || "Ultraviolet");
+          if (tb.proxy && tb.proxy.set) {
+            await tb.proxy.set(value);
+          }
+
+          const user = await tb.user.username();
+          const cfgPath = `/home/${user}/settings.json`;
+          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+          cfg.proxy = value;
+          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+        }
+
+        function buildCard(option) {
+          const active = currentProvider.toLowerCase() === option.id.toLowerCase();
+          return `
+<button type="button" class="proxy-card ${option.className} ${active ? "is-active" : ""}" data-proxy-value="${escHtml(option.id)}">
+<span class="proxy-card-icon"><img src="${escHtml(option.icon)}" alt="" /></span>
+<span class="proxy-card-copy">
+<span class="proxy-card-title">${escHtml(option.title)}</span>
+<span class="proxy-card-description">${escHtml(option.description)}</span>
+</span>
+<span class="proxy-card-check" aria-hidden="true">${active ? "✓" : ""}</span>
+</button>
+`;
+        }
+
+        async function renderProxyView() {
+          currentProvider = await readCurrentProvider();
+          const cards = proxyOptions.map(buildCard).join("");
+          return `
+<section class="proxy-picker-shell">
+<div class="proxy-picker-list">${cards}</div>
+</section>
+`;
+        }
+
+        function wireProxyView(root) {
+          const scope = root || document;
+          scope.querySelectorAll("[data-proxy-value]").forEach(btn => {
+            btn.addEventListener("click", async ev => {
+              ev.preventDefault();
+              const provider = String(btn.getAttribute("data-proxy-value") || "").trim();
+              if (!provider || provider === currentProvider) return;
+
+              btn.setAttribute("disabled", "true");
+              try {
+                await persistProvider(provider);
+                currentProvider = provider;
+                const host = scope.closest("#detailContent") || scope;
+                host.innerHTML = await renderProxyView();
+                wireProxyView(host);
+              } finally {
+                btn.removeAttribute("disabled");
+              }
+            });
+          });
+        }
+
+        return {
+          loadingText: "Loading proxy...",
+          render: renderProxyView,
+          wire: wireProxyView,
+        };
+      ]]>
+    </Script>
+    <Script id="transport" view="transport">
+      <![CDATA[
+        const tb = api.tb;
+
+        const transportOptions = [
+          {
+            id: "Default (Epoxy)",
+            title: "Epoxy",
+            description: "Default transport using Epoxy and Wisp gateway.",
+          },
+          {
+            id: "Libcurl",
+            title: "Libcurl",
+            description: "Legacy transport for compatibility with more servers.",
+          },
+          {
+            id: "Anura BCC",
+            title: "Anura BCC",
+            description: "Experimental high-performance transport using Anura Bare Client.",
+          },
+        ];
+
+        let currentTransport = "Default (Epoxy)";
+
+        function escHtmlTransport(value) {
+          return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        async function readCurrentTransport() {
+          try {
+            const user = await tb.user.username();
+            const cfgPath = `/home/${user}/settings.json`;
+            const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+            return String(cfg.transport || "Default (Epoxy)").trim();
+          } catch {
+            return "Default (Epoxy)";
+          }
+        }
+
+        async function persistTransport(transport) {
+          const value = String(transport || "Default (Epoxy)");
+          try {
+            const user = await tb.user.username();
+            const cfgPath = `/home/${user}/settings.json`;
+            const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+            cfg.transport = value;
+            await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+          } catch {
+            /* ignore */
+          }
+
+          try {
+            await window.tb.proxy?.updateSWs?.();
+          } catch {
+            /* ignore */
+          }
+        }
+
+        function buildTransportCard(option) {
+          const active = currentTransport === option.id;
+          return `
+<button type="button" class="transport-card ${active ? "is-active" : ""}" data-transport-value="${escHtmlTransport(option.id)}">
+  <span class="transport-card-indicator"></span>
+  <span class="transport-card-copy">
+    <span class="transport-card-title">${escHtmlTransport(option.title)}</span>
+    <span class="transport-card-description">${escHtmlTransport(option.description)}</span>
+  </span>
+</button>
+`;
+        }
+
+        async function renderTransportView() {
+          currentTransport = await readCurrentTransport();
+          const cards = transportOptions.map(buildTransportCard).join("");
+          return `
+<section class="transport-picker-shell">
+  <div class="transport-picker-list">${cards}</div>
+</section>
+`;
+        }
+
+        function wireTransportView(root) {
+          const scope = root || document;
+          scope.querySelectorAll("[data-transport-value]").forEach(btn => {
+            btn.addEventListener("click", async ev => {
+              ev.preventDefault();
+              const transport = String(btn.getAttribute("data-transport-value") || "").trim();
+              if (!transport || transport === currentTransport) return;
+              btn.setAttribute("disabled", "true");
+              try {
+                await persistTransport(transport);
+                currentTransport = transport;
+                const host = scope.closest("#detailContent") || scope;
+                host.innerHTML = await renderTransportView();
+                wireTransportView(host);
+              } finally {
+                btn.removeAttribute("disabled");
+              }
+            });
+          });
+        }
+
+        return {
+          loadingText: "Loading transport...",
+          render: renderTransportView,
+          wire: wireTransportView,
+        };
+      ]]>
+    </Script>
+    <Script id="wisp" view="wisp">
+      <![CDATA[
+        const tb = api.tb;
+
+      const pingIconSvg = `
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M0 1.45455C0 1.06878 0.153246 0.698807 0.426026 0.426026C0.698807 0.153246 1.06878 0 1.45455 0H2.90909C18.975 0 32 13.025 32 29.0909V30.5455C32 30.9312 31.8468 31.3012 31.574 31.574C31.3012 31.8468 30.9312 32 30.5455 32H29.0909C28.7051 32 28.3352 31.8468 28.0624 31.574C27.7896 31.3012 27.6364 30.9312 27.6364 30.5455V29.0909C27.6364 15.4337 16.5663 4.36364 2.90909 4.36364H1.45455C1.06878 4.36364 0.698807 4.21039 0.426026 3.93761C0.153246 3.66483 0 3.29486 0 2.90909V1.45455ZM0 14.5455C0 14.1597 0.153246 13.7897 0.426026 13.5169C0.698807 13.2442 1.06878 13.0909 1.45455 13.0909H2.90909C5.01024 13.0909 7.09082 13.5048 9.03203 14.3088C10.9732 15.1129 12.7371 16.2915 14.2228 17.7772C15.7085 19.2629 16.8871 21.0268 17.6912 22.968C18.4952 24.9092 18.9091 26.9898 18.9091 29.0909V30.5455C18.9091 30.9312 18.7558 31.3012 18.4831 31.574C18.2103 31.8468 17.8403 32 17.4545 32H16C15.6142 32 15.2443 31.8468 14.9715 31.574C14.6987 31.3012 14.5455 30.9312 14.5455 30.5455V29.0909C14.5455 26.0048 13.3195 23.045 11.1372 20.8628C8.955 18.6805 5.99525 17.4545 2.90909 17.4545H1.45455C1.06878 17.4545 0.698807 17.3013 0.426026 17.0285C0.153246 16.7557 0 16.3858 0 16V14.5455ZM0 29.0909C0 28.3194 0.306492 27.5794 0.852053 27.0339C1.39761 26.4883 2.13755 26.1818 2.90909 26.1818C3.68063 26.1818 4.42057 26.4883 4.96613 27.0339C5.51169 27.5794 5.81818 28.3194 5.81818 29.0909C5.81818 29.8624 5.51169 30.6024 4.96613 31.1479C4.42057 31.6935 3.68063 32 2.90909 32C2.13755 32 1.39761 31.6935 0.852053 31.1479C0.306492 30.6024 0 29.8624 0 29.0909Z" fill="#8AE66E"/>
+</svg>`;
+
+      const trashIconSvg = `
+    <svg viewBox="0 0 18 21" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M13.5 2.98V3.2c1.3.12 2.59.29 3.88.51a.75.75 0 0 1-.25 1.48l-.21-.03-1 13.07a3 3 0 0 1-2.99 2.77H5.08a3 3 0 0 1-2.99-2.77l-1-13.07-.21.03a.75.75 0 0 1-.25-1.48c1.29-.22 2.58-.39 3.88-.51v-.22A2.96 2.96 0 0 1 7.32.03c1.12-.04 2.24-.04 3.36 0A2.96 2.96 0 0 1 13.5 2.98ZM7.36 1.53a16.7 16.7 0 0 1 3.28 0c.75.02 1.36.66 1.36 1.45v.11a32.6 32.6 0 0 0-6 0v-.11c0-.79.61-1.43 1.36-1.45ZM7.01 7.47a.75.75 0 0 0-1.5.06l.35 9a.75.75 0 1 0 1.5-.06l-.35-9Zm5.48.06a.75.75 0 1 0-1.5-.06l-.35 9a.75.75 0 1 0 1.5.06l.35-9Z" fill="currentColor"/></svg>`;
+
+      const addIconSvg = `
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+        const statusColors = {
+          green: "#8AE66E",
+          yellow: "#FFC786",
+          red: "#FF8686",
+        };
+
+        function escHtml(value) {
+          return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function normalizeSocketUrl(value) {
+          const text = String(value || "").trim();
+          if (!text) return "";
+          if (text.startsWith("wss://") || text.startsWith("ws://")) return text;
+          if (text.startsWith("https://")) return `wss://${text.slice(8)}`;
+          if (text.startsWith("http://")) return `ws://${text.slice(7)}`;
+          return text.startsWith("//") ? `wss:${text}` : `wss://${text.replace(/^\/+/, "")}`;
+        }
+
+        function serverIdsMatch(left, right) {
+          const a = normalizeSocketUrl(left);
+          const b = normalizeSocketUrl(right);
+          return a && b && a === b;
+        }
+
+        async function loadSelectedWispServerId() {
+          try {
+            const username = await tb.user.username();
+            const raw = await tb.fs.promises.readFile(`/home/${username}/settings.json`, "utf8");
+            const settings = JSON.parse(String(raw || "{}"));
+            return String(settings.wispServer || "").trim();
+          } catch {
+            return "";
+          }
+        }
+
+        async function saveSelectedWispServerId(serverId) {
+          try {
+            const username = await tb.user.username();
+            const cfgPath = `/home/${username}/settings.json`;
+            const raw = await tb.fs.promises.readFile(cfgPath, "utf8");
+            const settings = JSON.parse(String(raw || "{}"));
+            settings.wispServer = String(serverId || "");
+            await tb.fs.promises.writeFile(cfgPath, JSON.stringify(settings, null, 2), "utf8");
+          } catch {
+            /* ignore */
+          }
+        }
+
+        async function loadWispServers() {
+          try {
+            const raw = await tb.fs.promises.readFile("/apps/system/settings.tapp/wisp-servers.json", "utf8");
+            const data = JSON.parse(String(raw || "[]"));
+            return Array.isArray(data) ? data : [];
+          } catch {
+            return [];
+          }
+        }
+
+        async function saveWispServers(list) {
+          await tb.fs.promises.writeFile("/apps/system/settings.tapp/wisp-servers.json", JSON.stringify(list, null, 2), "utf8");
+        }
+
+        async function ensureStore() {
+          const storePath = "/apps/system/settings.tapp/wisp-servers.json";
+          const exists = await tb.fs.promises.stat(storePath).then(() => true).catch(() => false);
+          if (exists) return storePath;
+
+          const initData = [{ id: `${tb.system?.originWs || "wss://"}`, name: "Backend" }];
+          await tb.fs.promises.writeFile(storePath, JSON.stringify(initData, null, 2), "utf8");
+          return storePath;
+        }
+
+        async function pingServer(url) {
+          const target = normalizeSocketUrl(url);
+          if (!target) return { latency: null, state: "red" };
+
+          return await new Promise(resolve => {
+            let done = false;
+            let socket = null;
+            const started = Date.now();
+
+            const finish = latency => {
+              if (done) return;
+              done = true;
+              try {
+                socket?.close();
+              } catch {
+                /* ignore */
+              }
+              if (latency === null) {
+                resolve({ latency: null, state: "red" });
+                return;
+              }
+              const state = latency <= 140 ? "green" : latency <= 320 ? "yellow" : "red";
+              resolve({ latency, state });
+            };
+
+            try {
+              socket = new WebSocket(target);
+            } catch {
+              finish(null);
+              return;
+            }
+
+            const timer = window.setTimeout(() => finish(null), 1800);
+            socket.addEventListener("open", () => {
+              window.clearTimeout(timer);
+              finish(Date.now() - started);
+            });
+            socket.addEventListener("error", () => {
+              window.clearTimeout(timer);
+              finish(null);
+            });
+          });
+        }
+
+        function buildBars(state) {
+          const activeBars = state === "green" ? 3 : state === "yellow" ? 2 : 1;
+          const color = statusColors[state] || statusColors.red;
+          return Array.from({ length: 3 }, (_, index) => {
+            const isActive = index < activeBars;
+            const height = [10, 17, 24][index];
+            const x = [3, 13, 23][index];
+            const y = 27 - height;
+            return `<rect x="${x}" y="${y}" width="6" height="${height}" rx="2" fill="${isActive ? color : "rgba(255,255,255,0.18)"}" />`;
+          }).join("");
+        }
+
+        async function buildCard(item, selectedId) {
+          const ping = await pingServer(item.id);
+          const latencyLabel = ping.latency === null ? "999ms" : `${ping.latency}ms`;
+          const isSelected = serverIdsMatch(item.id, selectedId);
+          const classes = [
+            "wisp-card",
+            isSelected ? "is-selected" : "",
+            ping.state === "green" ? "is-online" : ping.state === "yellow" ? "is-warn" : "is-offline",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          return `
+<div class="wisp-card-wrap">
+<button type="button" class="${classes}" data-edit-wisp="${escHtml(item.name)}">
+<span class="wisp-icon">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      ${buildBars(ping.state)}
+</svg>
+</span>
+<span class="wisp-copy">
+<span class="wisp-title">${escHtml(item.name || "Server Name")}</span>
+<span class="wisp-subtitle">${escHtml(item.id || "wss://example.com/wisp")}</span>
+<span class="wisp-latency">${escHtml(latencyLabel)}</span>
+</span>
+</button>
+      <button type="button" class="server-delete wisp-delete" data-del-wisp="${escHtml(item.name)}" aria-label="Remove ${escHtml(item.name || "wisp server")}">${trashIconSvg}</button>
+</div>
+`;
+        }
+
+        async function renderWispView() {
+          await ensureStore();
+          const list = await loadWispServers();
+          const selectedId = await loadSelectedWispServerId();
+          const rows = await Promise.all(list.map(item => buildCard(item, selectedId)));
+          return `
+<section class="wisp-picker-shell">
+<div class="wisp-picker-list">
+${rows.join("")}
+<button type="button" class="wisp-add-btn" data-add-wisp="true"><span class="wisp-add-icon">${addIconSvg}</span><span>Add Wisp Server</span></button>
+</div>
+</section>
+`;
+        }
+
+        function wireWispView(root) {
+          const scope = root || document;
+          scope.querySelectorAll("[data-del-wisp]").forEach(btn => {
+            btn.addEventListener("click", async ev => {
+              ev.preventDefault();
+              const target = String(btn.getAttribute("data-del-wisp") || "").trim();
+              if (!target) return;
+              const list = await loadWispServers();
+              const next = list.filter(item => String(item.name || "") !== target);
+              await saveWispServers(next);
+              const host = scope.closest("#detailContent") || scope;
+              host.innerHTML = await renderWispView();
+              wireWispView(host);
+            });
+          });
+
+          scope.querySelectorAll("[data-edit-wisp]").forEach(btn => {
+            btn.addEventListener("click", async ev => {
+              ev.preventDefault();
+              const target = String(btn.getAttribute("data-edit-wisp") || "").trim();
+              if (!target) return;
+              const list = await loadWispServers();
+              const item = list.find(entry => String(entry.name || "") === target);
+              if (!item) return;
+
+              await saveSelectedWispServerId(item.id);
+              try {
+                await window.tb.proxy.updateSWs();
+              } catch {
+                /* ignore */
+              }
+              const host = scope.closest("#detailContent") || scope;
+              host.innerHTML = await renderWispView();
+              wireWispView(host);
+            });
+          });
+
+          const addBtn = scope.querySelector("[data-add-wisp='true']");
+          if (addBtn) {
+            addBtn.addEventListener("click", async () => {
+              const name = await new Promise(resolve => {
+                tb.dialog.Message({
+                  title: "Enter Wisp display name",
+                  onOk: value => resolve(value),
+                });
+              });
+              if (!name) return;
+
+              const addr = await new Promise(resolve => {
+                tb.dialog.Message({
+                  title: "Enter Wisp socket URL",
+                  onOk: value => resolve(value),
+                });
+              });
+              if (!addr) return;
+
+              const list = await loadWispServers();
+              list.push({ id: String(addr), name: String(name) });
+              await saveWispServers(list);
+              const host = scope.closest("#detailContent") || scope;
+              host.innerHTML = await renderWispView();
+              wireWispView(host);
+            });
+          }
+        }
+
+        return {
+          loadingText: "Loading Wisp servers...",
+          render: renderWispView,
+          wire: wireWispView,
+        };
+      ]]>
+    </Script>
+  </Scripts>
 </TSL>
