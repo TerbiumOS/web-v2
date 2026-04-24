@@ -1703,7 +1703,7 @@ const WindowArea: React.FC<WindowAreaProps> = ({ className }) => {
 						{
 							text: "Change Wallpaper",
 							click: () => {
-								window.tb.system.openApp("settings", { message: { type: "process", path: { view: "wallpaper", catid: "settings.appearance", dest: "appearance.quick.wallpaper" } }})
+								window.tb.system.openApp("settings", { message: { type: "process", path: { view: "wallpaper", catid: "settings.appearance", dest: "appearance.quick.wallpaper" } } });
 							},
 						},
 						{
