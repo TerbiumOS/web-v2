@@ -535,7 +535,7 @@ export default async function Api() {
 				return system.version("string");
 			},
 			instance: system.instance,
-			openApp: async (pkg: string) => {
+			openApp: async (pkg: string, options?: Partial<WindowConfig>) => {
 				const apps = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
 				const app = apps.find((a: any) => a.name.toLowerCase() === pkg.toLowerCase());
 				if (!app) throw new Error(`App "${pkg}" not found`);
@@ -578,7 +578,7 @@ export default async function Api() {
 					conf.icon = icon;
 					config = conf;
 				}
-				window.tb.window.create(config);
+				window.tb.window.create({ ...options, ...config });
 			},
 			download: async (url: string, location: string) => {
 				try {

@@ -27,6 +27,20 @@ let currentSearchTerm = "";
 let navHistory = [];
 let navFuture = [];
 
+window.addEventListener("message", async function load(e) {
+	let data;
+	try {
+		data = JSON.parse(e.data);
+	} catch (err) {
+		data = e.data;
+	}
+	if (data && data.type === "process") {
+		const { dest, catid, view } = data.path;
+		console.log(data.path);
+		await navigateToRoute({ screen: "detail", categoryId: catid, viewId: view }, { push: true, reverse: false });
+	}
+});
+
 function getTitlebarEl(id) {
 	return window.parent?.document?.getElementById(id) || null;
 }

@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">Creating Custom Settings Interfaces</span>
 
-**Last Updated**: v2.3.0 - 04/11/2026
+**Last Updated**: v2.4.0 - 04/11/2026
 
 If you want your app settings to live inside the main Settings app, this guide shows how to add your own .tsl category, wire actions/scripts, and keep everything matching the built-in Terbium style.
 

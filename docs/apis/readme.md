@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">API Docs</span>
 
-**Last Updated**: v2.3.0 - 03/31/2026
+**Last Updated**: v2.4.0 - 04/24/2026
 
 So you're looking to use Terbium APIs. Well, you're in the right place! Terbium has a decent amount of components which I will break down below. The pages will include a description of the functions and code examples.
 
@@ -931,9 +931,11 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
     - Description: Opens an installed application
     - Parameters:
       - `pkg: string` - Package ID of the app.
+      - `options?: Partial<WindowConfig>` - Any other window configuration options you want to provide
     - Example:
       ```javascript
       await tb.system.openApp("browser");
+      await tb.system.openApp("settings", { message: { type: "process", path: "wallpaper" }})
       ```
 
   - **download**

@@ -493,7 +493,7 @@ export interface COM {
 	system: {
 		version(): string | number | unknown;
 		instance: System["instance"];
-		openApp(pkg: string): Promise<void>;
+		openApp(pkg: string, options?: Partial<WindowConfig>): Promise<void>;
 		download(url: string, location: string): Promise<void>;
 		exportfs(): void;
 		TSLParser: TSLParser;
