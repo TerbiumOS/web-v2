@@ -1,6 +1,6 @@
 import parser from "https://unpkg.com/yargs-parser@22.0.0/browser.js";
-import http from "https://cdn.jsdelivr.net/npm/isomorphic-git@latest/http/web/index.js";
-import git from "https://cdn.jsdelivr.net/npm/isomorphic-git@latest/+esm";
+import http from "https://cdn.jsdelivr.net/npm/isomorphic-git@1.37.1/http/web/index.js";
+import git from "https://cdn.jsdelivr.net/npm/isomorphic-git@1.37.1/+esm";
 import { Terminal } from "https://cdn.jsdelivr.net/npm/@xterm/xterm@latest/+esm";
 
 /**
