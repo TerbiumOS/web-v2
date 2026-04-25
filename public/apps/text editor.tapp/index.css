@@ -11,11 +11,108 @@ body {
 
 body {
 	display: flex;
-	font-family: Inter;
+	font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 	color: #ffffff;
 	scrollbar-width: thin;
 	scrollbar-color: #ffffff44 transparent;
 	overflow: hidden;
+}
+
+html,
+body {
+	height: 100%;
+}
+
+.editor-shell {
+	display: flex;
+	height: 100%;
+	width: 100%;
+}
+
+.editor-gutter {
+	width: 3.5rem;
+	min-width: 3.5rem;
+	padding: 1rem 0.5rem 1rem 0.75rem;
+	background: rgba(255, 255, 255, 0.04);
+	color: #94a3b8;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	font-size: 0.85rem;
+	line-height: 1.65;
+	text-align: right;
+	user-select: none;
+	overflow: hidden;
+}
+
+.editor-gutter span {
+	display: block;
+	padding: 0 0.5rem 0.15rem;
+}
+
+.editor-content {
+	position: relative;
+	flex: 1;
+	overflow: hidden;
+}
+
+.editor-highlight {
+	position: absolute;
+	inset: 0;
+	margin: 0;
+	padding: 1rem 0.75rem;
+	overflow: hidden;
+	white-space: pre-wrap;
+	word-break: break-word;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	font-size: 0.92rem;
+	line-height: 1.55;
+	color: #e2e8f0;
+	background: transparent;
+	pointer-events: none;
+	box-sizing: border-box;
+}
+
+.editor-highlight code {
+	display: block;
+	white-space: pre-wrap;
+	word-break: break-word;
+	overflow-wrap: break-word;
+	min-height: 100%;
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
+.editor-highlight .hljs {
+	background: transparent !important;
+	color: inherit !important;
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
+.editor-textarea {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 1rem 0.75rem;
+	border: none;
+	outline: none;
+	resize: none;
+	background: transparent;
+	color: transparent;
+	caret-color: #f8fafc;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	font-size: 0.92rem;
+	line-height: 1.55;
+	white-space: pre-wrap;
+	word-break: break-word;
+	box-sizing: border-box;
+	overflow: auto;
+	z-index: 1;
+}
+
+.editor-textarea::selection {
+	background: rgba(96, 165, 250, 0.3);
 }
 
 ::-webkit-scrollbar {

@@ -19,13 +19,13 @@ tb_island.addControl({
 				{
 					text: "Open",
 					click: async () => {
-						const textarea = document.querySelector("textarea");
 						await tb.dialog.FileBrowser({
 							title: "Open Text File",
 							filename: "untitled.txt",
 							onOk: async file => {
+								const fileData = await tb.vfs.whatFS(file).promises.readFile(file, "utf8");
 								document.body.setAttribute("path", file);
-								textarea.value = await tb.vfs.whatFS(file).promises.readFile(file, "utf8");
+								openFile(fileData, file);
 							},
 						});
 					},
@@ -34,16 +34,16 @@ tb_island.addControl({
 					text: "Save",
 					click: async () => {
 						const textarea = document.querySelector("textarea");
-						if (document.body.getAttribute("path") && document.body.getAttribute("path") !== "undefined") {
-							tb.fs.promises.writeFile(document.body.getAttribute("path"), textarea.value);
+						const path = document.body.getAttribute("path");
+						if (path && path !== "undefined") {
+							await tb.vfs.whatFS(path).promises.writeFile(path, textarea.value);
 						} else {
 							await tb.dialog.SaveFile({
 								title: "Save Text File",
 								filename: "untitled.txt",
 								onOk: async txt => {
-									tb.vfs.whatFS(txt).writeFile(`${txt}`, textarea.value, err => {
-										if (err) return alert(err);
-									});
+									await tb.vfs.whatFS(txt).promises.writeFile(txt, textarea.value);
+									document.body.setAttribute("path", txt);
 								},
 							});
 						}

@@ -5,10 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text Editor</title>
     <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="highlight.min.css">
 </head>
 <body class="p-2 h-full">
-    <!-- <div class="lines flex flex-col h-max max-h-full w-max p-2 bg-[#00000048] rounded-md items-center overflow-hidden"></div> -->
-    <textarea class="size-full pl-2 pt-1.5 rounded-md bg-transparent leading-tight cursor-text focus-within:outline-none resize-none" cols="30" rows="10" autocapitalize="false" autocomplete="false" spellcheck="false"></textarea>
+    <div class="editor-shell h-full w-full rounded-md overflow-hidden border border-white/10">
+        <div class="editor-gutter lines"></div>
+        <div class="editor-content">
+            <pre class="editor-highlight language-none"><code class="language-none"></code></pre>
+            <textarea class="editor-textarea size-full pl-2 pt-1.5 rounded-md bg-transparent leading-tight cursor-text focus-within:outline-none resize-none" cols="30" rows="10" autocapitalize="false" autocomplete="false" spellcheck="false"></textarea>
+        </div>
+    </div>
     <script src="/assets/libs/tailwind.min.js"></script>
     <script src="/assets/libs/highlight.min.js"></script>
     <script src="text.com.js" type="module"></script>
