@@ -206,7 +206,7 @@ textarea.addEventListener("keydown", async e => {
 		if (path && path !== "undefined") {
 			try {
 				await writePath(path, textarea.value);
-				} catch (err) {
+			} catch (err) {
 				window.tb.dialog.Alert({
 					title: "Failed to save file",
 					message: err?.message || String(err),
