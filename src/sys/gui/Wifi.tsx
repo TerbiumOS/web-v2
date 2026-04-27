@@ -155,8 +155,8 @@ export function WispMenu({ isOpen }: WispMenuProps) {
 		return () => window.removeEventListener("update-wispsrvs", fetchServers);
 	}, [isUpdating, isOpen]);
 	useEffect(() => {
-		setUpdating(true);
-	});
+		if (isOpen) setUpdating(true);
+	}, [isOpen]);
 	useEffect(() => {
 		const leave = (e: MouseEvent) => {
 			const withinRadius = (e: MouseEvent) => {

@@ -37,7 +37,12 @@ function runMp(config) {
 }
 
 async function newPlayer(elem, getConfig) {
-	elem?.addEventListener("click", async () => {
+	if (!elem) return;
+	// Prevent adding multiple event listeners
+	if (elem.dataset.anuraPlayerAdded) return;
+	elem.dataset.anuraPlayerAdded = "true";
+	
+	elem.addEventListener("click", async () => {
 		const exists = await window.parent.tb.mediaplayer.isExisting();
 		if (!exists) {
 			runMp(getConfig());
@@ -136,7 +141,8 @@ setInterval(() => {
 
 	// YouTube vid
 	const audtab = document.querySelector(".video-stream");
-	if (audtab) {
+	if (audtab && !audtab.dataset.anuraPlayerAdded) {
+		audtab.dataset.anuraPlayerAdded = "true";
 		const setupYT = async () => {
 			const exists = await window.parent.tb.mediaplayer.isExisting();
 			if (!exists) {
@@ -167,7 +173,8 @@ setInterval(() => {
 		const snaeRoot = document.querySelector(selector);
 		if (!snaeRoot) return;
 		const playBtn = snaeRoot.querySelector(".na.F.Q.-a.-Y.oa.a.m.pa.Va");
-		if (!playBtn) return;
+		if (!playBtn || playBtn.dataset.anuraPlayerAdded) return;
+		playBtn.dataset.anuraPlayerAdded = "true";
 		playBtn.addEventListener("click", async () => {
 			const exists = await window.parent.tb.mediaplayer.isExisting();
 			if (exists) return;

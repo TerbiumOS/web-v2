@@ -1,18 +1,28 @@
 let format: string = "12h";
 let internet: boolean;
 let showSeconds: boolean;
-const getTime = () => {
+let initialized = false;
+
+const loadSettings = () => {
 	window.tb.fs.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, (err: any, data: any) => {
-		if (err) return console.error(err);
-		const settings = JSON.parse(data);
-		format = settings["times"]["format"];
-		internet = settings["times"]["internet"];
-		if (settings["times"]["showSeconds"] === true) {
-			showSeconds = true;
-		} else {
-			showSeconds = false;
-		}
+		if (err) return;
+		try {
+			const settings = JSON.parse(data);
+			if (settings?.times) {
+				format = settings.times.format || "12h";
+				internet = settings.times.internet || false;
+				showSeconds = settings.times.showSeconds === true;
+			}
+		} catch (e) {}
 	});
+};
+
+const getTime = () => {
+	if (!initialized) {
+		initialized = true;
+		loadSettings();
+		window.addEventListener("settings-changed", loadSettings as EventListener);
+	}
 	const date = new Date();
 	let hours: any;
 	let minutes: any;

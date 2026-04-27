@@ -69,12 +69,17 @@ const NotificationMenu = ({ isOpen }: INotificationProps) => {
 		return savedNotifs ? JSON.parse(savedNotifs) : [];
 	});
 
-	const updateNotifications = () => {
-		const notifs = JSON.parse(sessionStorage.getItem("notifications") || "[]");
-		setNotifications(notifs);
-	};
+	useEffect(() => {
+		const updateNotifications = () => {
+			const notifs = JSON.parse(sessionStorage.getItem("notifications") || "[]");
+			setNotifications(notifs);
+		};
 
-	window.addEventListener("notification-update", updateNotifications as EventListener);
+		window.addEventListener("notification-update", updateNotifications as EventListener);
+		return () => {
+			window.removeEventListener("notification-update", updateNotifications as EventListener);
+		};
+	}, []);
 
 	useEffect(() => {
 		const leave = (e: MouseEvent) => {

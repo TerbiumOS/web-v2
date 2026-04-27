@@ -101,13 +101,28 @@ function getSpecs() {
 	gputxt.textContent = gpuName;
 }
 
+let lastMemTime = 0;
+let cachedMem = { bytes: 0, breakdown: [] };
+let isMeasuringMem = false;
+
 async function getTasks() {
-	let mem;
-	if ("measureUserAgentSpecificMemory" in window.parent.performance) {
-		mem = await window.parent.performance.measureUserAgentSpecificMemory();
-	} else {
+	let mem = cachedMem;
+	
+	if ("measureUserAgentSpecificMemory" in window.parent.performance && !isMeasuringMem && Date.now() - lastMemTime > 15000) {
+		isMeasuringMem = true;
+		try {
+			mem = await window.parent.performance.measureUserAgentSpecificMemory();
+			cachedMem = mem;
+			lastMemTime = Date.now();
+		} catch (e) {
+			console.error("Memory measurement failed", e);
+		} finally {
+			isMeasuringMem = false;
+		}
+	} else if (!("measureUserAgentSpecificMemory" in window.parent.performance)) {
 		mem = { bytes: 0, breakdown: [] };
 	}
+
 	window.tman_info = mem;
 	const windows = window.parent.tb.process.list();
 	let main = document.querySelector("tbody");
@@ -116,11 +131,33 @@ async function getTasks() {
 	const currentIdsSet = new Set(currentWinIds);
 	Object.values(windows).forEach(win => {
 		const winID = win.id;
+
+		let memEntry = null;
+		if (mem && Array.isArray(mem.breakdown)) {
+			memEntry = mem.breakdown.find(entry =>
+				entry.attribution.some(attr => attr.container && attr.container.src === win.src),
+			);
+		}
+		let memoryText = "N/A";
+		if (memEntry && typeof memEntry.bytes === "number") {
+			memoryText = `${(memEntry.bytes / (1024 * 1024)).toFixed(2)} MB`;
+		} else if (sysRegex.test(win.name)) {
+			memoryText = "System Process";
+		}
+
 		if (currentIdsSet.has(winID)) {
 			currentIdsSet.delete(winID);
+			// Update existing row
+			const row = main.querySelector(`tr[win-id="${winID}"]`);
+			if (row) {
+				const memoryCell = row.children[1];
+				if (memoryCell && memoryCell.textContent !== memoryText) {
+					memoryCell.textContent = memoryText;
+				}
+			}
 			return;
 		}
-		const sysRegex = /^Terbium (Alexa Desktop Experience|Service Worker|Node\.js Runtime)$/;
+		
 		const tr = document.createElement("tr");
 		tr.classList.add("hover:bg-[#ffffff18]", "duration-150", "ease-in-out", "px-2.5");
 		tr.setAttribute("win-id", winID);
@@ -128,22 +165,9 @@ async function getTasks() {
 		const thName = document.createElement("th");
 		thName.textContent = typeof win.name === "string" ? win.name : win.name.text;
 		thName.classList.add("text-left", "py-2.5", "pl-3.5", "pr-[100px]");
+		
 		const tdMemory = document.createElement("td");
-		let memEntry = null;
-		if (mem && Array.isArray(mem.breakdown)) {
-			memEntry = mem.breakdown.find(entry =>
-				entry.attribution.some(attr => {
-					return attr.container && attr.container.src === win.src;
-				}),
-			);
-		}
-		if (memEntry && typeof memEntry.bytes === "number") {
-			tdMemory.textContent = `${(memEntry.bytes / (1024 * 1024)).toFixed(2)} MB`;
-		} else if (sysRegex.test(win.name)) {
-			tdMemory.textContent = "System Process";
-		} else {
-			tdMemory.textContent = "N/A";
-		}
+		tdMemory.textContent = memoryText;
 
 		const tdPID = document.createElement("td");
 		tdPID.textContent = win.pid;

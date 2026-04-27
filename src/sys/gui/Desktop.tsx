@@ -193,10 +193,15 @@ const Desktop: FC<IDesktopProps> = ({ desktop, onContextMenu }) => {
 		};
 		const getPins = async () => {
 			if (await dirExists("/system")) {
-				setPinned(JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/dock.json", "utf8")));
+				try {
+					const newPins = JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/dock.json", "utf8"));
+					setPinned(prev => JSON.stringify(prev) === JSON.stringify(newPins) ? prev : newPins);
+				} catch (e) {
+					console.error(e);
+				}
 			}
 		};
-		getPins();
+
 		window.addEventListener("tfsready", getWallpaper);
 		window.addEventListener("open-net", menu);
 		window.addEventListener("open-notif", nMenu);
@@ -215,7 +220,21 @@ const Desktop: FC<IDesktopProps> = ({ desktop, onContextMenu }) => {
 			window.removeEventListener("windows-prev", showWinPrev);
 			window.removeEventListener("tfsready", getWallpaper);
 		};
-	}, [showNotif, winPrev, pinned]);
+	}, []);
+
+	useEffect(() => {
+		const getPins = async () => {
+			if (await dirExists("/system")) {
+				try {
+					const newPins = JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/dock.json", "utf8"));
+					setPinned(prev => JSON.stringify(prev) === JSON.stringify(newPins) ? prev : newPins);
+				} catch (e) {
+					console.error(e);
+				}
+			}
+		};
+		getPins();
+	}, []);
 
 	return (
 		<div

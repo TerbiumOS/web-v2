@@ -1373,12 +1373,12 @@ export default async function Api() {
 			},
 			isExisting: () => {
 				return new Promise(resolve => {
-					isExistingFn();
 					const getContent = (e: CustomEvent) => {
 						window.removeEventListener("isExistingMP", getContent as EventListener);
 						resolve(e.detail);
 					};
 					window.addEventListener("isExistingMP", getContent as EventListener);
+					isExistingFn();
 				});
 			},
 		},
