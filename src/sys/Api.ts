@@ -942,7 +942,7 @@ export default async function Api() {
 					const data = JSON.parse(await window.tb.fs.promises.readFile("/bootentries.json", "utf8"));
 					data.push({
 						name: name,
-						action: `() => { sessionStorage.setItem("cusboot", "true"); sessionStorage.setItem("bootfile", "${file}"); window.location.reload(); }`,
+						file: file,
 					});
 					await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify(data, null, 2));
 				},

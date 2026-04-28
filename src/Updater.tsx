@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { dirExists, fileExists, unzip, UserSettings } from "./sys/types";
+import { DEFAULT_BOOT_ENTRIES, upgradeLegacyBootEntries } from "./sys/bootentries";
 import { hash } from "./hash.json";
 import paths from "./installer.json";
 
@@ -141,6 +142,22 @@ export default function Updater() {
 				if (before !== after) {
 					await window.tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify(deduped, null, 2), "utf8");
 					console.log("Migrated installed.json system entries and preserved custom entries");
+				}
+			};
+			const migrateBootEntries = async () => {
+				if (!(await fileExists("/bootentries.json"))) return;
+				let entries: any[] = [];
+				try {
+					const raw = await window.tb.fs.promises.readFile("/bootentries.json", "utf8");
+					entries = JSON.parse(raw);
+					if (!Array.isArray(entries)) entries = DEFAULT_BOOT_ENTRIES;
+				} catch {
+					entries = DEFAULT_BOOT_ENTRIES;
+				}
+				const { entries: normalizedEntries, changed } = upgradeLegacyBootEntries(entries);
+				if (changed) {
+					await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify(normalizedEntries, null, 2), "utf8");
+					console.log("Migrated bootentries.json to latest format.");
 				}
 			};
 			const mergeFileIcons = async () => {
@@ -389,6 +406,7 @@ export default function Updater() {
 				await window.tb.fs.promises.writeFile("/system/var/terbium/recent.json", JSON.stringify([]));
 			}
 			await migrateInstalledSystemEntries();
+			await migrateBootEntries();
 			// v2.1 update
 			if (!(await fileExists(`/apps/user/${user}/app store/repos.json`))) {
 				await window.tb.fs.promises.mkdir(`/apps/user/${user}/app store/`);

@@ -9,7 +9,7 @@ export default function Recovery() {
 	const [selected, setSelected] = useState(0);
 	const [showCursor, setShowCursor] = useState(false);
 	const [msg, setMsg] = useState<string | null>(null);
-	const [action, setAction] = useState<string>("");
+	const [action, setAction] = useState<"prodins" | null>(null);
 	const [progress, setProgress] = useState(0);
 	const [updCache, setUpdCache] = useState(false);
 	const msgbox = useRef<HTMLDivElement>(null);
@@ -45,38 +45,6 @@ export default function Recovery() {
 	};
 	getTmp();
 
-	const boot = () => {
-		sessionStorage.setItem("boot", "true");
-		window.location.reload();
-	};
-
-	const cloak = () => {
-		const newWindow = window.open("about:blank", "_blank");
-		const newDocument = newWindow!.document.open();
-		sessionStorage.setItem("boot", "true");
-		newDocument.write(`
-			<!DOCTYPE html>
-			<html>
-				<head>
-					<style type="text/css">
-						body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-					</style>
-				</head>
-				<body>
-					<iframe style="border: none; width: 100%; height: 100vh;" src="${window.location.href}?boot=true"></iframe>
-				</body>
-			</html>
-		`);
-		newDocument.close();
-		window.location.href = "https://google.com";
-		console.log("Cloak Opened!");
-	};
-
-	const recovery = () => {
-		sessionStorage.setItem("recovery", "true");
-		window.location.reload();
-	};
-
 	const prodins = async () => {
 		setShowCursor(false);
 		msgbox.current!.classList.remove("flex");
@@ -87,11 +55,15 @@ export default function Recovery() {
 			await window.tb.sh.format();
 			await window.tb.fs.promises.writeFile(
 				"/bootentries.json",
-				JSON.stringify([
-					{ name: "TB React", action: boot.toString() },
-					{ name: "TB React (Cloaked)", action: cloak.toString() },
-					{ name: "TB System Recovery", action: recovery.toString() },
-				]),
+				JSON.stringify(
+					[
+						{ name: "TB React", file: "tb:root" },
+						{ name: "TB React (Cloaked)", file: "tb:root-cloak" },
+						{ name: "TB System Recovery", file: "tb:recovery" },
+					],
+					null,
+					2,
+				),
 			);
 		}
 		await download("https://cdn.terbiumon.top/recovery/latest.zip", "/uploaded.zip");
@@ -174,11 +146,15 @@ export default function Recovery() {
 					await window.tb.sh.format();
 					await window.tb.fs.promises.writeFile(
 						"/bootentries.json",
-						JSON.stringify([
-							{ name: "TB React", action: boot.toString() },
-							{ name: "TB React (Cloaked)", action: cloak.toString() },
-							{ name: "TB System Recovery", action: recovery.toString() },
-						]),
+						JSON.stringify(
+							[
+								{ name: "TB React", file: "tb:root" },
+								{ name: "TB React (Cloaked)", file: "tb:root-cloak" },
+								{ name: "TB System Recovery", file: "tb:recovery" },
+							],
+							null,
+							2,
+						),
 					);
 				}
 				setProgress(25);
@@ -342,11 +318,15 @@ export default function Recovery() {
 						await window.tb.sh.format();
 						await window.tb.fs.promises.writeFile(
 							"/bootentries.json",
-							JSON.stringify([
-								{ name: "TB React", action: boot.toString() },
-								{ name: "TB React (Cloaked)", action: cloak.toString() },
-								{ name: "TB System Recovery", action: recovery.toString() },
-							]),
+							JSON.stringify(
+								[
+									{ name: "TB React", file: "tb:root" },
+									{ name: "TB React (Cloaked)", file: "tb:root-cloak" },
+									{ name: "TB System Recovery", file: "tb:recovery" },
+								],
+								null,
+								2,
+							),
 						);
 					}
 					window.location.reload();
@@ -357,7 +337,7 @@ export default function Recovery() {
 					main.current!.classList.remove("flex");
 					setShowCursor(true);
 					setMsg("BE AWARE if your static hosting this download will NOT work. Proceed?");
-					setAction("prodins()");
+					setAction("prodins");
 				} else if (selected === 2) {
 					migrateFs();
 				} else if (selected === 3) {
@@ -417,7 +397,12 @@ export default function Recovery() {
 						<div className="flex mt-4">
 							<button
 								className="mr-2 cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150"
-								onClick={() => eval(action)}
+								onClick={async () => {
+									if (action === "prodins") {
+										await prodins();
+									}
+									setAction(null);
+								}}
 							>
 								Proceed
 							</button>
@@ -474,11 +459,15 @@ export default function Recovery() {
 								await window.tb.sh.format();
 								await window.tb.fs.promises.writeFile(
 									"/bootentries.json",
-									JSON.stringify([
-										{ name: "TB React", action: boot.toString() },
-										{ name: "TB React (Cloaked)", action: cloak.toString() },
-										{ name: "TB System Recovery", action: recovery.toString() },
-									]),
+									JSON.stringify(
+										[
+											{ name: "TB React", file: "tb:root" },
+											{ name: "TB React (Cloaked)", file: "tb:root-cloak" },
+											{ name: "TB System Recovery", file: "tb:recovery" },
+										],
+										null,
+										2,
+									),
 								);
 							}
 							window.location.reload();
@@ -502,7 +491,7 @@ export default function Recovery() {
 							main.current!.classList.remove("flex");
 							setShowCursor(true);
 							setMsg("BE AWARE if your static hosting this download will NOT work. Proceed?");
-							setAction("prodins()");
+							setAction("prodins");
 						}}
 					>
 						Restore from Production Instance (Beta)
