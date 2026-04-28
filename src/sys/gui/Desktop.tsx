@@ -195,7 +195,7 @@ const Desktop: FC<IDesktopProps> = ({ desktop, onContextMenu }) => {
 			if (await dirExists("/system")) {
 				try {
 					const newPins = JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/dock.json", "utf8"));
-					setPinned(prev => JSON.stringify(prev) === JSON.stringify(newPins) ? prev : newPins);
+					setPinned(prev => (JSON.stringify(prev) === JSON.stringify(newPins) ? prev : newPins));
 				} catch (e) {
 					console.error(e);
 				}
@@ -227,7 +227,7 @@ const Desktop: FC<IDesktopProps> = ({ desktop, onContextMenu }) => {
 			if (await dirExists("/system")) {
 				try {
 					const newPins = JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/dock.json", "utf8"));
-					setPinned(prev => JSON.stringify(prev) === JSON.stringify(newPins) ? prev : newPins);
+					setPinned(prev => (JSON.stringify(prev) === JSON.stringify(newPins) ? prev : newPins));
 				} catch (e) {
 					console.error(e);
 				}

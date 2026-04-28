@@ -107,7 +107,7 @@ let isMeasuringMem = false;
 
 async function getTasks() {
 	let mem = cachedMem;
-	
+
 	if ("measureUserAgentSpecificMemory" in window.parent.performance && !isMeasuringMem && Date.now() - lastMemTime > 15000) {
 		isMeasuringMem = true;
 		try {
@@ -134,9 +134,7 @@ async function getTasks() {
 
 		let memEntry = null;
 		if (mem && Array.isArray(mem.breakdown)) {
-			memEntry = mem.breakdown.find(entry =>
-				entry.attribution.some(attr => attr.container && attr.container.src === win.src),
-			);
+			memEntry = mem.breakdown.find(entry => entry.attribution.some(attr => attr.container && attr.container.src === win.src));
 		}
 		let memoryText = "N/A";
 		if (memEntry && typeof memEntry.bytes === "number") {
@@ -157,7 +155,7 @@ async function getTasks() {
 			}
 			return;
 		}
-		
+
 		const tr = document.createElement("tr");
 		tr.classList.add("hover:bg-[#ffffff18]", "duration-150", "ease-in-out", "px-2.5");
 		tr.setAttribute("win-id", winID);
@@ -165,7 +163,7 @@ async function getTasks() {
 		const thName = document.createElement("th");
 		thName.textContent = typeof win.name === "string" ? win.name : win.name.text;
 		thName.classList.add("text-left", "py-2.5", "pl-3.5", "pr-[100px]");
-		
+
 		const tdMemory = document.createElement("td");
 		tdMemory.textContent = memoryText;
 

@@ -41,7 +41,7 @@ async function newPlayer(elem, getConfig) {
 	// Prevent adding multiple event listeners
 	if (elem.dataset.anuraPlayerAdded) return;
 	elem.dataset.anuraPlayerAdded = "true";
-	
+
 	elem.addEventListener("click", async () => {
 		const exists = await window.parent.tb.mediaplayer.isExisting();
 		if (!exists) {
