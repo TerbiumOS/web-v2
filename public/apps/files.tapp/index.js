@@ -1380,9 +1380,10 @@ const cm = async e => {
 					? {
 							text: "Paste",
 							click: async () => {
-								await window.parent.tb.fs.promises.writeFile(`${document.querySelector(".exp").getAttribute("path")}/${copied.name}`, await window.parent.tb.fs.promises.readFile(copied.path, "utf8"));
+								const fs = window.parent.tb.vfs.whatFS(copied.path);
+								await fs.promises.writeFile(`${document.querySelector(".exp").getAttribute("path")}/${copied.name}`, await window.parent.tb.fs.promises.readFile(copied.path, "utf8"));
 								if (cut) {
-									await window.parent.tb.fs.promises.unlink(copied.path);
+									await fs.promises.unlink(copied.path);
 									cut = false;
 								}
 								copied = null;

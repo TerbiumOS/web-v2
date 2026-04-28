@@ -107,7 +107,7 @@ let isMeasuringMem = false;
 
 async function getTasks() {
 	let mem = cachedMem;
-
+	const sysRegex = /^Terbium (Alexa Desktop Experience|Service Worker|Node\.js Runtime)$/;
 	if ("measureUserAgentSpecificMemory" in window.parent.performance && !isMeasuringMem && Date.now() - lastMemTime > 15000) {
 		isMeasuringMem = true;
 		try {
@@ -122,7 +122,6 @@ async function getTasks() {
 	} else if (!("measureUserAgentSpecificMemory" in window.parent.performance)) {
 		mem = { bytes: 0, breakdown: [] };
 	}
-
 	window.tman_info = mem;
 	const windows = window.parent.tb.process.list();
 	let main = document.querySelector("tbody");
@@ -131,7 +130,6 @@ async function getTasks() {
 	const currentIdsSet = new Set(currentWinIds);
 	Object.values(windows).forEach(win => {
 		const winID = win.id;
-
 		let memEntry = null;
 		if (mem && Array.isArray(mem.breakdown)) {
 			memEntry = mem.breakdown.find(entry => entry.attribution.some(attr => attr.container && attr.container.src === win.src));
@@ -142,10 +140,8 @@ async function getTasks() {
 		} else if (sysRegex.test(win.name)) {
 			memoryText = "System Process";
 		}
-
 		if (currentIdsSet.has(winID)) {
 			currentIdsSet.delete(winID);
-			// Update existing row
 			const row = main.querySelector(`tr[win-id="${winID}"]`);
 			if (row) {
 				const memoryCell = row.children[1];
