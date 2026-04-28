@@ -1859,7 +1859,6 @@ body {
 
 .defaults-inline-icon.is-monochrome > svg,
 .defaults-inline-icon.is-monochrome > svg * {
-	fill: rgba(255, 255, 255, 0.95) !important;
 	stroke: rgba(255, 255, 255, 0.95) !important;
 }
 
