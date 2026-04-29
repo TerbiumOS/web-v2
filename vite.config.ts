@@ -32,17 +32,17 @@ export default defineConfig({
 					overwrite: false,
 				},
 				{
-					src: `${baremuxPath}/**/*`.replace(/\\/g, "/"),
+					src: `${baremuxPath}/**/*.{js,js.map}`.replace(/\\/g, "/"),
 					dest: "baremux",
 					overwrite: false,
 				},
 				{
-					src: `${epoxyPath}/**/*`.replace(/\\/g, "/"),
+					src: `${epoxyPath}/index.mjs`.replace(/\\/g, "/"),
 					dest: "epoxy",
 					overwrite: false,
 				},
 				{
-					src: `${libcurlPath}/**/*`.replace(/\\/g, "/"),
+					src: `${libcurlPath}/index.mjs`.replace(/\\/g, "/"),
 					dest: "libcurl",
 					overwrite: false,
 				},
