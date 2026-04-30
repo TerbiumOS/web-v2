@@ -5,18 +5,227 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Terbium</title>
     <link rel="stylesheet" href="./app.css">
+    <script src="/assets/libs/tailwind.min.js"></script>
 </head>
-    <body>
-        <img src="/assets/img/logo.png" alt="TB Logo" class="centered-image">
-        <h4 class="centered-text">Terbium WebOS</h4>
-        <h4 class="centered-text" id="version"></h4>
-        <h4 class="centered-text" id="liquor"></h4>
-        <h4 class="centered-text">Developers: SNOOT, XSTARS, IllusionTBA, Rafflesia, EndlessVortex, ironswordX</h4>
-        <h4 class="centered-text">&copy; Copyright 2026 TerbiumOS</h4>
-        <h4 class="centered-text">Licensed under the <a href="https://www.gnu.org/licenses/agpl-3.0.en.html" target="_blank">AGPL 3.0 License</a></h4>
-    </body>
+<body class="min-h-screen w-full overflow-hidden">
+    <div class="flex h-full w-full gap-6">
+        <aside class="sidebar">
+            <button class="nav-btn active" type="button" data-section="about">System Info</button>
+            <button class="nav-btn" type="button" data-section="credits">Credits</button>
+            <button class="nav-btn" type="button" data-section="licenses">Licenses</button>
+        </aside>
+        <main class="main flex-1 overflow-hidden rounded-[36px] border border-white/1 p-2 shadow-[0_40px_120px_-60px_rgba(0,0,0,0.75)] backdrop-blur-xl overflow-y-auto">
+            <section id="about" class="section-panel flex min-h-full flex-col items-center justify-center gap-6 text-center overflow-auto">
+                <img src="/assets/img/logo.png" alt="TB Logo" class="w-64 h-auto -mt-10" />
+                <div class="space-y-3 -mt-4">
+                    <h1 class="text-5xl">Terbium WebOS</h1>
+                    <h4 class="text-2xl" id="version"></h4>
+                    <h4 class="text-2xl" id="liquor"></h4>
+                </div>
+                <div class="gnu-modal max-w-3xl rounded-3xl border border-white/1 text-[#ffffffb3] shadow-lg">
+                    <h4 class="text-xl font-semibold">&copy; Copyright 2026 TerbiumOS Development. All rights reserved.</h4>
+                    <h4 class="text-sm mt-3 leading-7">
+                        This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+                        <br><br>
+                        This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+                        <br><br>
+                        You should have received a copy of the GNU Affero General Public License along with this program. If not, see <a href="https://www.gnu.org/licenses/" class="text-[#5088E1]" target="_blank">https://www.gnu.org/licenses/</a>.
+                    </h4>
+                </div>
+            </section>
+            <section id="credits" class="section-panel hidden flex min-h-full flex-col items-center justify-center gap-6 text-center overflow-auto">
+                <div class="space-y-6">
+                    <div class="credit-card">
+                        <h1 class="text-5xl">Developers</h1>
+                        <h4 class="text-2xl">SNOOT</h4>
+                        <h4 class="text-2xl">XSTARS</h4>
+                        <h4 class="text-2xl">IllusionTBA</h4>
+                        <h4 class="text-2xl">Rafflesia</h4>
+                        <h4 class="text-2xl">EndlessVortex</h4>
+                        <h4 class="text-2xl">proudparrot2</h4>
+                        <h4 class="text-2xl">boogibuck</h4>
+                    </div>
+                    <div class="credit-card">
+                        <h1 class="text-5xl">Designers</h1>
+                        <h4 class="text-2xl">SNOOT</h4>
+                        <h4 class="text-2xl">XSTARS</h4>
+                        <h4 class="text-2xl">xmb9</h4>
+                    </div>
+                    <div class="credit-card">
+                        <h1 class="text-5xl">Contributors</h1>
+                        <h4 class="text-2xl">ironswordX</h4>
+                        <h4 class="text-2xl">Blank</h4>
+                        <h4 class="text-2xl">Packjack</h4>
+                    </div>
+                </div>
+            </section>
+            <section id="licenses" class="section-panel hidden min-h-full overflow-hidden">
+                <div class="flex h-full flex-col gap-6 lg:flex-row">
+                    <aside id="license-package-list" class="sidebar lg:max-w-[320px] h-[calc(100vh-1px)] overflow-y-auto overflow-x-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-lg">
+                    </aside>
+                    <div class="flex-1 rounded-3xl border border-white/10 bg-white/5 p-8 shadow-lg backdrop-blur-xl flex flex-col gap-6">
+                        <div>
+                            <h1 class="text-2xl font-bold" id="product-title">Select a package</h1>
+                            <h4 class="text-2xl" id="product-summary">License</h4>
+                            <div class="mt-4 space-y-4 license-copy text-sm leading-7 text-[#d1d5db]" id="license-summary"></div>
+                        </div>
+                        <div class="flex-1 overflow-hidden">
+                            <div class="h-full overflow-y-auto rounded-3xl border border-white/10 bg-black/10 p-4 text-sm leading-7 text-[#d1d5db]" id="license-text">
+                                License details will appear here once you select a package.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
     <script>
-        document.all.liquor.innerText = "Liquor Version: " + parent.anura.version.pretty
-        document.all.version.innerText = `Version: ${parent.tb.system.version()}`
+        const buttons = document.querySelectorAll('.sidebar > .nav-btn[data-section]');
+        const sections = document.querySelectorAll('.section-panel');
+        const setSection = (sectionId) => {
+            sections.forEach((section) => {
+                section.classList.toggle('hidden', section.id !== sectionId);
+            });
+            buttons.forEach((button) => {
+                button.classList.toggle('active', button.dataset.section === sectionId);
+            });
+        };
+
+        buttons.forEach((button) => {
+            button.addEventListener('click', () => setSection(button.dataset.section));
+        });
+
+        setSection('about');
+
+        const version = document.getElementById('version');
+        const liquor = document.getElementById('liquor');
+        if (liquor) {
+            liquor.innerText = 'Liquor Version: ' + parent.anura.version.pretty;
+        }
+        if (version) {
+            version.innerText = `Version: ${parent.tb.system.version()}`;
+        }
+
+        const licensePackageList = document.getElementById('license-package-list');
+        const licenseText = document.getElementById('license-text');
+        const productTitle = document.getElementById('product-title');
+        const productSummary = document.getElementById('product-summary');
+
+        const licenseState = {
+            packages: [],
+            metadata: {},
+            selected: null,
+            textCache: {},
+        };
+
+        const pageFetch = async (resource, options = {}) => {
+            const libcurl = window.tb?.libcurl || window.parent?.tb?.libcurl;
+            if (libcurl?.fetch) {
+                return await libcurl.fetch(resource, options);
+            }
+            return await fetch(resource, options);
+        };
+
+        const fetchLicenseText = async (url) => {
+            if (!url) {
+                return 'No License URL was provided for this package.';
+            }
+            if (!navigator.onLine && !window.tb?.libcurl && !window.parent?.tb?.libcurl) {
+                return 'License text cannot be displayed while offline.';
+            }
+
+            try {
+                const response = await pageFetch(url);
+                if (!response.ok) {
+                    throw new Error(`Unable to load license text: ${response.status}`);
+                }
+                return await response.text();
+            } catch (error) {
+                console.warn('License fetch failed:', error);
+                return 'License text cannot be displayed while offline.';
+            }
+        };
+
+        const renderPackageButton = (pkg) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = "nav-btn";
+            if (licenseState.selected === pkg.name) {
+                button.classList.add('active');
+            }
+            button.innerHTML = `${pkg.name}`;
+            button.addEventListener('click', async () => {
+                licenseState.selected = pkg.name;
+                updatePackageList();
+                await updateLicenseDetail(pkg);
+            });
+            return button;
+        };
+
+        const updatePackageList = () => {
+            if (!licensePackageList) return;
+            licensePackageList.innerHTML = '';
+            licenseState.packages.forEach((pkg) => {
+                licensePackageList.appendChild(renderPackageButton(pkg));
+            });
+        };
+
+        const updateLicenseDetail = async (pkg) => {
+            if (!licenseText) return;
+            if (productTitle) {
+                productTitle.innerText = pkg.name;
+            }
+            if (productSummary && pkg.licenseName !== "Unlicensed") {
+                productSummary.innerText = `This repository is licensed under the ${pkg.licenseName}. The packages listed below use their own licenses.`;
+            } else if (productSummary) {
+                productSummary.innerText = `This repository is unlicensed. The packages listed below use their own licenses.`;
+            }
+            const cacheKey = pkg.licenseId;
+            if (!licenseState.textCache[cacheKey]) {
+                licenseText.innerText = 'Loading license text…';
+                licenseState.textCache[cacheKey] = await fetchLicenseText(pkg.licenseUrl);
+            }
+            licenseText.innerText = licenseState.textCache[cacheKey];
+        };
+
+        const initializeLicenses = async () => {
+            try {
+                const response = await fetch('./licenses.json');
+                if (!response.ok) {
+                    throw new Error(`Unable to load license metadata: ${response.status}`);
+                }
+                licenseState.metadata = await response.json();
+            } catch (error) {
+                console.warn('Error loading licenses.json:', error);
+                licenseState.metadata = { sources: {}, license_files: {}, license_names: {}, project: {} };
+            }
+
+            const metadata = licenseState.metadata;
+            const packages = Object.entries(metadata.sources || {}).map(([name, licenseId]) => ({
+                name,
+                licenseId,
+                licenseName: metadata.license_names?.[licenseId] || licenseId,
+                licenseUrl: metadata.license_files?.[licenseId] || null,
+            })).sort((a, b) => a.name.localeCompare(b.name));
+
+            licenseState.packages = packages;
+            licenseState.selected = packages[0]?.name || null;
+
+            if (productTitle) {
+                productTitle.innerText = metadata.project?.name || 'Terbium WebOS';
+            }
+            if (productSummary) {
+                productSummary.innerText = metadata.project?.summary || `This ${metadata.project?.type || 'repository'} is licensed under the ${metadata.project?.license || 'GNU Affero General Public License v3.0'}. The packages listed below use their own licenses.`;
+            }
+
+            updatePackageList();
+            if (packages.length > 0) {
+                await updateLicenseDetail(packages[0]);
+            }
+        };
+
+        initializeLicenses();
     </script>
+</body>
 </html>

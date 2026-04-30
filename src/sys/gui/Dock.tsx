@@ -446,11 +446,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 						<span
 							className="font-medium hover:text-[#ffffff98] cursor-pointer duration-150"
 							onClick={() => {
-								window.tb.window.create({
-									title: "Settings",
-									src: "/fs/apps/system/settings.tapp/index.html",
-									icon: "/fs/apps/system/settings.tapp/icon.svg",
-								});
+								window.tb.system.openApp("settings");
 								setStartOpen(false);
 							}}
 						>
@@ -459,11 +455,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 						<span
 							className="font-medium hover:text-[#ffffff98] cursor-pointer duration-150"
 							onClick={() => {
-								window.tb.window.create({
-									title: "About",
-									src: "/fs/apps/system/about.tapp/index.html",
-									icon: "/fs/apps/system/about.tapp/icon.svg",
-								});
+								window.tb.system.openApp("about");
 								setStartOpen(false);
 							}}
 						>
@@ -473,15 +465,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 							className="font-medium hover:text-[#ffffff98] cursor-pointer duration-150"
 							onClick={() => {
 								sessionStorage.setItem("ldir", `/home/${user.username}/Documents`);
-								window.tb.window.create({
-									title: "Files",
-									icon: "/fs/apps/system/files.tapp/icon.svg",
-									src: "/fs/apps/system/files.tapp/index.html",
-									size: {
-										width: 600,
-										height: 500,
-									},
-								});
+								window.tb.system.openApp("files");
 								setStartOpen(false);
 							}}
 						>

@@ -45,7 +45,7 @@
       <![CDATA[
         async function() {
           if (tb.system && tb.system.openApp) {
-            await tb.system.openApp("app store.tapp");
+            await tb.system.openApp("app store");
             return;
           }
         }
