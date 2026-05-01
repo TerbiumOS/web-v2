@@ -1,13 +1,6 @@
 {
-    "project": {
-        "name": "Terbium WebOS",
-        "type": "repository",
-        "repository": "TerbiumOS/web-v2",
-        "license": "GNU Affero General Public License v3.0",
-        "summary": "This repository is licensed under the GNU Affero General Public License v3.0. The packages listed below use their own licenses.",
-        "description": "Select a package to view its license text and source information. License bodies are loaded dynamically from the URLs listed below."
-    },
     "sources": {
+        "@terbiumos/web-v2": "AGPL-3.0-only",
         "@heroicons/react": "MIT",
         "@hono/node-server": "MIT",
         "@mercuryworkshop/bare-mux": "MIT",
