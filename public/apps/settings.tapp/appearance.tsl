@@ -939,6 +939,7 @@
               if (String(current.wallpaperMode || "cover").toLowerCase() === nextMode) return;
               await updateUserSettings(settings => {
                 settings.wallpaperMode = nextMode;
+                window.parent.dispatchEvent(new Event("updWallpaper"));
                 return settings;
               });
             });
