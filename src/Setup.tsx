@@ -35,11 +35,11 @@ export default function Setup() {
 			setCurrentStep(2.2);
 		} else if (currentStep === 3.1) {
 			setCurrentStep(2.5);
-		} else if (currentStep === 3) {
+		} else if (currentStep === 4) {
 			if (sessionStorage.getItem("tacc")) {
 				setCurrentStep(2.5);
 			} else {
-				setCurrentStep(2.1);
+				setCurrentStep(2);
 			}
 		} else {
 			setCurrentStep(prevStep => Math.max(prevStep - 1, 1));
@@ -650,7 +650,7 @@ export default function Setup() {
 		}, [hasSettings]);
 		nextButtonClick = () => {
 			if (!hasSettings) {
-				Next(3);
+				Next(4);
 				sessionStorage.setItem("tacc", "true");
 			} else {
 				Next(3.1);
@@ -715,7 +715,7 @@ export default function Setup() {
 			currentViewRef.current?.classList.add("-translate-x-6");
 			currentViewRef.current?.classList.add("opacity-0");
 			setTimeout(() => {
-				Next(3);
+				Next(4);
 			}, 150);
 		};
 		return (
@@ -1127,12 +1127,12 @@ export default function Setup() {
 						<Step2CA />
 					) : currentStep === 2.5 ? (
 						<Step2CF />
-					) : currentStep === 3 ? (
-						<Step4 />
 					) : currentStep === 3.1 ? (
 						<Step3SR />
-					) : currentStep === 5 ? (
+					) : currentStep === 4 ? (
 						<Step4 />
+					) : currentStep === 5 ? (
+						<Step5 />
 					) : null}
 				</div>
 			</div>
