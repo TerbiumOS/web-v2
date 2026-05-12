@@ -156,11 +156,7 @@ function newTab() {
 						} else {
 							targetUrl = `${searchEngine}${encodeURIComponent(input)}`;
 						}
-						if (settings.proxy === "Scramjet") {
-							activeTabContent.src = `${window.location.origin}/service/${await window.parent.tb.proxy.encode(targetUrl, "XOR")}`;
-						} else {
-							activeTabContent.src = `${window.location.origin}/uv/service/${await window.parent.tb.proxy.encode(targetUrl, "XOR")}`;
-						}
+						activeTabContent.src = `${window.location.origin}/service/${await window.parent.tb.proxy.encode(targetUrl, "XOR")}`;
 					});
 					break;
 			}
@@ -190,11 +186,7 @@ function newTab() {
 				});
 			});
 		} else {
-			if (proxy === "Ultraviolet") {
-				tab_content.src = parent.window.location.origin + "/uv/service/" + customEncode(localStorage.getItem("defUrl") || "about:newtab");
-			} else if (proxy === "Scramjet") {
-				tab_content.src = parent.window.location.origin + "/service/" + customEncode(localStorage.getItem("defUrl") || "about:newtab");
-			}
+			tab_content.src = parent.window.location.origin + "/service/" + customEncode(localStorage.getItem("defUrl") || "about:newtab");
 		}
 	});
 	const unloadHandler = function () {

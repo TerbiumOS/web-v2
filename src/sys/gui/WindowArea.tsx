@@ -104,11 +104,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
 				setSrc("about:blank");
 				console.log(settings.proxy);
-				if (settings.proxy === "Ultraviolet") {
-					setSrc(`${window.location.origin}/uv/service/${await window.tb.proxy.encode(config.src, "XOR")}`);
-				} else {
-					setSrc(`${window.location.origin}/service/${await window.tb.proxy.encode(config.src, "XOR")}`);
-				}
+				setSrc(`${window.location.origin}/service/${await window.tb.proxy.encode(config.src, "XOR")}`);
 				const instanceWin = (await window.anura.wm.getWeakRef(Number(config.pid))) || {};
 				Object.assign(srcRef.current?.contentWindow as typeof window, {
 					tb: window.parent.tb,

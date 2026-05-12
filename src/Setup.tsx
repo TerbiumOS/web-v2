@@ -788,62 +788,6 @@ export default function Setup() {
 			</div>
 		);
 	};
-	const Step3 = () => {
-		setTimeout(() => {
-			currentViewRef.current?.classList.remove("-translate-x-6");
-			currentViewRef.current?.classList.remove("opacity-0");
-		}, 150);
-
-		nextButtonClick = () => {
-			currentViewRef.current?.classList.add("-translate-x-6");
-			currentViewRef.current?.classList.add("opacity-0");
-			setTimeout(() => {
-				Next();
-			}, 150);
-		};
-
-		const [selectedProxy, setSelectedProxy] = useState(() => sessionStorage.getItem("selectedProxy") || "Scramjet");
-		const [proxyDropdownOpen, setProxyDropdownOpen] = useState(false);
-		const toggleProxyDropDown = () => {
-			setProxyDropdownOpen(prev => {
-				return !prev;
-			});
-		};
-		const proxyClick = (optionLabel: any) => {
-			setSelectedProxy(optionLabel);
-			sessionStorage.setItem("selectedProxy", optionLabel);
-			setProxyDropdownOpen(false);
-		};
-
-		return (
-			<div
-				ref={el => {
-					currentViewRef.current = el;
-				}}
-				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center"
-			>
-				<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Choose your default proxy.</span>
-				<div className="dropdown def-proxy">
-					<div className="dropdown-title" onMouseDown={toggleProxyDropDown}>
-						<span className="pointer-events-none">{selectedProxy}</span>
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px] pointer-events-none">
-							<path fillRule="evenodd" d="M11.47 4.72a.75.75 0 011.06 0l3.75 3.75a.75.75 0 01-1.06 1.06L12 6.31 8.78 9.53a.75.75 0 01-1.06-1.06l3.75-3.75zm-3.75 9.75a.75.75 0 011.06 0L12 17.69l3.22-3.22a.75.75 0 111.06 1.06l-3.75 3.75a.75.75 0 01-1.06 0l-3.75-3.75a.75.75 0 010-1.06z" clipRule="evenodd" />
-						</svg>
-					</div>
-					{proxyDropdownOpen && (
-						<div className="dropdown-options active">
-							<div className="dropdown-option" onMouseDown={() => proxyClick("Ultraviolet")}>
-								<span className="pointer-events-none">Ultraviolet</span>
-							</div>
-							<div className="dropdown-option" onMouseDown={() => proxyClick("Scramjet")}>
-								<span className="pointer-events-none">Scramjet</span>
-							</div>
-						</div>
-					)}
-				</div>
-			</div>
-		);
-	};
 	const Step3SR = () => {
 		useEffect(() => {
 			const t = setTimeout(() => {
@@ -1184,13 +1128,11 @@ export default function Setup() {
 					) : currentStep === 2.5 ? (
 						<Step2CF />
 					) : currentStep === 3 ? (
-						<Step3 />
+						<Step4 />
 					) : currentStep === 3.1 ? (
 						<Step3SR />
-					) : currentStep === 4 ? (
-						<Step4 />
 					) : currentStep === 5 ? (
-						<Step5 />
+						<Step4 />
 					) : null}
 				</div>
 			</div>

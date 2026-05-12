@@ -732,14 +732,10 @@ workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/
 	}
 });
 
-importScripts("/uv/uv.bundle.js");
-importScripts("/uv/uv.config.js");
-importScripts("/uv/uv.sw.js");
 importScripts("/scram/scramjet.all.js");
 
 const { ScramjetServiceWorker } = $scramjetLoadWorker();
 const scramjet = new ScramjetServiceWorker();
-const uv = new UVServiceWorker();
 
 const methods = ["GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "PATCH"];
 
@@ -820,20 +816,6 @@ async function saveFP(response, request, proxyName) {
 		return response;
 	}
 }
-
-methods.forEach(method => {
-	workbox.routing.registerRoute(
-		/\/uv\/service\//,
-		async event => {
-			console.debug("Got UV req");
-			uv.on("request", event => {
-				event.data.headers["user-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0 Safari/537.36 Terbium-Browser/2.3.0";
-			});
-			return await uv.fetch(event);
-		},
-		method,
-	);
-});
 
 // Route w-corp-staticblitz.com and subdomains through BareMux, so that the Node.js subsystem doesn't get blocked by filters
 methods.forEach(method => {

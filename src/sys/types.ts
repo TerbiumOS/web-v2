@@ -467,7 +467,13 @@ export interface COM {
 		pfp(): Promise<string>;
 	};
 	proxy: {
+		/**
+		 * @deprecated The Proxy switching APIs is deprecated as Ultraviolet has reached End of Life and has been replaced with the latest scramjet version. It remains as a stub for legacy applications and will be removed in the future
+		 */
 		get(): Promise<"Ultraviolet" | "Scramjet">;
+		/**
+		 * @deprecated The Proxy switching APIs is deprecated as Ultraviolet has reached End of Life and has been replaced with the latest scramjet version. It remains as a stub for legacy applications and will be removed in the future
+		 */
 		set(proxy: string): Promise<boolean>;
 		updateSWs(): Promise<boolean>;
 		encode(url: string, encoder: string): Promise<string>;

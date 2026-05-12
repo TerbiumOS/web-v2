@@ -15,13 +15,14 @@
       </Sidebar>
       <RecommendedOptions>
         <Option id="internet.quick.wisp" text="Change wisp server" view="wisp" />
-        <Option id="internet.quick.proxy" text="Change proxy" view="proxy" />
         <Option id="internet.quick.transport" text="Change transport" view="transport" />
       </RecommendedOptions>
       <Content>
         <View id="proxy">
-          <Section title="Proxy">
-            <Text label="Current Proxy" bind="internet.proxy.provider" />
+          <Section title="Proxy" custom="true">
+            <div id="proxyPlaceholder" style="display: flex; align-items: center; justify-content: center; height: 300px; font-size: 18px; color: rgba(255, 255, 255, 0.6); font-style: italic;">
+              shhh lets not leak our hard work
+            </div>
           </Section>
         </View>
         <View id="wisp">
@@ -36,21 +37,6 @@
     </SettingsPage>
   </UI>
   <Actions>
-    <Action id="applyProxy">
-      <![CDATA[
-        async function(context) {
-          const provider = (context.bindings && context.bindings["internet.proxy.provider"]) || "Ultraviolet";
-          if (tb.proxy && tb.proxy.set) {
-            await tb.proxy.set(provider);
-          }
-          const user = await tb.user.username();
-          const cfgPath = `/home/${user}/settings.json`;
-          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
-          cfg.proxy = provider;
-          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
-        }
-      ]]>
-    </Action>
     <Action id="addWisp">
       <![CDATA[
         async function(context) {
@@ -133,125 +119,6 @@
     </Action>
   </Actions>
   <Scripts>
-    <Script id="proxy" view="proxy">
-      <![CDATA[
-        const tb = api.tb;
-
-        const proxyOptions = [
-          {
-            id: "Scramjet",
-            title: "Scramjet",
-            description: "Scramjet is an experimental interception-based web proxy designed to evade internet censorship, bypass browser restrictions, and support more websites.",
-            icon: "/assets/img/scramjet.webp",
-            className: "provider-scramjet",
-          },
-          {
-            id: "Ultraviolet",
-            title: "Ultraviolet (Deprecated)",
-            description: "The proxy that was default before Scramjet. Stable, but less secure and doesn't support as many websites. No longer updated and should not be used unless needed.",
-            icon: "/assets/img/uv.png",
-            className: "provider-ultraviolet",
-          },
-        ];
-
-        let currentProvider = "Ultraviolet";
-
-        function escHtml(value) {
-          return String(value || "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/\"/g, "&quot;")
-            .replace(/'/g, "&#39;");
-        }
-
-        async function readCurrentProvider() {
-          try {
-            const user = await tb.user.username();
-            const cfgPath = `/home/${user}/settings.json`;
-            const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
-            const provider = String(cfg?.proxy || "").trim();
-            if (provider) return provider;
-          } catch {
-            /* ignore */
-          }
-
-          try {
-            const provider = await Promise.resolve(tb.proxy?.get?.());
-            if (provider) return String(provider);
-          } catch {
-            /* ignore */
-          }
-
-          return "Ultraviolet";
-        }
-
-        async function persistProvider(provider) {
-          const value = String(provider || "Ultraviolet");
-          if (tb.proxy && tb.proxy.set) {
-            await tb.proxy.set(value);
-          }
-
-          const user = await tb.user.username();
-          const cfgPath = `/home/${user}/settings.json`;
-          const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
-          cfg.proxy = value;
-          await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
-        }
-
-        function buildCard(option) {
-          const active = currentProvider.toLowerCase() === option.id.toLowerCase();
-          return `
-<button type="button" class="proxy-card ${option.className} ${active ? "is-active" : ""}" data-proxy-value="${escHtml(option.id)}">
-<span class="proxy-card-icon"><img src="${escHtml(option.icon)}" alt="" /></span>
-<span class="proxy-card-copy">
-<span class="proxy-card-title">${escHtml(option.title)}</span>
-<span class="proxy-card-description">${escHtml(option.description)}</span>
-</span>
-<span class="proxy-card-check" aria-hidden="true">${active ? "✓" : ""}</span>
-</button>
-`;
-        }
-
-        async function renderProxyView() {
-          currentProvider = await readCurrentProvider();
-          const cards = proxyOptions.map(buildCard).join("");
-          return `
-<section class="proxy-picker-shell">
-<div class="proxy-picker-list">${cards}</div>
-</section>
-`;
-        }
-
-        function wireProxyView(root) {
-          const scope = root || document;
-          scope.querySelectorAll("[data-proxy-value]").forEach(btn => {
-            btn.addEventListener("click", async ev => {
-              ev.preventDefault();
-              const provider = String(btn.getAttribute("data-proxy-value") || "").trim();
-              if (!provider || provider === currentProvider) return;
-
-              btn.setAttribute("disabled", "true");
-              try {
-                await persistProvider(provider);
-                currentProvider = provider;
-                const host = scope.closest("#detailContent") || scope;
-                host.innerHTML = await renderProxyView();
-                wireProxyView(host);
-              } finally {
-                btn.removeAttribute("disabled");
-              }
-            });
-          });
-        }
-
-        return {
-          loadingText: "Loading proxy...",
-          render: renderProxyView,
-          wire: wireProxyView,
-        };
-      ]]>
-    </Script>
     <Script id="transport" view="transport">
       <![CDATA[
         const tb = api.tb;

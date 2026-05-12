@@ -5,7 +5,6 @@ import { libcurlPath } from "@mercuryworkshop/libcurl-transport";
 import { scramjetPath } from "@mercuryworkshop/scramjet/path";
 // @ts-expect-error no types
 import { server as wisp } from "@mercuryworkshop/wisp-js/server";
-import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
 import react from "@vitejs/plugin-react-swc";
 import config from "dotenv";
 import { defineConfig } from "vite";
@@ -21,11 +20,6 @@ export default defineConfig({
 		viteStaticCopy({
 			targets: [
 				// These are copied so that Terbium will still work statically
-				{
-					src: `${uvPath}/**/*`.replace(/\\/g, "/"),
-					dest: "uv",
-					overwrite: false,
-				},
 				{
 					src: `${scramjetPath}/**/*`.replace(/\\/g, "/"),
 					dest: "scram",

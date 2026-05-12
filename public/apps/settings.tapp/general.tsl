@@ -10,6 +10,7 @@
     <SettingsPage>
       <Sidebar>
         <Item id="debugging" title="Debugging Settings" icon="bug_report" default="true" />
+        <Item id="notifications" title="Notification Control" icon="notifications" />
         <Item id="security" title="Security" icon="security" />
         <Item id="performance" title="Performance" icon="speed" />
         <Item id="data" title="Import and Export" icon="import_export" />
@@ -27,6 +28,9 @@
             <Toggle label="Enable Eruda" bind="general.debugging.eruda" />
             <Button label="Apply Debugging Flags" action="applyDebuggingFlags" />
           </Section>
+        </View>
+        <View id="notifications" custom="true">
+          <Section title="Notification Control"></Section>
         </View>
         <View id="security">
           <Section title="Action Center">
@@ -187,6 +191,142 @@
     </Action>
   </Actions>
   <Scripts>
+    <Script id="notifications" view="notifications">
+      <![CDATA[
+        const tb = api.tb;
+
+        const notificationOptions = [
+          {
+            id: "do-not-disturb",
+            title: "Do Not Disturb",
+            description: "Block all notifications",
+            icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="16" cy="16" r="15" stroke="currentColor" stroke-width="1.5" fill="none"/>
+<line x1="6" y1="16" x2="26" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>`,
+          },
+          {
+            id: "snooze",
+            title: "Snooze Notifications",
+            description: "Pause notifications for a specified duration",
+            icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.5" fill="none"/>
+<line x1="16" y1="8" x2="16" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+<line x1="16" y1="16" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>`,
+          },
+          {
+            id: "allow-apps",
+            title: "Allow from Certain Apps",
+            description: "Choose which apps can send notifications",
+            icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="4" y="6" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none" rx="2"/>
+<rect x="18" y="6" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none" rx="2"/>
+<rect x="4" y="20" width="10" height="6" stroke="currentColor" stroke-width="1.5" fill="none" rx="1"/>
+<rect x="18" y="20" width="10" height="6" stroke="currentColor" stroke-width="1.5" fill="none" rx="1"/>
+</svg>`,
+          },
+          {
+            id: "none",
+            title: "No Preference",
+            description: "Use default notification settings",
+            icon: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M16 2C8.26863 2 2 8.26863 2 16C2 23.7314 8.26863 30 16 30C23.7314 30 30 23.7314 30 16C30 8.26863 23.7314 2 16 2Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+<path d="M16 9V16L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>`,
+          },
+        ];
+
+        let currentNotifMode = "none";
+
+        function escHtml(value) {
+          return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        async function readCurrentNotificationMode() {
+          try {
+            const user = await tb.user.username();
+            const cfgPath = `/home/${user}/settings.json`;
+            const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+            const mode = String(cfg?.notificationMode || "").trim();
+            if (mode) return mode;
+          } catch {
+            /* ignore */
+          }
+          return "none";
+        }
+
+        async function persistNotificationMode(mode) {
+          const value = String(mode || "none");
+          try {
+            const user = await tb.user.username();
+            const cfgPath = `/home/${user}/settings.json`;
+            const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+            cfg.notificationMode = value;
+            await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+          } catch {
+            /* ignore */
+          }
+        }
+
+        function buildNotificationCard(option) {
+          const active = currentNotifMode === option.id;
+          return `
+<button type="button" class="notification-card ${active ? "is-active" : ""}" data-notification-value="${escHtml(option.id)}">
+  <span class="notification-card-icon">${option.icon}</span>
+  <span class="notification-card-copy">
+    <span class="notification-card-title">${escHtml(option.title)}</span>
+    <span class="notification-card-description">${escHtml(option.description)}</span>
+  </span>
+  <span class="notification-card-check" aria-hidden="true">${active ? "✓" : ""}</span>
+</button>
+`;
+        }
+
+        async function renderNotificationView() {
+          currentNotifMode = await readCurrentNotificationMode();
+          const cards = notificationOptions.map(buildNotificationCard).join("");
+          return `
+<section class="notification-picker-shell">
+  <div class="notification-picker-list">${cards}</div>
+</section>
+`;
+        }
+
+        function wireNotificationView(root) {
+          const scope = root || document;
+          scope.querySelectorAll("[data-notification-value]").forEach(btn => {
+            btn.addEventListener("click", async ev => {
+              ev.preventDefault();
+              const mode = String(btn.getAttribute("data-notification-value") || "").trim();
+              if (!mode || mode === currentNotifMode) return;
+
+              btn.setAttribute("disabled", "true");
+              try {
+                await persistNotificationMode(mode);
+                currentNotifMode = mode;
+                const host = scope.closest("#detailContent") || scope;
+                host.innerHTML = await renderNotificationView();
+                wireNotificationView(host);
+              } finally {
+                btn.removeAttribute("disabled");
+              }
+            });
+          });
+        }
+
+        return {
+          loadingText: "Loading notification preferences...",
+          render: renderNotificationView,
+          wire: wireNotificationView,
+        };
+      ]]>
+    </Script>
     <Script id="security" view="security">
       <![CDATA[
         const tb = api.tb;

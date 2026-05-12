@@ -363,7 +363,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       ```
 
 ### Proxy
-  - **get**
+  - **get** [⚠ Deprecated]
     - Description: Gets the current proxy settings.
     - Returns: `Promise<string>` - Proxy settings.
     - Example:
@@ -372,7 +372,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       console.log("Using:", proxySettings);
       ```
 
-  - **set**
+  - **set** [⚠ Deprecated]
     - Description: Selects the proxy.
     - Parameters:
       - `proxy: string` - New proxy settings.
@@ -382,6 +382,8 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       await tb.proxy.set("Ultraviolet");
       console.log("Proxy set successfully");
       ```
+
+  > <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> The Proxy switching APIs is deprecated as Ultraviolet has reached End of Life and has been replaced with the latest scramjet version. It remains as a stub for legacy applications and will be removed in the future
 
   - **updateSWs**
     - Description: Updates the Transport and Wisp Server of the proxy.
