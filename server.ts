@@ -8,8 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { version } from "./package.json";
-// @ts-expect-error no types
-import { server as wisp } from "@mercuryworkshop/wisp-js/server";
+import { createMrrowisp } from "mrrowisp";
 
 export function TServer() {
 	config.config();
@@ -112,14 +111,14 @@ export function TServer() {
 			root: path.join(__dirname, "dist"),
 		}),
 	);
-	wisp.options.dns_method = "resolve";
-	wisp.options.dns_servers = ["1.1.1.3", "1.0.0.3"];
-	wisp.options.dns_result_order = "ipv4first";
+
+	const wisp = createMrrowisp().dns(["1.1.1.3", "1.0.0.3"]);
+
 	const server = createServer(nodeHandler);
 
 	server.on("upgrade", (req: IncomingMessage, socket: any, head: Buffer) => {
 		if (req.url?.endsWith("/wisp/")) {
-			wisp.routeRequest(req as any, socket as any, head as any);
+			wisp.route(req, socket, head);
 		} else {
 			socket.destroy();
 		}
