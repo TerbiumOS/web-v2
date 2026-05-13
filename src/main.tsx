@@ -51,6 +51,7 @@ const Root = () => {
 			const sw = await navigator.serviceWorker.register("/anura-sw.js");
 			const scramjetHandler = new ScramjetHandler(Controller, sw, window.__scramjet$config, window.__scramjet$flags);
 			scramjetHandler.setTransports();
+			// @ts-expect-error
 			window.scramjetTb = scramjetHandler;
 			const tbOn = async () => {
 				while (!window.tb.system?.version) {

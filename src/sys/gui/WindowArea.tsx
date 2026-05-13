@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, memo } from "react";
 import { fileExists, UserSettings, WindowConfig } from "../types";
 import { clearInfo, updateInfo } from "./AppIsland";
 import { useWindowStore } from "../Store";
+import ScramjetFrame from "../apis/scramjet-frame";
 
 interface WindowProps {
 	config: WindowConfig;
@@ -1002,7 +1003,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				)}
 			</div>
 			<div ref={contentRef} className="w-full h-full" style={optimizationsEnabled ? { contain: "strict" } : {}}>
-				<iframe
+				{config.proxy ? <ScramjetFrame url={config.src} /> : <iframe
 					key={config.src}
 					ref={srcRef}
 					src={src}
@@ -1029,7 +1030,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 						userSelect: "none",
 						...(optimizationsEnabled && { contain: "strict" }),
 					}}
-				></iframe>
+				></iframe>}
 			</div>
 		</div>
 	);

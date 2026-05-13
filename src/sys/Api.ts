@@ -37,7 +37,6 @@ declare global {
 		tb: COM;
 		Filer: FilerType;
 	}
-	var scramjetTb: any;
 	var sjint: boolean;
 }
 
@@ -390,6 +389,7 @@ export default async function Api() {
 				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`));
 				const scramjetHandler = new ScramjetHandler(Controller, sw, window.__scramjet$config, window.__scramjet$flags);
 				scramjetHandler.setTransports();
+				// @ts-expect-error
 				window.scramjetTb = scramjetHandler;
 				if (settings.wispServer === null) {
 					// @ts-expect-error

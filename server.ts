@@ -28,6 +28,11 @@ export function TServer() {
 			allowMethods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
 			credentials: true,
 		}),
+		// Add COEP header
+		async (c, next) => {
+			c.header("cross-origin-embedder-policy", "require-corp");
+			await next();
+		},
 	);
 
 	const masqrCheck = process.env.MASQR && process.env.MASQR.toLowerCase() === "true";

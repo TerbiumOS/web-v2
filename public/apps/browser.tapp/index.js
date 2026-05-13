@@ -156,7 +156,8 @@ function newTab() {
 						} else {
 							targetUrl = `${searchEngine}${encodeURIComponent(input)}`;
 						}
-						activeTabContent.src = `${window.location.origin}${x.prefix}${await window.parent.tb.proxy.encode(targetUrl, "XOR")}`;
+						//activeTabContent.src = `${window.location.origin}${x.prefix}${await window.parent.tb.proxy.encode(targetUrl, "XOR")}`;
+						x.go(targetUrl);
 					});
 					break;
 			}
