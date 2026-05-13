@@ -1,5 +1,3 @@
-import { BareMuxConnection } from "@mercuryworkshop/bare-mux";
-import type { ScramjetController } from "@mercuryworkshop/scramjet";
 import * as fflate from "fflate";
 import { libcurl } from "libcurl.js";
 import apps from "../apps.json";
@@ -18,7 +16,6 @@ import { Lemonade } from "./lemonade";
 import { AliceWM } from "./liquor/AliceWM";
 import { Anura } from "./liquor/Anura";
 import { LocalFS } from "./liquor/api/LocalFS";
-import { AnuraBareClient } from "./liquor/bcc";
 import { ExternalApp } from "./liquor/coreapps/ExternalApp";
 import { ExternalLib } from "./liquor/libs/ExternalLib";
 import { initializeWebContainer } from "./Node/runtimes/Webcontainers/nodeProc";
@@ -29,6 +26,8 @@ import { vFS } from "./vFS";
 import { auth, getinfo, setinfo } from "./apis/utils/tauth";
 import { launchProcs, addStartupProc, removeStartupProc, enableProc, disableProc } from "./apis/utils/startupHandler";
 import { TSLParser } from "./apis/utils/TSLParser";
+import { ScramjetHandler } from "./scramjet-handler";
+const { Controller } = $scramjetController;
 
 const system = new System();
 const pw = new pwd();
@@ -37,13 +36,13 @@ declare global {
 	interface Window {
 		tb: COM;
 		Filer: FilerType;
-		ScramjetController: ScramjetController;
 	}
 	var scramjetTb: any;
-	var scramjet: ScramjetController;
+	var sjint: boolean;
 }
 
 export default async function Api() {
+	window.sjint = true;
 	window.tb = {
 		registry: registry,
 		sh: window.tb.sh,
@@ -387,51 +386,11 @@ export default async function Api() {
 						});
 					});
 				});
-				const request = indexedDB.open("$scramjet");
-				request.onsuccess = () => {
-					const db = request.result;
-					if (db.objectStoreNames.length === 0) {
-						db.close();
-						const deleteRequest = indexedDB.deleteDatabase("$scramjet");
-						deleteRequest.onsuccess = () => {
-							console.log("Cleared SJ DB");
-						};
-						deleteRequest.onerror = err => {
-							console.error(err);
-						};
-					} else {
-						console.log("Scramjet is fine");
-					}
-				};
-				request.onerror = err => {
-					console.error(err);
-				};
+				const sw = await navigator.serviceWorker.register("/anura-sw.js");
 				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`));
-				const updateTransport = async () => {
-					const wispserver = settings.wispServer || `${window.location.origin.replace(/^https?:\/\//, "ws://")}/wisp/`;
-					const connection = new BareMuxConnection("/baremux/worker.js");
-					if (settings.transport === "Default (Epoxy)") {
-						await connection.setTransport("/epoxy/index.mjs", [{ wisp: wispserver }]);
-					} else if (settings.transport === "Anura BCC") {
-						// @ts-expect-error
-						await connection.setRemoteTransport(new AnuraBareClient(), "AnuraBareClient");
-					} else {
-						await connection.setTransport("/libcurl/index.mjs", [{ wisp: wispserver }]);
-					}
-				};
-				const { ScramjetController } = $scramjetLoadController();
-				window.scramjet = new ScramjetController(window.scramjetTb);
-				scramjet.init();
-				navigator.serviceWorker
-					.register("anura-sw.js", {
-						scope: "/",
-					})
-					.then(() => {
-						updateTransport();
-					});
-				navigator.serviceWorker.ready.then(async () => {
-					await updateTransport();
-				});
+				const scramjetHandler = new ScramjetHandler(Controller, sw, window.__scramjet$config, window.__scramjet$flags);
+				scramjetHandler.setTransports();
+				window.scramjetTb = scramjetHandler;
 				if (settings.wispServer === null) {
 					// @ts-expect-error
 					window.tb.libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);

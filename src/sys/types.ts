@@ -12,6 +12,8 @@ import { createAuthClient } from "better-auth/client";
 import type { HTTPSession, libcurl } from "libcurl.js";
 import * as fflate from "fflate";
 import { TSLParser } from "./apis/utils/TSLParser";
+import type { ProxyTransport } from "@mercuryworkshop/proxy-transports";
+import type * as ScramjetControllerGlobal from "@mercuryworkshop/scramjet-controller";
 
 declare global {
 	namespace React.JSX {
@@ -33,6 +35,8 @@ declare global {
 		loadLock: boolean;
 		libcurlLock: boolean;
 		libcurlSession: HTTPSession;
+		__scramjet$config: SJConfig;
+		__scramjet$flags: SJFlags;
 	}
 }
 
@@ -342,6 +346,62 @@ export interface MediaProps {
 	onSeek?: void;
 	onNext?: void;
 	onBack?: void;
+}
+
+export interface SJConfig {
+	prefix: string;
+	injectPath: string;
+	scramjetPath: string;
+	virtualWasmPath: string;
+	wasmPath: string;
+	codec: {
+		encode: (url: string) => string;
+		decode: (url: string) => string;
+	};
+}
+
+export interface SJFlags {
+	globals: {
+		wrapfn: string;
+		wrappropertybase: string;
+		wrappropertyfn: string;
+		cleanrestfn: string;
+		importfn: string;
+		rewritefn: string;
+		metafn: string;
+		wrappostmessagefn: string;
+		pushsourcemapfn: string;
+		trysetfn: string;
+		templocid: string;
+		tempunusedid: string;
+	};
+	flags: {
+		syncxhr: boolean;
+		strictRewrites: boolean;
+		rewriterLogs: boolean;
+		captureErrors: boolean;
+		cleanErrors: boolean;
+		scramitize: boolean;
+		sourcemaps: boolean;
+		destructureRewrites: boolean;
+		allowInvalidJs: boolean;
+		debugTrampolines: boolean;
+		allowFailedIntercepts: boolean;
+		encapsulateWorkers: boolean;
+		debugSourceURL: boolean;
+	};
+	siteFlags: Record<string, any>;
+	maskedfiles: string[];
+}
+
+export interface SJController {
+	id: string;
+	config: SJConfig;
+	scramjetConfig: SJFlags;
+	frames: ScramjetControllerGlobal.Frame[];
+	serviceWorkerController: ServiceWorker | null;
+	rpc: any;
+	transport: ProxyTransport | null;
 }
 
 export type websocketUrl = `wss://${string}` | `ws://${string}`;

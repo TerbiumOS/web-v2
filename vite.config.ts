@@ -1,7 +1,3 @@
-import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
-// @ts-expect-error no types
-import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
-import { libcurlPath } from "@mercuryworkshop/libcurl-transport";
 import { scramjetPath } from "@mercuryworkshop/scramjet/path";
 // @ts-expect-error no types
 import { server as wisp } from "@mercuryworkshop/wisp-js/server";
@@ -10,6 +6,7 @@ import config from "dotenv";
 import { defineConfig } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import { tfsPath } from "@terbiumos/tfs";
+import path from "node:path";
 
 config.config();
 
@@ -26,23 +23,13 @@ export default defineConfig({
 					overwrite: false,
 				},
 				{
-					src: `${baremuxPath}/**/*.{js,js.map}`.replace(/\\/g, "/"),
-					dest: "baremux",
-					overwrite: false,
-				},
-				{
-					src: `${epoxyPath}/index.mjs`.replace(/\\/g, "/"),
-					dest: "epoxy",
-					overwrite: false,
-				},
-				{
-					src: `${libcurlPath}/index.mjs`.replace(/\\/g, "/"),
-					dest: "libcurl",
-					overwrite: false,
-				},
-				{
 					src: `${tfsPath}/**/*`.replace(/\\/g, "/"),
 					dest: "tfs",
+					overwrite: false,
+				},
+				{
+					src: `${path.resolve("node_modules/@mercuryworkshop/scramjet-controller/dist/")}/**/*.{js,js.map}`.replace(/\\/g, "/"),
+					dest: "sj-control",
 					overwrite: false,
 				},
 			],

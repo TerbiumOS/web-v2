@@ -156,7 +156,7 @@ function newTab() {
 						} else {
 							targetUrl = `${searchEngine}${encodeURIComponent(input)}`;
 						}
-						activeTabContent.src = `${window.location.origin}/service/${await window.parent.tb.proxy.encode(targetUrl, "XOR")}`;
+						activeTabContent.src = `${window.location.origin}${x.prefix}${await window.parent.tb.proxy.encode(targetUrl, "XOR")}`;
 					});
 					break;
 			}
@@ -169,7 +169,8 @@ function newTab() {
 			};
 		}
 	});
-	const tab_content = document.createElement("iframe");
+	const x = window.parent.scramjetTb.controller.createFrame()
+	const tab_content = x.element;
 	Filer.promises.readFile(`/home/${user}/settings.json`, "utf8").then(data => {
 		let settings = JSON.parse(data);
 		let proxy = settings["proxy"];
@@ -203,16 +204,10 @@ function newTab() {
 		if (document.querySelector(".left-arrow").classList.contains("disabled")) {
 			document.querySelector(".left-arrow").classList.remove("disabled");
 		}
-		if ("__uv$location" in tab_content.contentDocument) {
-			if (updateTab === false) {
-				urlbar.value = tab_content.contentDocument.__uv$location?.href;
-			}
-		} else {
-			if (updateTab === false) {
-				window.parent.tb.proxy.decode(tab_content.contentWindow.window.location.href.replace(/^.*\/service\//, ""), "XOR").then(decodedUrl => {
-					urlbar.value = decodedUrl;
-				});
-			}
+		if (updateTab === false) {
+			window.parent.tb.proxy.decode(tab_content.contentWindow.window.location.href.replace(/^.*\/service\//, ""), "XOR").then(decodedUrl => {
+				urlbar.value = decodedUrl;
+			});
 		}
 		if (!tab_content.contentDocument.getElementById("tb-cursor-controller")) {
 			const cursor_controller = document.createElement("script");

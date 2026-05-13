@@ -732,10 +732,7 @@ workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/
 	}
 });
 
-importScripts("/scram/scramjet.all.js");
-
-const { ScramjetServiceWorker } = $scramjetLoadWorker();
-const scramjet = new ScramjetServiceWorker();
+importScripts("/sj-control/controller.sw.js");
 
 const methods = ["GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "PATCH"];
 
@@ -850,17 +847,14 @@ methods.forEach(method => {
 	);
 });
 
-scramjet.loadConfig();
-
 methods.forEach(method => {
 	workbox.routing.registerRoute(
 		/\/service\//,
 		async ({ event }) => {
 			console.log("Got SJ req");
-			await scramjet.loadConfig();
-			if (scramjet.route(event)) {
-				const response = await scramjet.fetch(event);
-				return await saveFP(response, event.request, "Scramjet");
+			if ($scramjetController.shouldRoute(event)) {
+				return await $scramjetController.route(event);
+				//return await saveFP(response, event.request, "Scramjet");
 			}
 			return fetch(event.request);
 		},

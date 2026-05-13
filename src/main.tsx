@@ -2,7 +2,6 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { BareMuxConnection } from "@mercuryworkshop/bare-mux";
 import Boot from "./Boot.tsx";
 import CustomOS from "./CustomOS.tsx";
 import { hash } from "./hash.json";
@@ -12,14 +11,47 @@ import Recovery from "./Recovery.tsx";
 import Setup from "./Setup.tsx";
 import { fileExists } from "./sys/types.ts";
 import Updater from "./Updater.tsx";
+import { ScramjetHandler } from "./sys/scramjet-handler.ts";
+const { Controller } = $scramjetController;
 
 const Root = () => {
 	const [currPag, setPag] = useState(<Loader />);
 	const params = new URLSearchParams(window.location.search);
 	useEffect(() => {
+		window.__scramjet$config = {
+			prefix: "/service/",
+			scramjetPath: "/scram/",
+			wasmPath: "/scram/scramjet.wasm",
+			injectPath: "/sj-control/inject.js",
+			virtualWasmPath: "/scram/scramjet.wasm.js",
+			codec: {
+				encode: function encode(input: string): string {
+					let result = "";
+					let len = input.length;
+					for (let i = 0; i < len; i++) {
+						const char = input[i];
+						result += i % 2 ? String.fromCharCode(char.charCodeAt(0) ^ 2) : char;
+					}
+					return encodeURIComponent(result);
+				},
+				decode: function decode(input: string): string {
+					if (!input) return input;
+					input = decodeURIComponent(input);
+					let result = "";
+					let len = input.length;
+					for (let i = 0; i < len; i++) {
+						const char = input[i];
+						result += i % 2 ? String.fromCharCode(char.charCodeAt(0) ^ 2) : char;
+					}
+					return result;
+				},
+			},
+		};
 		const tempTransport = async () => {
-			const connection = new BareMuxConnection("/baremux/worker.js");
-			await connection.setTransport("/epoxy/index.mjs", [{ wisp: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/` }]);
+			const sw = await navigator.serviceWorker.register("/anura-sw.js");
+			const scramjetHandler = new ScramjetHandler(Controller, sw, window.__scramjet$config, window.__scramjet$flags);
+			scramjetHandler.setTransports();
+			window.scramjetTb = scramjetHandler;
 			const tbOn = async () => {
 				while (!window.tb.system?.version) {
 					await new Promise(res => setTimeout(res, 50));
@@ -27,45 +59,10 @@ const Root = () => {
 				window.dispatchEvent(new Event("tfsready"));
 			};
 			tbOn();
-			const { ScramjetController } = $scramjetLoadController();
-			window.scramjetTb = {
-				prefix: "/service/",
-				files: {
-					wasm: "/scram/scramjet.wasm.wasm",
-					all: "/scram/scramjet.all.js",
-					sync: "/scram/scramjet.sync.js",
-				},
-				defaultFlags: {
-					rewriterLogs: false,
-				},
-				codec: {
-					encode: function encode(input: string): string {
-						let result = "";
-						let len = input.length;
-						for (let i = 0; i < len; i++) {
-							const char = input[i];
-							result += i % 2 ? String.fromCharCode(char.charCodeAt(0) ^ 2) : char;
-						}
-						return encodeURIComponent(result);
-					},
-					decode: function decode(input: string): string {
-						if (!input) return input;
-						input = decodeURIComponent(input);
-						let result = "";
-						let len = input.length;
-						for (let i = 0; i < len; i++) {
-							const char = input[i];
-							result += i % 2 ? String.fromCharCode(char.charCodeAt(0) ^ 2) : char;
-						}
-						return result;
-					},
-				},
-			};
-			window.scramjet = new ScramjetController(scramjetTb);
-			scramjet.init();
-			navigator.serviceWorker.register("/anura-sw.js");
 		};
-		tempTransport();
+		if (!window.sjint) {
+			tempTransport();
+		}
 		if (sessionStorage.getItem("recovery")) {
 			setPag(<Recovery />);
 		} else if (sessionStorage.getItem("boot") || params.get("boot")) {
