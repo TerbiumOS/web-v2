@@ -169,7 +169,7 @@ function newTab() {
 			};
 		}
 	});
-	const x = window.parent.scramjetTb.controller.createFrame()
+	const x = window.parent.scramjetTb.controller.createFrame();
 	const tab_content = x.element;
 	Filer.promises.readFile(`/home/${user}/settings.json`, "utf8").then(data => {
 		let settings = JSON.parse(data);
