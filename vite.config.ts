@@ -46,8 +46,5 @@ export default defineConfig({
 		watch: {
 			ignored: ["**/public/apps/terminal.tapp/**"],
 		},
-		headers: {
-			"cross-origin-embedder-policy": "require-corp",
-		},
 	},
 });

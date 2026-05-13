@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type * as ScramjetGlobal from "@mercuryworkshop/scramjet";
 import type { CookieSyncOptions, CookieSyncEntry, ScramjetConfig, ScramjetContext, ScramjetFetchHandler } from "@mercuryworkshop/scramjet";
-import { BareResponse, type ProxyTransport, type RawHeaders } from "@mercuryworkshop/proxy-transports";
+import type { ProxyTransport, RawHeaders } from "@mercuryworkshop/proxy-transports";
 
 declare const $scramjet: typeof ScramjetGlobal;
 
@@ -328,10 +328,10 @@ function createReactScramjetFrame(controller: ScramjetController, element: HTMLI
 			);
 		},
 		async fetchBlobUrl(url: string) {
-			return BareResponse.fromNativeResponse(await fetch(url));
+			return $scramjet.BareResponse.fromNativeResponse(await fetch(url));
 		},
 		async fetchDataUrl(url: string) {
-			return BareResponse.fromNativeResponse(await fetch(url));
+			return $scramjet.BareResponse.fromNativeResponse(await fetch(url));
 		},
 	});
 
