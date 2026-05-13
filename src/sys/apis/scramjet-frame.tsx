@@ -1,12 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type * as ScramjetGlobal from "@mercuryworkshop/scramjet";
-import type {
-	CookieSyncOptions,
-	CookieSyncEntry,
-	ScramjetConfig,
-	ScramjetContext,
-	ScramjetFetchHandler,
-} from "@mercuryworkshop/scramjet";
+import type { CookieSyncOptions, CookieSyncEntry, ScramjetConfig, ScramjetContext, ScramjetFetchHandler } from "@mercuryworkshop/scramjet";
 import { BareResponse, type ProxyTransport, type RawHeaders } from "@mercuryworkshop/proxy-transports";
 
 declare const $scramjet: typeof ScramjetGlobal;
@@ -31,10 +25,7 @@ type ScramjetController = {
 	frames: ScramjetControllerFrame[];
 	wait?: () => Promise<void>;
 	persistCookies: () => Promise<void>;
-	propagateCookieSync: (
-		cookies: Array<{ url: string; cookie: string }>,
-		options?: CookieSyncOptions
-	) => Promise<void>;
+	propagateCookieSync: (cookies: Array<{ url: string; cookie: string }>, options?: CookieSyncOptions) => Promise<void>;
 };
 
 type FrameInitHooks = {
@@ -92,10 +83,7 @@ export type ScramjetDownload = {
 
 export type ScramjetDownloadHandler = (download: ScramjetDownload) => Promise<void>;
 
-export type ScramjetFrameProps = Omit<
-	React.IframeHTMLAttributes<HTMLIFrameElement>,
-	"ref" | "src"
-> & {
+export type ScramjetFrameProps = Omit<React.IframeHTMLAttributes<HTMLIFrameElement>, "ref" | "src"> & {
 	url?: string;
 	controller?: ScramjetController;
 	onDownload?: ScramjetDownloadHandler;
@@ -117,7 +105,7 @@ function base64Encode(text: string): string {
 				data.push(String.fromCharCode(byte));
 				return data;
 			}, [])
-			.join("")
+			.join(""),
 	);
 }
 
@@ -210,14 +198,7 @@ async function defaultDownloadHandler({ filename, body }: ScramjetDownload): Pro
 	});
 }
 
-function yieldGetInjectScripts(
-	config: ScramjetController["config"],
-	sjconfig: ScramjetConfig,
-	prefix: URL,
-	cookieJar: ScramjetController["cookieJar"],
-	codecEncode: (input: string) => string,
-	codecDecode: (input: string) => string
-): ScramjetContext["interface"]["getInjectScripts"] {
+function yieldGetInjectScripts(config: ScramjetController["config"], sjconfig: ScramjetConfig, prefix: URL, cookieJar: ScramjetController["cookieJar"], codecEncode: (input: string) => string, codecDecode: (input: string) => string): ScramjetContext["interface"]["getInjectScripts"] {
 	return (meta, handler, htmlcontext, script) => {
 		void meta;
 		void handler;
@@ -241,17 +222,13 @@ function yieldGetInjectScripts(
 						initHeaders: ${JSON.stringify(htmlcontext.headers ?? [])},
 						history: ${JSON.stringify(htmlcontext.history ?? [])},
 					})
-				`)
+				`),
 			),
 		];
 	};
 }
 
-function createReactScramjetFrame(
-	controller: ScramjetController,
-	element: HTMLIFrameElement,
-	downloadHandler: ScramjetDownloadHandler
-): ScramjetControllerFrame {
+function createReactScramjetFrame(controller: ScramjetController, element: HTMLIFrameElement, downloadHandler: ScramjetDownloadHandler): ScramjetControllerFrame {
 	const id = makeId();
 	const prefix = controller.prefix + id + "/";
 
@@ -266,14 +243,7 @@ function createReactScramjetFrame(
 				prefix: new URL(prefix, location.href),
 				cookieJar: controller.cookieJar as ScramjetContext["cookieJar"],
 				interface: {
-					getInjectScripts: yieldGetInjectScripts(
-						controller.config,
-						controller.scramjetConfig,
-						new URL(prefix, location.href),
-						controller.cookieJar,
-						controller.config.codec.encode,
-						controller.config.codec.decode
-					),
+					getInjectScripts: yieldGetInjectScripts(controller.config, controller.scramjetConfig, new URL(prefix, location.href), controller.cookieJar, controller.config.codec.encode, controller.config.codec.decode),
 					getWorkerInjectScripts: (meta, type, script) => {
 						void meta;
 						void type;
@@ -310,7 +280,7 @@ function createReactScramjetFrame(
 
 						client.hook();
 					})();
-					`)
+					`),
 						);
 
 						return source;
@@ -354,7 +324,7 @@ function createReactScramjetFrame(
 					url: url.href,
 					cookie,
 				})),
-				options
+				options,
 			);
 		},
 		async fetchBlobUrl(url: string) {
@@ -375,9 +345,7 @@ function createReactScramjetFrame(
 		const disposition = getHeader(props.response.headers.toRawHeaders(), "content-disposition");
 		if (!disposition || !/\battachment\b/i.test(disposition)) return;
 
-		const filename = sanitizeFilename(
-			parseContentDispositionFilename(disposition) ?? getFilenameFromUrl(context.request.rawUrl.href)
-		);
+		const filename = sanitizeFilename(parseContentDispositionFilename(disposition) ?? getFilenameFromUrl(context.request.rawUrl.href));
 		await frame.download({
 			url: context.request.rawUrl.href,
 			filename,
@@ -393,9 +361,7 @@ function createReactScramjetFrame(
 		};
 	});
 
-	(element as HTMLIFrameElement & { [CONTROLLER_FRAME]?: ScramjetControllerFrame })[
-		CONTROLLER_FRAME
-	] = frame;
+	(element as HTMLIFrameElement & { [CONTROLLER_FRAME]?: ScramjetControllerFrame })[CONTROLLER_FRAME] = frame;
 
 	return frame;
 }
@@ -404,107 +370,105 @@ function getDefaultController(): ScramjetController | undefined {
 	return window.scramjetTb?.controller as unknown as ScramjetController | undefined;
 }
 
-export const ScramjetFrame = forwardRef<ScramjetFrameHandle, ScramjetFrameProps>(
-	({ url, controller, onDownload, onFrameReady, onFrameDestroy, ...iframeProps }, ref) => {
-		const iframeRef = useRef<HTMLIFrameElement | null>(null);
-		const frameRef = useRef<ScramjetControllerFrame | null>(null);
-		const onDownloadRef = useRef(onDownload);
-		const onFrameReadyRef = useRef(onFrameReady);
-		const onFrameDestroyRef = useRef(onFrameDestroy);
-		const [isReady, setIsReady] = useState(false);
-		const [resolvedController, setResolvedController] = useState<ScramjetController | undefined>(
-			() => controller ?? getDefaultController()
-		);
+export const ScramjetFrame = forwardRef<ScramjetFrameHandle, ScramjetFrameProps>(({ url, controller, onDownload, onFrameReady, onFrameDestroy, ...iframeProps }, ref) => {
+	const iframeRef = useRef<HTMLIFrameElement | null>(null);
+	const frameRef = useRef<ScramjetControllerFrame | null>(null);
+	const onDownloadRef = useRef(onDownload);
+	const onFrameReadyRef = useRef(onFrameReady);
+	const onFrameDestroyRef = useRef(onFrameDestroy);
+	const [isReady, setIsReady] = useState(false);
+	const [resolvedController, setResolvedController] = useState<ScramjetController | undefined>(() => controller ?? getDefaultController());
 
-		useEffect(() => {
-			onDownloadRef.current = onDownload;
-			onFrameReadyRef.current = onFrameReady;
-			onFrameDestroyRef.current = onFrameDestroy;
-		}, [onDownload, onFrameDestroy, onFrameReady]);
+	useEffect(() => {
+		onDownloadRef.current = onDownload;
+		onFrameReadyRef.current = onFrameReady;
+		onFrameDestroyRef.current = onFrameDestroy;
+	}, [onDownload, onFrameDestroy, onFrameReady]);
 
-		useEffect(() => {
-			if (controller) {
-				setResolvedController(controller);
-				return;
-			}
+	useEffect(() => {
+		if (controller) {
+			setResolvedController(controller);
+			return;
+		}
 
-			const currentController = getDefaultController();
-			if (currentController) {
-				setResolvedController(currentController);
-				return;
-			}
+		const currentController = getDefaultController();
+		if (currentController) {
+			setResolvedController(currentController);
+			return;
+		}
 
-			const interval = window.setInterval(() => {
-				const nextController = getDefaultController();
-				if (!nextController) return;
+		const interval = window.setInterval(() => {
+			const nextController = getDefaultController();
+			if (!nextController) return;
 
-				setResolvedController(nextController);
-				window.clearInterval(interval);
-			}, 50);
+			setResolvedController(nextController);
+			window.clearInterval(interval);
+		}, 50);
 
-			return () => window.clearInterval(interval);
-		}, [controller]);
+		return () => window.clearInterval(interval);
+	}, [controller]);
 
-		useImperativeHandle(
-			ref,
-			() => ({
-				get iframe() {
-					return iframeRef.current;
-				},
-				get frame() {
-					return frameRef.current;
-				},
-				back: () => frameRef.current?.back(),
-				forward: () => frameRef.current?.forward(),
-				reload: () => frameRef.current?.reload(),
-				go: (targetUrl: string) => frameRef.current?.go(targetUrl),
-			}),
-			[]
-		);
+	useImperativeHandle(
+		ref,
+		() => ({
+			get iframe() {
+				return iframeRef.current;
+			},
+			get frame() {
+				return frameRef.current;
+			},
+			back: () => frameRef.current?.back(),
+			forward: () => frameRef.current?.forward(),
+			reload: () => frameRef.current?.reload(),
+			go: (targetUrl: string) => frameRef.current?.go(targetUrl),
+		}),
+		[],
+	);
 
-		useEffect(() => {
-			const element = iframeRef.current;
-			if (!element || !resolvedController) return;
+	useEffect(() => {
+		const element = iframeRef.current;
+		if (!element || !resolvedController) return;
 
-			let disposed = false;
+		let disposed = false;
 
-			void (async () => {
-				await resolvedController.wait?.();
-				if (disposed) return;
+		void (async () => {
+			await resolvedController.wait?.();
+			if (disposed) return;
 
-				const frame = createReactScramjetFrame(resolvedController, element, async download => {
-					await (onDownloadRef.current ?? defaultDownloadHandler)(download);
-				});
-				frameRef.current = frame;
-				resolvedController.frames.push(frame);
-				setIsReady(true);
-				onFrameReadyRef.current?.(frame);
-			})();
+			const frame = createReactScramjetFrame(resolvedController, element, async download => {
+				await (onDownloadRef.current ?? defaultDownloadHandler)(download);
+			});
+			frameRef.current = frame;
+			resolvedController.frames.push(frame);
+			setIsReady(true);
+			onFrameReadyRef.current?.(frame);
+		})();
 
-			return () => {
-				disposed = true;
-				const frame = frameRef.current;
-				if (!frame) return;
+		return () => {
+			disposed = true;
+			const frame = frameRef.current;
+			if (!frame) return;
 
-				const frameIndex = resolvedController.frames.indexOf(frame);
-				if (frameIndex !== -1) resolvedController.frames.splice(frameIndex, 1);
-				delete (element as HTMLIFrameElement & {
+			const frameIndex = resolvedController.frames.indexOf(frame);
+			if (frameIndex !== -1) resolvedController.frames.splice(frameIndex, 1);
+			delete (
+				element as HTMLIFrameElement & {
 					[CONTROLLER_FRAME]?: ScramjetControllerFrame;
-				})[CONTROLLER_FRAME];
-				frameRef.current = null;
-				setIsReady(false);
-				onFrameDestroyRef.current?.(frame);
-			};
-		}, [resolvedController]);
+				}
+			)[CONTROLLER_FRAME];
+			frameRef.current = null;
+			setIsReady(false);
+			onFrameDestroyRef.current?.(frame);
+		};
+	}, [resolvedController]);
 
-		useEffect(() => {
-			if (!url || !isReady) return;
-			frameRef.current?.go(url);
-		}, [isReady, url]);
+	useEffect(() => {
+		if (!url || !isReady) return;
+		frameRef.current?.go(url);
+	}, [isReady, url]);
 
-		return <iframe className="w-full h-full" {...iframeProps} ref={iframeRef} />;
-	}
-);
+	return <iframe className="w-full h-full" {...iframeProps} ref={iframeRef} />;
+});
 
 ScramjetFrame.displayName = "ScramjetFrame";
 

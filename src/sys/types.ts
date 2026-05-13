@@ -37,7 +37,7 @@ declare global {
 		libcurlSession: HTTPSession;
 		__scramjet$config: SJConfig;
 		__scramjet$flags: SJFlags;
-		scramjetTb: SJController
+		scramjetTb: SJController;
 	}
 }
 
@@ -405,7 +405,7 @@ export interface SJController {
 	transport: ProxyTransport | null;
 	controller: {
 		createFrame: (e?: any) => ScramjetControllerGlobal.Frame;
-	}
+	};
 }
 
 export type websocketUrl = `wss://${string}` | `ws://${string}`;

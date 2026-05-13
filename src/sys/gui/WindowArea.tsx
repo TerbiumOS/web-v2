@@ -1003,34 +1003,38 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				)}
 			</div>
 			<div ref={contentRef} className="w-full h-full" style={optimizationsEnabled ? { contain: "strict" } : {}}>
-				{config.proxy ? <ScramjetFrame url={config.src} /> : <iframe
-					key={config.src}
-					ref={srcRef}
-					src={src}
-					id={`proc-${config.pid}`}
-					loading={optimizationsEnabled && minimized ? "lazy" : "eager"}
-					onLoad={() => {
-						if (config.message) {
-							srcRef.current?.contentWindow!.postMessage(config.message, "*");
-						}
-						const sr1 = document.createElement("script");
-						const sr2 = document.createElement("script");
-						sr1.src = "/cursor_changer.js";
-						sr2.src = "/media_interactions.js";
-						srcRef.current?.contentDocument?.head.appendChild(sr1);
-						srcRef.current?.contentDocument?.head.appendChild(sr2);
-					}}
-					referrerPolicy="no-referrer"
-					style={{
-						border: "none",
-						all: "initial",
-						width: "100%",
-						height: "calc(100% - 40px)",
-						pointerEvents: isMouseDown ? "none" : "auto",
-						userSelect: "none",
-						...(optimizationsEnabled && { contain: "strict" }),
-					}}
-				></iframe>}
+				{config.proxy ? (
+					<ScramjetFrame url={config.src} />
+				) : (
+					<iframe
+						key={config.src}
+						ref={srcRef}
+						src={src}
+						id={`proc-${config.pid}`}
+						loading={optimizationsEnabled && minimized ? "lazy" : "eager"}
+						onLoad={() => {
+							if (config.message) {
+								srcRef.current?.contentWindow!.postMessage(config.message, "*");
+							}
+							const sr1 = document.createElement("script");
+							const sr2 = document.createElement("script");
+							sr1.src = "/cursor_changer.js";
+							sr2.src = "/media_interactions.js";
+							srcRef.current?.contentDocument?.head.appendChild(sr1);
+							srcRef.current?.contentDocument?.head.appendChild(sr2);
+						}}
+						referrerPolicy="no-referrer"
+						style={{
+							border: "none",
+							all: "initial",
+							width: "100%",
+							height: "calc(100% - 40px)",
+							pointerEvents: isMouseDown ? "none" : "auto",
+							userSelect: "none",
+							...(optimizationsEnabled && { contain: "strict" }),
+						}}
+					></iframe>
+				)}
 			</div>
 		</div>
 	);
