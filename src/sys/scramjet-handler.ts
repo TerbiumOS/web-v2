@@ -13,12 +13,13 @@ export class ScramjetHandler {
 	private activeTransport: string = "epoxy";
 	private readonly controllerConfig: SJConfig;
 	private readonly scramjetFlags: SJFlags;
+	private settingsReady!: Promise<void>;
 
 	constructor(Controller: any, SW: any, config: SJConfig, flags: SJFlags) {
 		this.controllerConfig = config;
 		this.scramjetFlags = flags;
-		if (localStorage.getItem("setup")) {
-			(async () => {
+		this.settingsReady = (async () => {
+			if (localStorage.getItem("setup")) {
 				if (sessionStorage.getItem("currAcc")) {
 					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
 					this.wispUrl = settings.wispServer;
@@ -29,12 +30,13 @@ export class ScramjetHandler {
 					this.wispUrl = usersettings.wispServer;
 					this.transportVar = usersettings.transport;
 				}
-			})();
-		} else {
-			this.wispUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/wisp/`;
-			this.transportVar = "epoxy";
-		}
+			} else {
+				this.wispUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/wisp/`;
+				this.transportVar = "epoxy";
+			}
+		})();
 		this.initReady = (async () => {
+			await this.settingsReady;
 			const transportConfig = await this.buildTransportConfig();
 			this.controller = new Controller({
 				serviceworker: navigator.serviceWorker.controller ?? SW.active,

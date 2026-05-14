@@ -20,9 +20,9 @@ const Root = () => {
 	useEffect(() => {
 		window.__scramjet$config = {
 			prefix: "/service/",
-			scramjetPath: "/scram/",
+			scramjetPath: "/scram/scramjet.js",
 			wasmPath: "/scram/scramjet.wasm",
-			injectPath: "/sj-control/inject.js",
+			injectPath: "/sj-control/controller.inject.js",
 			virtualWasmPath: "/scram/scramjet.wasm.js",
 			codec: {
 				encode: function encode(input: string): string {

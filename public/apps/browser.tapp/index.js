@@ -49,6 +49,13 @@ new_tab.addEventListener("click", () => {
 function closeTab(id) {
 	const tab = document.getElementById(id);
 	const tab_content = document.getElementById(id + "-content");
+	if (tab_content && tab_content._scramjetFrame) {
+		const frames = window.parent.scramjetTb.controller.frames;
+		const frameIndex = frames?.indexOf(tab_content._scramjetFrame);
+		if (frameIndex >= 0) {
+			frames.splice(frameIndex, 1);
+		}
+	}
 	tab.remove();
 	window.parent.tb.mediaplayer.hide();
 	tab_content.remove();
@@ -172,6 +179,7 @@ function newTab() {
 	});
 	const x = window.parent.scramjetTb.controller.createFrame();
 	const tab_content = x.element;
+	tab_content._scramjetFrame = x;
 	Filer.promises.readFile(`/home/${user}/settings.json`, "utf8").then(data => {
 		let settings = JSON.parse(data);
 		let proxy = settings["proxy"];

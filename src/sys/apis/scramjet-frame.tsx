@@ -59,6 +59,7 @@ export type ScramjetControllerFrame = {
 	};
 	context: ScramjetContext;
 	download: ScramjetDownloadHandler;
+	destroy: () => void;
 	back: () => void;
 	forward: () => void;
 	reload: () => void;
@@ -198,6 +199,30 @@ async function defaultDownloadHandler({ filename, body }: ScramjetDownload): Pro
 	});
 }
 
+function unregisterFrame(controller: ScramjetController, frame: ScramjetControllerFrame): void {
+	for (let index = controller.frames.length - 1; index >= 0; index--) {
+		const candidate = controller.frames[index];
+		if (candidate === frame || candidate.id === frame.id || candidate.prefix === frame.prefix || candidate.element === frame.element) {
+			controller.frames.splice(index, 1);
+		}
+	}
+}
+
+function stopIframe(element: HTMLIFrameElement): void {
+	try {
+		element.contentWindow?.stop();
+	} catch {
+		// Cross-origin or already-destroyed frame.
+	}
+
+	try {
+		element.removeAttribute("src");
+		element.src = "about:blank";
+	} catch {
+		// The element may already be detached.
+	}
+}
+
 function yieldGetInjectScripts(config: ScramjetController["config"], sjconfig: ScramjetConfig, prefix: URL, cookieJar: ScramjetController["cookieJar"], codecEncode: (input: string) => string, codecDecode: (input: string) => string): ScramjetContext["interface"]["getInjectScripts"] {
 	return (meta, handler, htmlcontext, script) => {
 		void meta;
@@ -296,6 +321,11 @@ function createReactScramjetFrame(controller: ScramjetController, element: HTMLI
 			frameInit: ScramjetGlobal.TapInstance<FrameInitHooks>;
 		},
 		download: downloadHandler,
+		destroy() {
+			stopIframe(element);
+			unregisterFrame(controller, this);
+			delete (element as HTMLIFrameElement & { [CONTROLLER_FRAME]?: ScramjetControllerFrame })[CONTROLLER_FRAME];
+		},
 		back() {
 			element.contentWindow?.history.back();
 		},
@@ -430,35 +460,49 @@ export const ScramjetFrame = forwardRef<ScramjetFrameHandle, ScramjetFrameProps>
 		if (!element || !resolvedController) return;
 
 		let disposed = false;
+		let frameForCleanup: ScramjetControllerFrame | null = null;
+		let cleanupDone = false;
+
+		const cleanupFrame = () => {
+			if (cleanupDone) return;
+			cleanupDone = true;
+			disposed = true;
+			const frame = frameForCleanup ?? frameRef.current;
+			if (frame) {
+				frame.destroy();
+				onFrameDestroyRef.current?.(frame);
+			} else {
+				stopIframe(element);
+			}
+			frameForCleanup = null;
+			frameRef.current = null;
+		};
 
 		void (async () => {
 			await resolvedController.wait?.();
-			if (disposed) return;
+			if (disposed || !element.isConnected) return;
 
 			const frame = createReactScramjetFrame(resolvedController, element, async download => {
 				await (onDownloadRef.current ?? defaultDownloadHandler)(download);
 			});
+			frameForCleanup = frame;
 			frameRef.current = frame;
 			resolvedController.frames.push(frame);
 			setIsReady(true);
 			onFrameReadyRef.current?.(frame);
 		})();
 
-		return () => {
-			disposed = true;
-			const frame = frameRef.current;
-			if (!frame) return;
+		const observer = new MutationObserver(() => {
+			if (element.isConnected) return;
+			cleanupFrame();
+			observer.disconnect();
+		});
+		observer.observe(document.documentElement, { childList: true, subtree: true });
 
-			const frameIndex = resolvedController.frames.indexOf(frame);
-			if (frameIndex !== -1) resolvedController.frames.splice(frameIndex, 1);
-			delete (
-				element as HTMLIFrameElement & {
-					[CONTROLLER_FRAME]?: ScramjetControllerFrame;
-				}
-			)[CONTROLLER_FRAME];
-			frameRef.current = null;
+		return () => {
+			observer.disconnect();
+			cleanupFrame();
 			setIsReady(false);
-			onFrameDestroyRef.current?.(frame);
 		};
 	}, [resolvedController]);
 
