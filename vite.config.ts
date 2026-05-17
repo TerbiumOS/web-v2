@@ -3,14 +3,13 @@ import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
 import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
 import { libcurlPath } from "@mercuryworkshop/libcurl-transport";
 import { scramjetPath } from "@mercuryworkshop/scramjet/path";
-// @ts-expect-error no types
-import { server as wisp } from "@mercuryworkshop/wisp-js/server";
 import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
 import react from "@vitejs/plugin-react-swc";
 import config from "dotenv";
 import { defineConfig } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import { tfsPath } from "@terbiumos/tfs";
+import { Mrrowisp } from "mrrowisp";
 
 config.config();
 
@@ -56,7 +55,12 @@ export default defineConfig({
 		{
 			name: "vite-wisp-server",
 			configureServer(server) {
-				server.httpServer?.on("upgrade", (req, socket, head) => (req.url?.startsWith("/wisp") ? wisp.routeRequest(req, socket, head) : undefined));
+				const wisp = new Mrrowisp({
+					port: 6001,
+				});
+
+				wisp.start();
+				server.httpServer?.on("upgrade", (req, socket, head) => (req.url?.startsWith("/wisp") ? wisp.route(req, socket, head) : undefined));
 			},
 		},
 	],
