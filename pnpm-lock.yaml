@@ -69,8 +69,8 @@ importers:
         specifier: ^4.7.0
         version: 4.7.0
       mrrowisp:
-        specifier: 2.9.99
-        version: 2.9.99(chalk@5.6.2)(typescript@6.0.3)
+        specifier: 2.10.0
+        version: 2.10.0(chalk@5.6.2)(typescript@6.0.3)
       path-browserify:
         specifier: ^1.0.1
         version: 1.0.1
@@ -1757,8 +1757,8 @@ packages:
   modern-screenshot@4.7.0:
     resolution: {integrity: sha512-9YxN+ddPSMMlhylOv25VHzXrl9u67QRxoh7+SEewGtgUw7t6hHTrjptSDJUSne9oG4Xk/h2cwG15nIt4Hc9ujg==}
 
-  mrrowisp@2.9.99:
-    resolution: {integrity: sha512-BYnWM6ItfTfLWup8gtwpMQG0c4dfjBDuk84ifCHQdTc1H55WQWEwkVBZpyoLpZ1v4MPS5dCThYUAj5ZVjZ/lWQ==}
+  mrrowisp@2.10.0:
+    resolution: {integrity: sha512-T2Uk/lwGoMbFMHC9ySC8AMOiFWYikYNVGdc7P+txYdObG1Y/ocnngLIsYaw4sj+ssewEWusG4ccRFaDwJx6RNg==}
     peerDependencies:
       chalk: ^5.6.2
       typescript: ^6.0.3
@@ -3478,7 +3478,7 @@ snapshots:
 
   modern-screenshot@4.7.0: {}
 
-  mrrowisp@2.9.99(chalk@5.6.2)(typescript@6.0.3):
+  mrrowisp@2.10.0(chalk@5.6.2)(typescript@6.0.3):
     dependencies:
       chalk: 5.6.2
       detect-port: 2.1.0
