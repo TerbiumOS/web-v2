@@ -38,6 +38,7 @@
 		"htmlparser2": "^10.1.0",
 		"libcurl.js": "^0.7.4",
 		"modern-screenshot": "^4.7.0",
+		"mrrowisp": "2.9.99",
 		"path-browserify": "^1.0.1",
 		"react": "^19.2.6",
 		"react-dom": "^19.2.6",

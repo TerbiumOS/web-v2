@@ -8,8 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { version } from "./package.json";
-// @ts-expect-error no types
-import { server as wisp } from "@mercuryworkshop/wisp-js/server";
+import { Mrrowisp } from "mrrowisp";
 
 export function TServer() {
 	config.config();
@@ -112,15 +111,44 @@ export function TServer() {
 			root: path.join(__dirname, "dist"),
 		}),
 	);
-	wisp.options.dns_method = "resolve";
-	wisp.options.dns_servers = ["1.1.1.3", "1.0.0.3"];
-	wisp.options.dns_result_order = "ipv4first";
+
+	const wisp = new Mrrowisp({
+		port: 6001,
+		tcpBufferSize: 65535,
+		streamLimitPerHost: 256,
+		streamLimitTotal: 8192,
+		dnsServers: ["1.1.1.3", "1.0.0.3"],
+		dnsTTLSeconds: 300,
+		dnsMethod: "resolve",
+		dnsResultOrder: "ipv4first",
+		enableV2: true,
+		bandwidthLimitKbps: 51200,
+		connectionsLimitPerIP: 100,
+		connectionWindowSeconds: 10,
+		maxMessageSize: 262144,
+		writeTimeoutSeconds: 30,
+		frameReadTimeoutSeconds: 60,
+		logLevel: "warn",
+		banDurationSeconds: 86400,
+		banMaxStrikes: 5,
+		banEscalationMultiplier: 2,
+		maxHandshakeFailures: 20,
+		maxPacketRate: 2000,
+		maxConnectionLifetimeSeconds: 7200,
+		maxStreamsPerConnection: 256,
+		maxConnectionsPerIP: 100,
+		globalMaxConnections: 10000,
+		writeQueueSize: 16384,
+		maxInboundBytesPerSecond: 10485760,
+	});
+
+	wisp.start();
 
 	const server = createServer(nodeHandler);
 
 	server.on("upgrade", (req: IncomingMessage, socket: any, head: Buffer) => {
 		if (req.url?.endsWith("/wisp/")) {
-			wisp.routeRequest(req as any, socket as any, head as any);
+			wisp.route(req as any, socket as any, head as any);
 		} else {
 			socket.destroy();
 		}
