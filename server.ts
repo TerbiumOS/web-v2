@@ -211,6 +211,7 @@ export function TServer() {
 
 	process.on("SIGINT", () => {
 		console.log("\x1b[0m");
+		wisp.stop();
 		process.exit();
 	});
 }
