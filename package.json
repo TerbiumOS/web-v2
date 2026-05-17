@@ -23,7 +23,6 @@
 		"@mercuryworkshop/epoxy-transport": "^2.1.28",
 		"@mercuryworkshop/libcurl-transport": "^1.5.2",
 		"@mercuryworkshop/scramjet": "https://cdn.terbiumon.top/scramjet-v2.0-alpha.tgz",
-		"@mercuryworkshop/wisp-js": "^0.4.1",
 		"@paralleldrive/cuid2": "^3.3.0",
 		"@terbiumos/tfs": "1.0.24",
 		"@titaniumnetwork-dev/ultraviolet": "^3.2.10",
