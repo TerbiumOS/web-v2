@@ -113,36 +113,87 @@ export function TServer() {
 	);
 
 	const wisp = new Mrrowisp({
-		port: 6001,
+		port: Number.parseInt(process.env.WISP_PORT || "6001", 10),
+
+		allowTCP: true,
+		allowUDP: true,
+		allowDirectIP: false,
+		allowPrivateIPs: false,
+		allowLoopbackIPs: false,
+		enableV2: true,
+		enableTwisp: false,
+
+		tcpNoDelay: true,
 		tcpBufferSize: 65535,
-		streamLimitPerHost: 256,
-		streamLimitTotal: 8192,
+		bufferRemainingLength: 1 << 20,
+		websocketPermessageDeflate: false,
+		
 		dnsServers: ["1.1.1.3", "1.0.0.3"],
-		dnsTTLSeconds: 300,
 		dnsMethod: "resolve",
 		dnsResultOrder: "ipv4first",
-		enableV2: true,
-		bandwidthLimitKbps: 51200,
-		connectionsLimitPerIP: 100,
+
+		parseRealIP: true,
+		trustedProxies: ["127.0.0.1", "::1"],
+		trustedHeaders: ["CF-Connecting-IP", "X-Forwarded-For", "X-Real-IP"],
+
+		maxMessageSize: 4 * 1024 * 1024,
+		logLevel: "info",
+
+		bandwidthLimitKbps: 200 * 1024,
+		connectionsLimitPerIP: 600,
 		connectionWindowSeconds: 10,
-		maxMessageSize: 262144,
-		writeTimeoutSeconds: 30,
-		frameReadTimeoutSeconds: 60,
-		logLevel: "warn",
-		banDurationSeconds: 86400,
-		banMaxStrikes: 5,
-		banEscalationMultiplier: 2,
-		maxHandshakeFailures: 20,
-		maxPacketRate: 2000,
-		maxConnectionLifetimeSeconds: 7200,
-		maxStreamsPerConnection: 256,
-		maxConnectionsPerIP: 100,
-		globalMaxConnections: 10000,
-		writeQueueSize: 16384,
-		maxInboundBytesPerSecond: 10485760,
+
+		floodProtection: {
+			enabled: true,
+			maxConnectsPerSourceIPPerSecond: 200,
+			maxConnectsPerDestPerSecond: 32,
+			maxConnectsPerDestPerMinute: 600,
+			maxInFlightSyns: 4096,
+			maxConcurrentStreamsPerConnection: 512,
+			maxConcurrentConnections: 8192,
+			synFloodSignature: {
+				enabled: true,
+				windowMs: 2000,
+				minSamples: 64,
+				failedHandshakeRatio: 0.8,
+			},
+			wsCloseAfterViolations: 24,
+			logBlockedDials: false,
+		},
+
+		reputation: {
+			enabled: true,
+			storePath: "./data/mrrowisp-reputation.json",
+			saveIntervalSeconds: 60,
+			scoreDecayPerHour: 2,
+			evictAfterDays: 14,
+			thresholds: {
+				warn: 30,
+				throttle: 70,
+				strict: 110,
+			},
+			weights: {
+				privateEgress: 25,
+				synSignature: 30,
+				twispNoAuth: 50,
+				burstRate: 4,
+				successfulStream: -3,
+				requestKnownBadDest: 4,
+			},
+			destinationWeights: {
+				privateEgress: 25,
+				synSignature: 35,
+				distinctSourcesEscalation: 1,
+			},
+		},
+
+		staticDir: "",
+
+		blacklist: { hostnames: [], ports: [] },
+		whitelist: { hostnames: [], ports: [] },
 	});
 
-	wisp.start();
+	wisp.start(2);
 
 	const server = createServer(nodeHandler);
 
