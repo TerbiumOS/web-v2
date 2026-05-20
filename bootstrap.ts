@@ -153,18 +153,36 @@ export async function CreateEnv() {
 			placeholder: "3000",
 			cancel: "default",
 		})) || 3000;
+	const wispPort =
+		(await consola.prompt("Enter a port for the Wisp server to run on (3001): ", {
+			type: "text",
+			default: "3001",
+			placeholder: "3001",
+			cancel: "default",
+		})) || 3001;
+	const reputation = await consola.prompt("Path to IP reputation storage (leave blank to disable): ", {
+		type: "text",
+		default: "",
+		placeholder: "./data/reputation.json",
+		cancel: "default",
+	});
 	const masqr = await consola.prompt("Enable Masqr? (no): ", {
 		type: "text",
 		default: "false",
 		placeholder: "no",
 		cancel: "default",
 	});
+	if (reputation) {
+		fs.writeFileSync(".env", `REPUTATION_STORE=${reputation}\n`);
+	} else {
+		fs.writeFileSync(".env", `REPUTATION_STORE=\n`);
+	}
 	if (masqr === "no" || masqr === "false" || masqr === "n") {
-		fs.writeFileSync(".env", `MASQR=${false}\nPORT=${port}`);
+		fs.writeFileSync(".env", `MASQR=${false}\nPORT=${port}\nWISP_PORT=${wispPort}`);
 	} else {
 		const licenseServer = (await consola.prompt("Enter the masqr license server URL: ")) || "";
 		const whitelist = (await consola.prompt("Enter a comma separated array of domains to whitelist (Ex: ['https://balls.com', 'https://tomp.app']): ")) || [];
-		fs.writeFileSync(".env", `MASQR=${true}\nPORT=${port}\nLICENSE_SERVER_URL=${licenseServer}\nWHITELISTED_DOMAINS=${whitelist}\n`);
+		fs.writeFileSync(".env", `MASQR=${true}\nPORT=${port}\nWISP_PORT=${wispPort}\nLICENSE_SERVER_URL=${licenseServer}\nWHITELISTED_DOMAINS=${whitelist}\n`);
 	}
 	consola.success("Environment file created");
 	return true;

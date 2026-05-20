@@ -80,8 +80,8 @@ importers:
         specifier: ^4.7.0
         version: 4.7.0
       mrrowisp:
-        specifier: ^2.10.0
-        version: 2.10.0(chalk@5.6.2)(typescript@6.0.3)
+        specifier: ^3.1.2
+        version: 3.1.2(typescript@6.0.3)
       path-browserify:
         specifier: ^1.0.1
         version: 1.0.1
@@ -1917,10 +1917,9 @@ packages:
       socks:
         optional: true
 
-  mrrowisp@2.10.0:
-    resolution: {integrity: sha512-T2Uk/lwGoMbFMHC9ySC8AMOiFWYikYNVGdc7P+txYdObG1Y/ocnngLIsYaw4sj+ssewEWusG4ccRFaDwJx6RNg==}
+  mrrowisp@3.1.2:
+    resolution: {integrity: sha512-BD8HLL4n+HqjZ8aUZaRtpEJ4Tq9LS2VtM1/T0HbMBcFwPntQEMamSBD4JfoLRAphlXtgl5a5W9B/azjBDM5G8Q==}
     peerDependencies:
-      chalk: ^5.6.2
       typescript: ^6.0.3
 
   ms@2.1.3:
@@ -3956,7 +3955,7 @@ snapshots:
       mongodb-connection-string-url: 7.0.1
     optional: true
 
-  mrrowisp@2.10.0(chalk@5.6.2)(typescript@6.0.3):
+  mrrowisp@3.1.2(typescript@6.0.3):
     dependencies:
       chalk: 5.6.2
       detect-port: 2.1.0
