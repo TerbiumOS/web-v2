@@ -19,6 +19,8 @@ export function TServer() {
 	const app = new Hono();
 
 	const port = Number.parseInt(process.env.PORT || "8080", 10);
+	const wispPort = Number.parseInt(process.env.WISP_PORT || "6001", 10);
+	const reputation = process.env.REPUTATION_STORE || undefined;
 
 	app.use(
 		"*",
@@ -113,7 +115,7 @@ export function TServer() {
 	);
 
 	const wisp = new Mrrowisp({
-		port: Number.parseInt(process.env.WISP_PORT || "6001", 10),
+		port: wispPort,
 
 		allowTCP: true,
 		allowUDP: true,
@@ -127,7 +129,7 @@ export function TServer() {
 		tcpBufferSize: 65535,
 		bufferRemainingLength: 1 << 20,
 		websocketPermessageDeflate: false,
-		
+
 		dnsServers: ["1.1.1.3", "1.0.0.3"],
 		dnsMethod: "resolve",
 		dnsResultOrder: "ipv4first",
@@ -162,8 +164,8 @@ export function TServer() {
 		},
 
 		reputation: {
-			enabled: true,
-			storePath: "./data/mrrowisp-reputation.json",
+			enabled: reputation ? true : false,
+			storePath: reputation,
 			saveIntervalSeconds: 60,
 			scoreDecayPerHour: 2,
 			evictAfterDays: 14,
