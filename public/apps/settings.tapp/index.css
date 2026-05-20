@@ -1407,17 +1407,17 @@ body {
 
 /* Notification picker specific tweaks */
 .notification-picker-shell {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 12px 0;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 12px 0;
 }
 .notification-picker-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  align-items: center;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 100%;
+	align-items: center;
 }
 
 .allow-apps-panel {

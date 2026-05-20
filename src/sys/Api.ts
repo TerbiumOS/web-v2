@@ -607,7 +607,7 @@ export default async function Api() {
 				}
 			},
 			scanintegrity: async () => {
-				let invalid = []
+				let invalid = [];
 				for (const path of paths) {
 					if (path.toString().endsWith("/")) continue;
 					const content = await window.tb.fs.promises.readFile(`/apps/system/${path.toString()}`, "utf8");
@@ -619,7 +619,7 @@ export default async function Api() {
 				}
 				const systemFiles = ["/system/etc/terbium/settings.json", "/system/var/terbium/dock.json", "/system/var/terbium/start.json", "/system/etc/terbium/file-icons.json"];
 				for (const file of systemFiles) {
-					if (!await fileExists(file)) {
+					if (!(await fileExists(file))) {
 						invalid.push(file);
 					}
 				}
