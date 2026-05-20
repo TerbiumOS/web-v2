@@ -14,15 +14,14 @@
         <Item id="transport" title="Transport" icon="swap_horiz" />
       </Sidebar>
       <RecommendedOptions>
+        <Option id="internet.quick.proxy" text="Change scramjet flags" view="proxy" />
         <Option id="internet.quick.wisp" text="Change wisp server" view="wisp" />
         <Option id="internet.quick.transport" text="Change transport" view="transport" />
       </RecommendedOptions>
       <Content>
         <View id="proxy">
           <Section title="Proxy" custom="true">
-            <div id="proxyPlaceholder" style="display: flex; align-items: center; justify-content: center; height: 300px; font-size: 18px; color: rgba(255, 255, 255, 0.6); font-style: italic;">
-              shhh lets not leak our hard work
-            </div>
+            <Text label="Scramjet Flags" bind="internet.proxy.flags" />
           </Section>
         </View>
         <View id="wisp">
@@ -127,17 +126,12 @@
           {
             id: "Default (Epoxy)",
             title: "Epoxy",
-            description: "Default transport using Epoxy and Wisp gateway.",
+            description: "The fastest transport and compatability with most sites. Recommended for most users not on webkit or encountering specific issues.",
           },
           {
             id: "Libcurl",
             title: "Libcurl",
-            description: "Legacy transport for compatibility with more servers.",
-          },
-          {
-            id: "Anura BCC",
-            title: "Anura BCC",
-            description: "Experimental high-performance transport using Anura Bare Client.",
+            description: "A fast transport that focuses more on compatability in certain edge cases. Recommended if you encounter issues with epoxy or are on WebKit.",
           },
         ];
 

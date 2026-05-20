@@ -236,8 +236,6 @@ export default function Setup() {
 		const transport = sessionStorage.getItem("selectedTransport") || "Default (Epoxy)";
 		if (transport === "Default (Epoxy)") {
 			settings["transport"] = "Default (Epoxy)";
-		} else if (transport === "Anura BCC") {
-			settings["transport"] = "Anura BCC";
 		} else {
 			settings["transport"] = "Libcurl";
 		}
@@ -927,7 +925,7 @@ export default function Setup() {
 		const [transportDropdownOpen, setTransportDropdownOpen] = useState(false);
 		const [customServer, setCustomServer] = useState("");
 		const bareOptions = [{ label: "Backend (Default)" }, { label: "TB Wisp Instance" }, { label: "Custom Server" }];
-		const transportOptions = [{ label: "Default (Epoxy)" }, { label: "Libcurl" }, { label: "Anura BCC" }];
+		const transportOptions = [{ label: "Default (Epoxy)" }, { label: "Libcurl" }];
 		const bClick = (label: any) => {
 			setSelectedBare(label);
 			if (label === "Custom Server") {

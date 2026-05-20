@@ -119,6 +119,7 @@ export async function init() {
 			},
 			showFPS: false,
 			windowOptimizations: false,
+			notificationMode: "all",
 			window: {
 				winAccent: "#ffffff",
 				blurlevel: 18,

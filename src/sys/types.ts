@@ -414,6 +414,7 @@ export interface UserSettings {
 	wallpaper: string;
 	wallpaperMode: "cover" | "contain" | "stretch";
 	animations: boolean;
+	/** @deprecated The proxy switching API is deprecated as Ultraviolet has reached End of Life and has been replaced with the latest scramjet version. It remains as a stub for legacy applications and will be removed in the future */
 	proxy: "Ultraviolet" | "Scramjet";
 	transport: string;
 	wispServer: websocketUrl | string | any;
@@ -421,6 +422,7 @@ export interface UserSettings {
 	accent: string;
 	windowOptimizations?: boolean;
 	showFPS?: boolean;
+	notificationMode: "all" | "dnd" | "snooze-10" | [];
 	times: {
 		format: "12h" | "24h";
 		internet: boolean;
@@ -566,6 +568,7 @@ export interface COM {
 		openApp(pkg: string, options?: Partial<WindowConfig>): Promise<void>;
 		download(url: string, location: string): Promise<void>;
 		exportfs(): void;
+		scanintegrity(): void;
 		TSLParser: TSLParser;
 		users: {
 			list(): Promise<string[]>;

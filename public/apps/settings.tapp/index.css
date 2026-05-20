@@ -1390,19 +1390,51 @@ body {
 }
 
 .proxy-card-title {
-	font-size: 1.05rem;
-	font-weight: 800;
+	font-size: 1.08rem;
+	font-weight: 900;
 	line-height: 1.05;
 	letter-spacing: -0.02em;
 	color: #fff;
 }
 
 .proxy-card-description {
-	font-size: 0.72rem;
-	font-weight: 700;
-	line-height: 1.25;
-	color: rgba(255, 255, 255, 0.86);
-	max-width: 38rem;
+	font-size: 0.85rem;
+	font-weight: 600;
+	line-height: 1.35;
+	color: rgba(255, 255, 255, 0.92);
+	max-width: 48rem;
+}
+
+/* Notification picker specific tweaks */
+.notification-picker-shell {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12px 0;
+}
+.notification-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  align-items: center;
+}
+
+.allow-apps-panel {
+	width: 100%;
+}
+.allow-apps-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 6px 0;
+}
+.allow-apps-item input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+}
+.allow-apps-item span {
+	font-size: 0.95rem;
 }
 
 .proxy-card-check {

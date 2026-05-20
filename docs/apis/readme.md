@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">API Docs</span>
 
-**Last Updated**: v2.4.0 - 04/24/2026
+**Last Updated**: v2.4.0 - 05/14/2026
 
 So you're looking to use Terbium APIs. Well, you're in the right place! Terbium has a decent amount of components which I will break down below. The pages will include a description of the functions and code examples.
 
@@ -960,6 +960,14 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
     - Example:
       ```javascript
       await tb.system.exportfs("/home/", "backup.zip");
+      ```
+
+  - **scanintegrity**
+    - Description: Scans the integrity of the file system and returns an array of courupted paths
+    - Returns: `Array` - Array of the courupted file paths
+    - Example:
+      ```javascript
+      await tb.system.scanintegrity()
       ```
 
   - **users**

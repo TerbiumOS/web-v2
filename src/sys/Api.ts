@@ -2,6 +2,7 @@ import * as fflate from "fflate";
 import { libcurl } from "libcurl.js";
 import apps from "../apps.json";
 import { hash } from "../hash.json";
+import paths from "../installer.json";
 import pwd from "./apis/Crypto";
 import { setDialogFn } from "./apis/Dialogs";
 import { hideFn, isExistingFn, setMusicFn, setVideoFn } from "./apis/Mediaisland";
@@ -605,6 +606,25 @@ export default async function Api() {
 					throw err;
 				}
 			},
+			scanintegrity: async () => {
+				let invalid = []
+				for (const path of paths) {
+					if (path.toString().endsWith("/")) continue;
+					const content = await window.tb.fs.promises.readFile(`/apps/system/${path.toString()}`, "utf8");
+					const remoteContent = await fetch(`/apps/${path.toString()}`);
+					const remoteText = await remoteContent.text();
+					if (content !== remoteText) {
+						invalid.push(`/apps/system/${path.toString()}`);
+					}
+				}
+				const systemFiles = ["/system/etc/terbium/settings.json", "/system/var/terbium/dock.json", "/system/var/terbium/start.json", "/system/etc/terbium/file-icons.json"];
+				for (const file of systemFiles) {
+					if (!await fileExists(file)) {
+						invalid.push(file);
+					}
+				}
+				return invalid;
+			},
 			TSLParser: new TSLParser(),
 			users: {
 				async list() {
@@ -652,6 +672,7 @@ export default async function Api() {
 						},
 						showFPS: false,
 						windowOptimizations: false,
+						notificationMode: "all",
 						window: {
 							winAccent: "#ffffff",
 							blurlevel: 18,
