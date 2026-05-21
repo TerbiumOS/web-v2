@@ -1369,6 +1369,9 @@ body {
 	width: 3.15rem;
 	height: 3.15rem;
 	border-radius: 0.95rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	overflow: hidden;
 	flex: 0 0 auto;
 	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
@@ -1380,6 +1383,12 @@ body {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
+}
+
+.proxy-card-icon > svg {
+	display: block;
+	width: 1.9rem;
+	height: 1.9rem;
 }
 
 .proxy-card-copy {
@@ -1418,6 +1427,37 @@ body {
 	gap: 12px;
 	width: 100%;
 	align-items: center;
+}
+
+.notification-picker-list .proxy-card {
+	background: rgba(20, 20, 20, 0.78);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	backdrop-filter: blur(18px);
+}
+
+.notification-picker-list .proxy-card.is-active {
+	background: rgba(28, 28, 28, 0.9);
+	border-color: rgba(82, 224, 111, 0.42);
+}
+
+.notification-mode-all {
+	background: linear-gradient(90deg, rgba(73, 155, 110, 0.28), rgba(20, 20, 20, 0.78));
+}
+
+.notification-mode-dnd {
+	background: linear-gradient(90deg, rgba(190, 72, 72, 0.28), rgba(20, 20, 20, 0.78));
+}
+
+.notification-mode-snooze {
+	background: linear-gradient(90deg, rgba(202, 154, 71, 0.28), rgba(20, 20, 20, 0.78));
+}
+
+.notification-mode-allow {
+	background: linear-gradient(90deg, rgba(74, 129, 198, 0.28), rgba(20, 20, 20, 0.78));
+}
+
+.notification-mode-none {
+	background: linear-gradient(90deg, rgba(140, 140, 140, 0.22), rgba(20, 20, 20, 0.78));
 }
 
 .allow-apps-panel {
