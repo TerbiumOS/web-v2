@@ -2,10 +2,30 @@ import { NotificationProps } from "../types";
 import { useState, useEffect } from "react";
 import "../gui/styles/notification.css";
 
-export let setNotifFn: (type: "message" | "toast" | "installing", props: NotificationProps) => number;
-export let dismissNotifFn: (id: number) => void;
+const noopSetNotif = () => 0;
+const noopDismissNotif = () => {};
+
+export let setNotifFn: (type: "message" | "toast" | "installing", props: NotificationProps) => number = noopSetNotif;
+export let dismissNotifFn: (id: number) => void = noopDismissNotif;
 let notificationId = 0;
 let notificationCount = 0;
+
+const getElapsedLabel = (startTime: number) => {
+	const elapsedMinutes = Math.floor((Date.now() - startTime) / 60000);
+	if (elapsedMinutes >= 10080) {
+		return `${Math.floor(elapsedMinutes / 10080)}w ago`;
+	}
+	if (elapsedMinutes >= 1440) {
+		return `${Math.floor(elapsedMinutes / 1440)}d ago`;
+	}
+	if (elapsedMinutes >= 60) {
+		return `${Math.floor(elapsedMinutes / 60)}h ago`;
+	}
+	if (elapsedMinutes > 0) {
+		return `${elapsedMinutes}min ago`;
+	}
+	return "Now";
+};
 
 export default function NotificationContainer() {
 	const [notifications, setNotifications] = useState<{ id: number; type: "message" | "toast" | "installing"; props: NotificationProps }[]>([]);
@@ -25,6 +45,10 @@ export default function NotificationContainer() {
 	useEffect(() => {
 		setNotifFn = setNotif;
 		dismissNotifFn = remove;
+		return () => {
+			setNotifFn = noopSetNotif;
+			dismissNotifFn = noopDismissNotif;
+		};
 	}, []);
 	return (
 		<div className="absolute grid grid-cols-1 h-max max-h-[calc(100%-calc(60px+1.5rem))] w-[380px] top-[60px] right-1.5 z-9999 gap-2">
@@ -47,18 +71,11 @@ export function Message({ iconSrc, application, message, txt, onOk, onCancel, ti
 	const [elapsedTime, setElapsedTime] = useState<string>("Now");
 	useEffect(() => {
 		const startTime = Date.now();
-		const int = setInterval(() => {
-			const elapsed = Math.floor((Date.now() - startTime) / 60000);
-			if (elapsed > 0) {
-				setElapsedTime(`${elapsed}min ago`);
-			} else if (elapsed > 60) {
-				setElapsedTime(`${Math.floor(elapsed / 60)}h ago`);
-			} else if (elapsed > 1440) {
-				setElapsedTime(`${Math.floor(elapsed / 1440)}d ago`);
-			} else if (elapsed > 10080) {
-				setElapsedTime(`${Math.floor(elapsed / 10080)}w ago`);
-			}
-		}, 60000);
+		const updateElapsedTime = () => {
+			setElapsedTime(getElapsedLabel(startTime));
+		};
+		updateElapsedTime();
+		const int = setInterval(updateElapsedTime, 60000);
 		const tID = setTimeout(() => {
 			Cancel();
 		}, time || 10000);
@@ -120,18 +137,11 @@ export function Toast({ iconSrc, application, message, time, onOk, onCancel, rem
 	const [elapsedTime, setElapsedTime] = useState<string>("Now");
 	useEffect(() => {
 		const startTime = Date.now();
-		const int = setInterval(() => {
-			const elapsed = Math.floor((Date.now() - startTime) / 60000);
-			if (elapsed > 0) {
-				setElapsedTime(`${elapsed}min ago`);
-			} else if (elapsed > 60) {
-				setElapsedTime(`${Math.floor(elapsed / 60)}h ago`);
-			} else if (elapsed > 1440) {
-				setElapsedTime(`${Math.floor(elapsed / 1440)}d ago`);
-			} else if (elapsed > 10080) {
-				setElapsedTime(`${Math.floor(elapsed / 10080)}w ago`);
-			}
-		}, 60000);
+		const updateElapsedTime = () => {
+			setElapsedTime(getElapsedLabel(startTime));
+		};
+		updateElapsedTime();
+		const int = setInterval(updateElapsedTime, 60000);
 		const tID = setTimeout(() => {
 			Cancel();
 		}, time || 10000);

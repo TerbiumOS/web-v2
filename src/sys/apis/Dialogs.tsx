@@ -7,21 +7,21 @@ import Compressor from "compressorjs";
 
 export type dialogType = "alert" | "message" | "select" | "auth" | "permissions" | "filebrowser" | "directorybrowser" | "savefile" | "cropper" | "webauth";
 
-export let setDialogFn: (type: dialogType, props: dialogProps, options?: { sudo: boolean }) => void;
-export let removeFn: () => void;
+const noop = () => {};
+
+export let setDialogFn: (type: dialogType, props: dialogProps, options?: { sudo: boolean }) => void = noop;
+export let removeFn: () => void = noop;
 
 export default function DialogContainer() {
 	const [dialogType, setdialogType] = useState<dialogType | null>(null);
 	const [dialogProps, setdialogProps] = useState<dialogProps | {}>({});
-	const [sudo, setSudo] = useState<boolean | null>(null);
 	const remove = () => {
 		setdialogType(null);
 		setdialogProps({});
 	};
-	const setDialog = (type: dialogType, props: dialogProps, options?: { sudo: boolean }) => {
+	const setDialog = (type: dialogType, props: dialogProps, _options?: { sudo: boolean }) => {
 		setdialogType(type);
 		setdialogProps(props);
-		setSudo(options?.sudo || null);
 	};
 	/**
 	 * @returns Components for COM
@@ -30,6 +30,10 @@ export default function DialogContainer() {
 	useEffect(() => {
 		setDialogFn = setDialog;
 		removeFn = remove;
+		return () => {
+			setDialogFn = noop;
+			removeFn = noop;
+		};
 	}, []);
 	return (
 		<>
@@ -69,12 +73,14 @@ export function Alert({ title, message, onOk }: dialogProps) {
 		removeFn();
 	};
 	useEffect(() => {
-		document.addEventListener("mousedown", e => {
+		const onMouseDown = (e: MouseEvent) => {
 			if (container.current && e.target !== dialog.current && e.target === container.current) {
 				if (onOk) onOk();
 			}
-		});
-	});
+		};
+		document.addEventListener("mousedown", onMouseDown);
+		return () => document.removeEventListener("mousedown", onMouseDown);
+	}, [onOk]);
 	useEffect(() => {
 		// @ts-expect-error
 		if (message instanceof Error) {
@@ -141,12 +147,14 @@ export function Message({ title, defaultValue, onOk, onCancel }: dialogProps) {
 		}
 	};
 	useEffect(() => {
-		document.addEventListener("mousedown", e => {
+		const onMouseDown = (e: MouseEvent) => {
 			if (container.current && e.target !== dialog.current && e.target === container.current) {
 				Cancel();
 			}
-		});
-	});
+		};
+		document.addEventListener("mousedown", onMouseDown);
+		return () => document.removeEventListener("mousedown", onMouseDown);
+	}, [Cancel]);
 	return (
 		<div className="fixed inset-0 z-999999999 flex flex-col items-center justify-center bg-[#00000078] backdrop-blur-xs duration-150" ref={container}>
 			<div ref={dialog} className="flex flex-col p-2.5 gap-2.5 backdrop-blur-md rounded-lg sm:min-w-[340px] md:min-w-[400px] lg:min-w-[600px] bg-[#ffffff18] text-white shadow-tb-border-shadow duration-150">
@@ -194,12 +202,14 @@ export function Select({ title, options, onOk, onCancel }: dialogProps) {
 		}
 	};
 	useEffect(() => {
-		document.addEventListener("mousedown", e => {
+		const onMouseDown = (e: MouseEvent) => {
 			if (container.current && e.target !== dialog.current && e.target === container.current) {
 				Cancel();
 			}
-		});
-	});
+		};
+		document.addEventListener("mousedown", onMouseDown);
+		return () => document.removeEventListener("mousedown", onMouseDown);
+	}, [Cancel]);
 	return (
 		<div className="fixed inset-0 z-999999999 flex flex-col items-center justify-center bg-[#00000078] backdrop-blur-xs duration-150" ref={container}>
 			<div ref={dialog} className="flex flex-col p-2.5 gap-2.5 backdrop-blur-md rounded-lg sm:min-w-[340px] md:min-w-[400px] lg:min-w-[600px] bg-[#ffffff18] text-white shadow-tb-border-shadow duration-150">
@@ -223,7 +233,6 @@ export function Auth({ title, defaultUsername, onOk, onCancel, sudo }: dialogPro
 	const dialog = useRef<HTMLDivElement | null>(null);
 	const usernameRef = useRef<HTMLInputElement | null>(null);
 	const passwordRef = useRef<HTMLInputElement | null>(null);
-	const [sudoList, setSudoList] = useState<string[]>([]);
 	const OK = () => {
 		const username = usernameRef.current?.value;
 		const password = passwordRef.current?.value;
@@ -258,12 +267,14 @@ export function Auth({ title, defaultUsername, onOk, onCancel, sudo }: dialogPro
 		}
 	};
 	useEffect(() => {
-		document.addEventListener("mousedown", e => {
+		const onMouseDown = (e: MouseEvent) => {
 			if (container.current && e.target !== dialog.current && e.target === container.current) {
 				Cancel();
 			}
-		});
-	});
+		};
+		document.addEventListener("mousedown", onMouseDown);
+		return () => document.removeEventListener("mousedown", onMouseDown);
+	}, [Cancel]);
 	return (
 		<div className="fixed inset-0 z-999999999 flex flex-col items-center justify-center bg-[#00000078] backdrop-blur-xs duration-150" ref={container}>
 			<div ref={dialog} className="flex flex-col p-2.5 gap-2.5 backdrop-blur-md rounded-lg sm:min-w-[340px] md:min-w-[400px] lg:min-w-[600px] bg-[#ffffff18] text-white shadow-tb-border-shadow duration-150">
@@ -322,12 +333,14 @@ export function Permissions({ title, message, onOk, onCancel }: dialogProps) {
 		}
 	};
 	useEffect(() => {
-		document.addEventListener("mousedown", e => {
+		const onMouseDown = (e: MouseEvent) => {
 			if (container.current && e.target !== dialog.current && e.target === container.current) {
 				Cancel();
 			}
-		});
-	});
+		};
+		document.addEventListener("mousedown", onMouseDown);
+		return () => document.removeEventListener("mousedown", onMouseDown);
+	}, [Cancel]);
 	return (
 		<div className="fixed inset-0 z-999999999 flex flex-col items-center justify-center bg-[#00000078] backdrop-blur-xs duration-150" ref={container}>
 			<div ref={dialog} className="flex flex-col p-2.5 gap-2.5 backdrop-blur-md rounded-lg sm:min-w-[340px] md:min-w-[400px] lg:min-w-[600px] bg-[#ffffff18] text-white shadow-tb-border-shadow duration-150">
@@ -1238,12 +1251,14 @@ export function WebAuth({ title, defaultUsername, onOk, onCancel }: dialogProps)
 		}
 	};
 	useEffect(() => {
-		document.addEventListener("mousedown", e => {
+		const onMouseDown = (e: MouseEvent) => {
 			if (container.current && e.target !== dialog.current && e.target === container.current) {
 				Cancel();
 			}
-		});
-	});
+		};
+		document.addEventListener("mousedown", onMouseDown);
+		return () => document.removeEventListener("mousedown", onMouseDown);
+	}, [Cancel]);
 	return (
 		<div className="fixed inset-0 z-999999999 flex flex-col items-center justify-center bg-[#00000078] backdrop-blur-xs duration-150" ref={container}>
 			<div ref={dialog} className="flex flex-col p-2.5 gap-2.5 backdrop-blur-md rounded-lg sm:min-w-[340px] md:min-w-[400px] lg:min-w-[600px] bg-[#ffffff18] text-white shadow-tb-border-shadow duration-150">
