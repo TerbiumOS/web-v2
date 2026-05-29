@@ -588,25 +588,28 @@ const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onConte
 			hoverPreviewTimeoutRef.current = null;
 		}
 	};
-	const mm = useCallback((e: MouseEvent) => {
-		const target = e.target;
-		if (target instanceof Element && target.closest("[data-win-preview='true']")) {
-			return;
-		}
-		const withinRadius = (e: MouseEvent) => {
-			if (!dockItemRef.current) return false;
-			const rect = dockItemRef.current.getBoundingClientRect();
-			const xDistance = Math.abs(e.clientX - (rect.left + rect.width / 2));
-			const yDistance = Math.abs(e.clientY - (rect.top + rect.height / 2));
-			const distance = Math.sqrt(xDistance * xDistance + yDistance * yDistance);
-			return distance > 350;
-		};
-		if (withinRadius(e)) {
-			window.removeEventListener("mousemove", mm);
-			clearHoverPreviewTimeout();
-			window.dispatchEvent(new CustomEvent("windows-prev", { detail: JSON.stringify({ open: false, location: null }) }));
-		}
-	}, [title]);
+	const mm = useCallback(
+		(e: MouseEvent) => {
+			const target = e.target;
+			if (target instanceof Element && target.closest("[data-win-preview='true']")) {
+				return;
+			}
+			const withinRadius = (e: MouseEvent) => {
+				if (!dockItemRef.current) return false;
+				const rect = dockItemRef.current.getBoundingClientRect();
+				const xDistance = Math.abs(e.clientX - (rect.left + rect.width / 2));
+				const yDistance = Math.abs(e.clientY - (rect.top + rect.height / 2));
+				const distance = Math.sqrt(xDistance * xDistance + yDistance * yDistance);
+				return distance > 350;
+			};
+			if (withinRadius(e)) {
+				window.removeEventListener("mousemove", mm);
+				clearHoverPreviewTimeout();
+				window.dispatchEvent(new CustomEvent("windows-prev", { detail: JSON.stringify({ open: false, location: null }) }));
+			}
+		},
+		[title],
+	);
 	useEffect(() => {
 		const setWID = (e: CustomEvent) => {
 			setcurrWID(e.detail);
