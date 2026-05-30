@@ -2,6 +2,7 @@ import LibcurlClient from "@mercuryworkshop/libcurl-transport";
 import EpoxyClient from "@mercuryworkshop/epoxy-transport";
 import { SJConfig, SJFlags, SysSettings, UserSettings } from "./types";
 import { defaultConfigDev } from "@mercuryworkshop/scramjet";
+import { AnuraBareClient } from "./liquor/bcc";
 
 export class ScramjetHandler {
 	transportVar!: UserSettings["transport"];
@@ -59,7 +60,7 @@ export class ScramjetHandler {
 				opts: ["wisp", "proxy"],
 			},
 			"Anura BCC": {
-				constructor: class AnuraBCCClient {},
+				constructor: AnuraBareClient,
 				opts: ["wisp"],
 			},
 		};
