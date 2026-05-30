@@ -416,7 +416,7 @@ export interface UserSettings {
 	animations: boolean;
 	/** @deprecated The proxy switching API is deprecated as Ultraviolet has reached End of Life and has been replaced with the latest scramjet version. It remains as a stub for legacy applications and will be removed in the future */
 	proxy: "Ultraviolet" | "Scramjet";
-	transport: string;
+	transport: "Default (Epoxy)" | "Libcurl" | "Anura BCC";
 	wispServer: websocketUrl | string | any;
 	"battery-percent": boolean;
 	accent: string;

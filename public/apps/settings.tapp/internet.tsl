@@ -133,6 +133,11 @@
             title: "Libcurl",
             description: "A fast transport that focuses more on compatability in certain edge cases. Recommended if you encounter issues with epoxy or are on WebKit.",
           },
+          {
+            id: "Anura BCC",
+            title: "Anura BCC",
+            description: "The Anura BCC transport for power users utilizing networking libraries in Liquor Applications",
+          }
         ];
 
         let currentTransport = "Default (Epoxy)";

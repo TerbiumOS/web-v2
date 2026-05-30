@@ -4,7 +4,7 @@ import { SJConfig, SJFlags, SysSettings, UserSettings } from "./types";
 import { defaultConfigDev } from "@mercuryworkshop/scramjet";
 
 export class ScramjetHandler {
-	transportVar!: string;
+	transportVar!: UserSettings["transport"];
 	wispUrl!: string;
 	initReady: Promise<void>;
 	libcurl!: LibcurlClient;
@@ -32,7 +32,7 @@ export class ScramjetHandler {
 				}
 			} else {
 				this.wispUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/wisp/`;
-				this.transportVar = "epoxy";
+				this.transportVar = "Default (Epoxy)";
 			}
 		})();
 		this.initReady = (async () => {
@@ -50,23 +50,27 @@ export class ScramjetHandler {
 
 	async TransportMapping(): Promise<Record<any, any>> {
 		return {
-			epoxy: {
+			"Default (Epoxy)": {
 				constructor: EpoxyClient,
 				opts: ["wisp"],
 			},
-			libcurl: {
+			"Libcurl": {
 				constructor: LibcurlClient,
 				opts: ["wisp", "proxy"],
+			},
+			"Anura BCC": {
+				constructor: class AnuraBCCClient {},
+				opts: ["wisp"],
 			},
 		};
 	}
 
 	private async buildTransportConfig() {
 		const transportMap = await this.TransportMapping();
-		const selectedTransport = this.transportVar || "epoxy";
-		const fallbackTransport = transportMap.libcurl;
+		const selectedTransport = this.transportVar || "Default (Epoxy)";
+		const fallbackTransport = transportMap["Libcurl"];
 		const mappedTransport = transportMap[selectedTransport] || fallbackTransport;
-		this.activeTransport = transportMap[selectedTransport] ? selectedTransport : "epoxy";
+		this.activeTransport = transportMap[selectedTransport] ? selectedTransport : "Default (Epoxy)";
 		const wispUrl = this.wispUrl;
 		const clientOptions: Record<string, any> = {
 			wisp: wispUrl,
