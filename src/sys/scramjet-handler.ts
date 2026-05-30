@@ -54,7 +54,7 @@ export class ScramjetHandler {
 				constructor: EpoxyClient,
 				opts: ["wisp"],
 			},
-			"Libcurl": {
+			Libcurl: {
 				constructor: LibcurlClient,
 				opts: ["wisp", "proxy"],
 			},
