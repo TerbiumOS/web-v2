@@ -2,14 +2,17 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import "../gui/styles/mediaisland.css";
 import { MediaProps } from "../types";
 
-export let setMusicFn: (props: MediaProps) => void;
-export let setVideoFn: (props: MediaProps) => void;
-export let hideFn: () => void;
-export let isExistingFn: () => void;
+const noop = () => {};
+
+export let setMusicFn: (props: MediaProps) => void = noop;
+export let setVideoFn: (props: MediaProps) => void = noop;
+export let hideFn: () => void = noop;
+export let isExistingFn: () => void = noop;
 
 export default function MediaIsland() {
 	const [mediaType, setMediaType] = useState<"music" | "video" | null>(null);
 	const [mediaProps, setMediaProps] = useState<MediaProps | {}>({});
+	const mediaTypeRef = useRef<"music" | "video" | null>(null);
 	const removeMedia = () => {
 		setMediaType(null);
 		setMediaProps({});
@@ -22,6 +25,10 @@ export default function MediaIsland() {
 		setMediaType("video");
 		setMediaProps(props);
 	};
+
+	useEffect(() => {
+		mediaTypeRef.current = mediaType;
+	}, [mediaType]);
 	/**
 	 * @returns Components for COM
 	 * @author XSTARS
@@ -31,7 +38,13 @@ export default function MediaIsland() {
 		setVideoFn = setVideo;
 		hideFn = removeMedia;
 		isExistingFn = () => {
-			window.dispatchEvent(new CustomEvent("isExistingMP", { detail: mediaType !== null }));
+			window.dispatchEvent(new CustomEvent("isExistingMP", { detail: mediaTypeRef.current !== null }));
+		};
+		return () => {
+			setMusicFn = noop;
+			setVideoFn = noop;
+			hideFn = noop;
+			isExistingFn = noop;
 		};
 	}, []);
 	return (
