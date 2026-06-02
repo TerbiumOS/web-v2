@@ -28,9 +28,6 @@ importers:
       '@mercuryworkshop/epoxy-transport':
         specifier: ^3.0.1
         version: 3.0.1
-      '@mercuryworkshop/libcurl-transport':
-        specifier: ^2.0.5
-        version: 2.0.5
       '@mercuryworkshop/proxy-transports':
         specifier: ^1.0.2
         version: 1.0.2
@@ -658,9 +655,6 @@ packages:
 
   '@mercuryworkshop/epoxy-transport@3.0.1':
     resolution: {integrity: sha512-8YzL73WaXZJLBRydmmY6NNPt5leB8ygBYuqgLn4+pGQ+wgi+JUC7ZdBQrA86TR6Oue3twbdfDvLRp48bzZ7DSw==}
-
-  '@mercuryworkshop/libcurl-transport@2.0.5':
-    resolution: {integrity: sha512-YkAPEAWTEUZZkEOejmRQJxNHw90+kNQnoiSqa5H2sExHBXXdGSXEtg7/35A53U8MDVaznpAwjVbXRONSsfatzw==}
 
   '@mercuryworkshop/proxy-transports@1.0.2':
     resolution: {integrity: sha512-zgD+JMYNSx8LxVLWwGPPVnoDHjoh1GqqwUJIjhIwCwhy+Z7g+MhmiTJvCcRPAo7qXXbqJwIrpBJduRSOrjMV7g==}
@@ -2762,10 +2756,6 @@ snapshots:
   '@mercuryworkshop/epoxy-transport@3.0.1':
     dependencies:
       '@mercuryworkshop/epoxy-tls': 2.1.19-1
-
-  '@mercuryworkshop/libcurl-transport@2.0.5':
-    dependencies:
-      libcurl.js: 0.7.4
 
   '@mercuryworkshop/proxy-transports@1.0.2': {}
 

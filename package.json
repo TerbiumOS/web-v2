@@ -20,7 +20,6 @@
 		"@heroicons/react": "^2.2.0",
 		"@hono/node-server": "^2.0.2",
 		"@mercuryworkshop/epoxy-transport": "^3.0.1",
-		"@mercuryworkshop/libcurl-transport": "^2.0.5",
 		"@mercuryworkshop/proxy-transports": "^1.0.2",
 		"@mercuryworkshop/scramjet": "http://cdn.terbiumon.top/new_scramjet-2.0.2.tgz",
 		"@mercuryworkshop/scramjet-controller": "http://cdn.terbiumon.top/scram_controller-0.0.9.tgz",

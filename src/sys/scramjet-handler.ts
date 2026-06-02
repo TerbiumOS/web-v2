@@ -1,4 +1,4 @@
-import LibcurlClient from "@mercuryworkshop/libcurl-transport";
+import LibcurlClient from "../sys/apis/utils/libcurl-wrapper";
 import EpoxyClient from "@mercuryworkshop/epoxy-transport";
 import { SJConfig, SJFlags, SysSettings, UserSettings } from "./types";
 import { defaultConfigDev } from "@mercuryworkshop/scramjet";
