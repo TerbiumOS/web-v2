@@ -14,7 +14,7 @@
 		"vite": "vite",
 		"preview": "vite preview",
 		"check": "biome check . --write",
-		"fmt": "biome format --write ."
+		"fmt": "biome format --write . && npx @terbiumos/tsl-linter ./public/apps/settings.tapp/"
 	},
 	"dependencies": {
 		"@heroicons/react": "^2.2.0",
@@ -45,6 +45,7 @@
 		"@biomejs/biome": "2.4.15",
 		"@eslint/js": "^10.0.1",
 		"@tailwindcss/postcss": "^4.3.0",
+		"@terbiumos/tsl-linter": "1.0.0-rc",
 		"@types/adm-zip": "^0.5.8",
 		"@types/node": "^25.7.0",
 		"@types/path-browserify": "^1.0.3",

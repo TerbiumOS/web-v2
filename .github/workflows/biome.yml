@@ -23,8 +23,16 @@ jobs:
         with:
           version: "latest"
 
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+
       - name: "Format with Biome"
         run: "biome format --write ."
+
+      - name: "Format with TSL Linter"
+        run: "npx @terbiumos/tsl-linter ./public/apps/settings.tapp/"
 
       - name: "Check for Git changes"
         id: "verify-changed-files"

@@ -98,6 +98,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.3.0
         version: 4.3.0
+      '@terbiumos/tsl-linter':
+        specifier: 1.0.0-rc
+        version: 1.0.0-rc
       '@types/adm-zip':
         specifier: ^0.5.8
         version: 0.5.8
@@ -1024,6 +1027,10 @@ packages:
 
   '@terbiumos/tfs@1.0.24':
     resolution: {integrity: sha512-WgMfItV5hadW+FZzPeVVR0Hoy0JNUbmKc4yHp8d9o/xPa5kVCDH5Ov521VcGG+Gk8y3a5/KK1xG5VJMpbGOlVQ==}
+
+  '@terbiumos/tsl-linter@1.0.0-rc':
+    resolution: {integrity: sha512-yyaKXcvp/WTMR2qm4fZi2+JY1yDuTiMdRNrLxLu80sdVy4jRG28EO3tAFebgtFu+Cv1xm/bYQ3IX6Sbi2DNpUw==}
+    hasBin: true
 
   '@tybys/wasm-util@0.10.2':
     resolution: {integrity: sha512-RoBvJ2X0wuKlWFIjrwffGw1IqZHKQqzIchKaadZZfnNpsAYp2mM0h36JtPCjNDAHGgYez/15uMBpfGwchhiMgg==}
@@ -3083,6 +3090,8 @@ snapshots:
       buffer: 6.0.3
       minimatch: 10.2.5
       stack-trace: 1.0.0-pre2
+
+  '@terbiumos/tsl-linter@1.0.0-rc': {}
 
   '@tybys/wasm-util@0.10.2':
     dependencies:
