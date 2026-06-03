@@ -4,7 +4,6 @@
 		"@heroicons/react": "MIT",
 		"@hono/node-server": "MIT",
 		"@mercuryworkshop/proxy-transports": "MIT",
-		"@mercuryworkshop/epoxy-transport": "Unlicensed",
 		"@mercuryworkshop/libcurl-transport": "AGPL-3.0-only",
 		"@mercuryworkshop/scramjet": "AGPL-3.0-only",
 		"@mercuryworkshop/scramjet-controller": "AGPL-3.0-only",

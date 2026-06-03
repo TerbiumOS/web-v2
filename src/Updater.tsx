@@ -451,6 +451,11 @@ export default function Updater() {
 					usrSettings.notificationMode = "all";
 					await window.tb.fs.promises.writeFile(`/home/${user}/settings.json`, JSON.stringify(usrSettings, null, 4));
 				}
+				// v2.4 Update
+				if (!usrSettings.transport && usrSettings.transport !== "Default (Libcurl)" && usrSettings.transport !== "Anura BCC") {
+					usrSettings.transport = "Default (Libcurl)";
+					await window.tb.fs.promises.writeFile(`/home/${user}/settings.json`, JSON.stringify(usrSettings, null, 4));
+				}
 				// hotfix for v2.2.1 & migration from v2.0.0-beta.x to v2.1.x
 				if (await fileExists(`/home/${user}/desktop/browser.lnk`)) {
 					await window.tb.fs.promises.writeFile(`/home/${user}/desktop/browser.lnk`, "symlink:/apps/system/browser.tapp/index.json:file");

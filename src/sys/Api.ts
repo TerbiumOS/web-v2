@@ -610,6 +610,7 @@ export default async function Api() {
 				let invalid = [];
 				for (const path of paths) {
 					if (path.toString().endsWith("/")) continue;
+					if (path.toString().includes("browser.tapp/") && !path.toString().endsWith("browser.tapp/index.json")) continue;
 					const content = await window.tb.fs.promises.readFile(`/apps/system/${path.toString()}`, "utf8");
 					const remoteContent = await fetch(`/apps/${path.toString()}`);
 					const remoteText = await remoteContent.text();
@@ -661,7 +662,7 @@ export default async function Api() {
 						wallpaperMode: "cover",
 						animations: true,
 						proxy: "Scramjet",
-						transport: "Default (Epoxy)",
+						transport: "Default (Libcurl)",
 						wispServer: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`,
 						"battery-percent": false,
 						accent: "#32ae62",

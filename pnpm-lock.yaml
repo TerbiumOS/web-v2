@@ -25,9 +25,6 @@ importers:
       '@hono/node-server':
         specifier: ^2.0.2
         version: 2.0.2(hono@4.12.18)
-      '@mercuryworkshop/epoxy-transport':
-        specifier: ^3.0.1
-        version: 3.0.1
       '@mercuryworkshop/proxy-transports':
         specifier: ^1.0.2
         version: 1.0.2
@@ -649,12 +646,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
-
-  '@mercuryworkshop/epoxy-tls@2.1.19-1':
-    resolution: {integrity: sha512-lF3WVDmKDWfClgFaDm1OAGI6PStcUUKUjNh2AJbfmLXEGh+dT4nvsuTY2QGRImnajCboIRyrpx9eGNY0egZSVg==}
-
-  '@mercuryworkshop/epoxy-transport@3.0.1':
-    resolution: {integrity: sha512-8YzL73WaXZJLBRydmmY6NNPt5leB8ygBYuqgLn4+pGQ+wgi+JUC7ZdBQrA86TR6Oue3twbdfDvLRp48bzZ7DSw==}
 
   '@mercuryworkshop/proxy-transports@1.0.2':
     resolution: {integrity: sha512-zgD+JMYNSx8LxVLWwGPPVnoDHjoh1GqqwUJIjhIwCwhy+Z7g+MhmiTJvCcRPAo7qXXbqJwIrpBJduRSOrjMV7g==}
@@ -2750,12 +2741,6 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
-
-  '@mercuryworkshop/epoxy-tls@2.1.19-1': {}
-
-  '@mercuryworkshop/epoxy-transport@3.0.1':
-    dependencies:
-      '@mercuryworkshop/epoxy-tls': 2.1.19-1
 
   '@mercuryworkshop/proxy-transports@1.0.2': {}
 

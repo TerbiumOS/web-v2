@@ -108,7 +108,7 @@ export async function init() {
 			animations: true,
 			// @ts-ignore
 			proxy: sessionStorage.getItem("selectedProxy") || "Scramjet",
-			transport: sessionStorage.getItem("selectedTransport") || "Default (Epoxy)",
+			transport: sessionStorage.getItem("selectedTransport") || "Default (Libcurl)",
 			wispServer: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`,
 			"battery-percent": false,
 			accent: "#32ae62",

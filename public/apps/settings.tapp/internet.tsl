@@ -107,7 +107,7 @@
     <Action id="applyTransport">
       <![CDATA[
         async function(context) {
-          const kind = (context.bindings && context.bindings["internet.transport.type"]) || "Default (Epoxy)";
+          const kind = (context.bindings && context.bindings["internet.transport.type"]) || "Default (Libcurl)";
           const user = await tb.user.username();
           const cfgPath = `/home/${user}/settings.json`;
           const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
@@ -124,14 +124,9 @@
 
         const transportOptions = [
           {
-            id: "Default (Epoxy)",
-            title: "Epoxy",
-            description: "The fastest transport and compatability with most sites. Recommended for most users not on webkit or encountering specific issues.",
-          },
-          {
-            id: "Libcurl",
+            id: "Default (Libcurl)",
             title: "Libcurl",
-            description: "A fast transport that focuses more on compatability in certain edge cases. Recommended if you encounter issues with epoxy or are on WebKit.",
+            description: "A fast transport that focuses more on compatability in most environments. This is the default transport as of TB v2.4",
           },
           {
             id: "Anura BCC",
@@ -140,7 +135,7 @@
           }
         ];
 
-        let currentTransport = "Default (Epoxy)";
+        let currentTransport = "Default (Libcurl)";
 
         function escHtmlTransport(value) {
           return String(value || "")
@@ -156,14 +151,14 @@
             const user = await tb.user.username();
             const cfgPath = `/home/${user}/settings.json`;
             const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
-            return String(cfg.transport || "Default (Epoxy)").trim();
+            return String(cfg.transport || "Default (Libcurl)").trim();
           } catch {
-            return "Default (Epoxy)";
+            return "Default (Libcurl)";
           }
         }
 
         async function persistTransport(transport) {
-          const value = String(transport || "Default (Epoxy)");
+          const value = String(transport || "Default (Libcurl)");
           try {
             const user = await tb.user.username();
             const cfgPath = `/home/${user}/settings.json`;
@@ -499,5 +494,164 @@ ${rows.join("")}
         };
       ]]>
     </Script>
+    <Script id="flags" view="flags">
+<![CDATA[
+const tb = api.tb;
+
+const DEFAULT_FLAGS = {
+  allowFailedIntercepts: false,
+  allowInvalidJs: false,
+  captureErrors: true,
+  cleanErrors: false,
+  debugSourceURL: true,
+  debugTrampolines: true,
+  destructureRewrites: true,
+  disableComputedWrap: false,
+  encapsulateWorkers: true,
+  rewriterLogs: false,
+  scramitize: false,
+  sourcemaps: true,
+  syncxhr: false
+};
+
+const FLAG_DESCRIPTIONS = {
+  allowFailedIntercepts: "Allow requests to continue after failed intercepts.",
+  allowInvalidJs: "Permit invalid JavaScript rewrites.",
+  captureErrors: "Capture runtime rewrite errors.",
+  cleanErrors: "Strip internal rewrite information from errors.",
+  debugSourceURL: "Inject sourceURL directives for debugging.",
+  debugTrampolines: "Enable trampoline debugging output.",
+  destructureRewrites: "Use destructuring-based rewrite optimizations.",
+  disableComputedWrap: "Disable wrapping of computed property access.",
+  encapsulateWorkers: "Encapsulate Worker execution environments.",
+  rewriterLogs: "Enable verbose rewriter logging.",
+  scramitize: "Enable Scramitize transformations.",
+  sourcemaps: "Generate sourcemaps for rewritten code.",
+  syncxhr: "Allow synchronous XHR support."
+};
+
+function prettyName(key) {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, c => c.toUpperCase());
+}
+
+function escHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+async function loadFlags() {
+  try {
+    const user = await tb.user.username();
+    const cfgPath = `/home/${user}/settings.json`;
+
+    const cfg = JSON.parse(
+      await tb.fs.promises.readFile(cfgPath, "utf8")
+    );
+
+    return {
+      ...DEFAULT_FLAGS,
+      ...(cfg.scramjetFlags || {})
+    };
+  } catch {
+    return { ...DEFAULT_FLAGS };
+  }
+}
+
+async function saveFlags(flags) {
+  const user = await tb.user.username();
+  const cfgPath = `/home/${user}/settings.json`;
+
+  const cfg = JSON.parse(
+    await tb.fs.promises.readFile(cfgPath, "utf8")
+  );
+
+  cfg.scramjetFlags = flags;
+
+  await tb.fs.promises.writeFile(
+    cfgPath,
+    JSON.stringify(cfg, null, 2),
+    "utf8"
+  );
+
+  try {
+    await window.tb.proxy?.updateSWs?.();
+  } catch {}
+}
+
+function buildFlagCard(key, enabled) {
+  return `
+<button
+  type="button"
+  class="transport-card ${enabled ? "is-active" : ""}"
+  data-flag="${escHtml(key)}"
+>
+  <span class="transport-card-indicator"></span>
+
+  <span class="transport-card-copy">
+    <span class="transport-card-title">
+      ${escHtml(prettyName(key))}
+    </span>
+
+    <span class="transport-card-description">
+      ${escHtml(FLAG_DESCRIPTIONS[key] || "")}
+    </span>
+  </span>
+</button>
+`;
+}
+
+async function renderFlagsView() {
+  const flags = await loadFlags();
+
+  const cards = Object.entries(flags)
+    .map(([key, enabled]) => buildFlagCard(key, enabled))
+    .join("");
+
+  return `
+<section class="transport-picker-shell">
+  <div class="transport-picker-list">
+    ${cards}
+  </div>
+</section>
+`;
+}
+
+function wireFlagsView(root) {
+  const scope = root || document;
+
+  scope.querySelectorAll("[data-flag]").forEach(btn => {
+    btn.addEventListener("click", async ev => {
+      ev.preventDefault();
+
+      const key = btn.getAttribute("data-flag");
+
+      const flags = await loadFlags();
+
+      flags[key] = !flags[key];
+
+      await saveFlags(flags);
+
+      const host =
+        scope.closest("#detailContent") || scope;
+
+      host.innerHTML = await renderFlagsView();
+      wireFlagsView(host);
+    });
+  });
+}
+
+return {
+  loadingText: "Loading scramjet flags...",
+  render: renderFlagsView,
+  wire: wireFlagsView
+};
+]]>
+</Script>
   </Scripts>
 </TSL>

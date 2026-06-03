@@ -1,5 +1,4 @@
 import LibcurlClient from "../sys/apis/utils/libcurl-wrapper";
-import EpoxyClient from "@mercuryworkshop/epoxy-transport";
 import { SJConfig, SJFlags, SysSettings, UserSettings } from "./types";
 import { defaultConfigDev } from "@mercuryworkshop/scramjet";
 import { AnuraBareClient } from "./liquor/bcc";
@@ -9,7 +8,6 @@ export class ScramjetHandler {
 	wispUrl!: string;
 	initReady: Promise<void>;
 	libcurl!: LibcurlClient;
-	epoxy!: EpoxyClient;
 	controller: any;
 	private activeTransport: string = "epoxy";
 	private readonly controllerConfig: SJConfig;
@@ -33,7 +31,7 @@ export class ScramjetHandler {
 				}
 			} else {
 				this.wispUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/wisp/`;
-				this.transportVar = "Default (Epoxy)";
+				this.transportVar = "Default (Libcurl)";
 			}
 		})();
 		this.initReady = (async () => {
@@ -51,11 +49,7 @@ export class ScramjetHandler {
 
 	async TransportMapping(): Promise<Record<any, any>> {
 		return {
-			"Default (Epoxy)": {
-				constructor: EpoxyClient,
-				opts: ["wisp"],
-			},
-			Libcurl: {
+			"Default (Libcurl)": {
 				constructor: LibcurlClient,
 				opts: ["wisp", "proxy"],
 			},
@@ -68,10 +62,10 @@ export class ScramjetHandler {
 
 	private async buildTransportConfig() {
 		const transportMap = await this.TransportMapping();
-		const selectedTransport = this.transportVar || "Default (Epoxy)";
-		const fallbackTransport = transportMap["Libcurl"];
+		const selectedTransport = this.transportVar || "Default (Libcurl)";
+		const fallbackTransport = transportMap["Anura BCC"];
 		const mappedTransport = transportMap[selectedTransport] || fallbackTransport;
-		this.activeTransport = transportMap[selectedTransport] ? selectedTransport : "Default (Epoxy)";
+		this.activeTransport = transportMap[selectedTransport] ? selectedTransport : "Default (Libcurl)";
 		const wispUrl = this.wispUrl;
 		const clientOptions: Record<string, any> = {
 			wisp: wispUrl,

@@ -233,13 +233,11 @@ export default function Setup() {
 			syssettings["setup"] = true;
 		}
 		syssettings["defaultUser"] = usr;
-		const transport = sessionStorage.getItem("selectedTransport") || "Default (Epoxy)";
-		if (transport === "Default (Epoxy)") {
-			settings["transport"] = "Default (Epoxy)";
-		} else if (transport === "Anura BCC") {
+		const transport = sessionStorage.getItem("selectedTransport") || "Default (Libcurl)";
+		if (transport === "Anura BCC") {
 			settings["transport"] = "Anura BCC";
 		} else {
-			settings["transport"] = "Libcurl";
+			settings["transport"] = "Default (Libcurl)";
 		}
 		const wsrv = sessionStorage.getItem("selectedBare") || `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`;
 		settings["wispServer"] = wsrv;
@@ -922,12 +920,12 @@ export default function Setup() {
 		};
 
 		const [selectedBare, setSelectedBare] = useState(() => sessionStorage.getItem("selectedBare") || "Backend (Default)");
-		const [selectedTransport, setSelectedTransport] = useState(() => sessionStorage.getItem("selectedTransport") || "Default (Epoxy)");
+		const [selectedTransport, setSelectedTransport] = useState(() => sessionStorage.getItem("selectedTransport") || "Default (Libcurl)");
 		const [bareDropdownOpen, setBareDropdownOpen] = useState(false);
 		const [transportDropdownOpen, setTransportDropdownOpen] = useState(false);
 		const [customServer, setCustomServer] = useState("");
 		const bareOptions = [{ label: "Backend (Default)" }, { label: "TB Wisp Instance" }, { label: "Custom Server" }];
-		const transportOptions = [{ label: "Default (Epoxy)" }, { label: "Libcurl" }, { label: "Anura BCC" }];
+		const transportOptions = [{ label: "Default (Libcurl)" }, { label: "Anura BCC" }];
 		const bClick = (label: any) => {
 			setSelectedBare(label);
 			if (label === "Custom Server") {

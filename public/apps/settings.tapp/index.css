@@ -1414,7 +1414,6 @@ body {
 	max-width: 48rem;
 }
 
-/* Notification picker specific tweaks */
 .notification-picker-shell {
 	display: flex;
 	align-items: flex-start;
@@ -1430,13 +1429,13 @@ body {
 }
 
 .notification-picker-list .proxy-card {
-	background: rgba(20, 20, 20, 0.78);
+	background: rgba(255, 255, 255, 0.2);
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	backdrop-filter: blur(18px);
 }
 
 .notification-picker-list .proxy-card.is-active {
-	background: rgba(28, 28, 28, 0.9);
+	background: rgba(255, 255, 255, 0.2);
 	border-color: rgba(82, 224, 111, 0.42);
 }
 
