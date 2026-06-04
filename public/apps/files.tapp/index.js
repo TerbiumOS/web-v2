@@ -1795,8 +1795,9 @@ const createPath = async (title, path, type) => {
 				if (await window.parent.tb.vfs.whatFS(path).promises.exists(`${path}/manifest.json`)) {
 					const appData = JSON.parse(await window.parent.tb.vfs.whatFS(path).promises.readFile(`${path}/manifest.json`, "utf8"));
 					const iconPath = appData.icon.includes("http") ? appData.icon : `${path}/${appData.icon}`;
-					const imgData = await window.parent.tb.vfs.whatFS(path).promises.readFile(iconPath, "utf8");
-					icon.innerHTML = imgData;
+					const imgData = await window.parent.tb.vfs.whatFS(path).promises.readFile(iconPath, "arraybuffer");
+					const b64 = window.parent.tb.buffer.from(imgData).toString("base64");
+					icon.innerHTML = `<img src="data:image/png;base64,${b64}" alt="${appData.title || ""}" />`;
 				}
 			} catch {
 				icon.innerHTML = `
