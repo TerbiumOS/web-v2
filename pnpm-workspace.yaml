@@ -12,6 +12,9 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - '@terbiumos/tsl-linter@1.0.0-rc.2'
+  - '@terbiumos/tsl-linter@1.0.0'
+  - '@types/node@25.9.2'
+  - '@types/react@19.2.17'
 
 overrides:
   'lodash@>=4.0.0 <=4.17.22': '>=4.17.23'

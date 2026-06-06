@@ -66,126 +66,126 @@
 		<Action id="applyDebuggingFlags">
 			<![CDATA[
 				async function(context) {
-					const enabled = !!(context.bindings && context.bindings["general.debugging.eruda"]);
-					const user = await tb.user.username();
-					const cfgPath = `/home/${user}/settings.json`;
-					const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
-					cfg.eruda = enabled;
-					await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+				  const enabled = !!(context.bindings && context.bindings["general.debugging.eruda"]);
+				  const user = await tb.user.username();
+				  const cfgPath = `/home/${user}/settings.json`;
+				  const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
+				  cfg.eruda = enabled;
+				  await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
 				}
 			]]>
 		</Action>
 		<Action id="openSecurityPreview">
 			<![CDATA[
 				async function() {
-					if (!tb.dialog || !tb.dialog.Alert) return;
-					tb.dialog.Alert({
-						title: "Security Center is coming soon",
-						message: "This will evolve into an Action Center style security dashboard.",
-					});
+				  if (!tb.dialog || !tb.dialog.Alert) return;
+				  tb.dialog.Alert({
+				    title: "Security Center is coming soon",
+				    message: "This will evolve into an Action Center style security dashboard.",
+				  });
 				}
 			]]>
 		</Action>
 		<Action id="runPerformanceAssessment">
 			<![CDATA[
 				async function() {
-					if (!tb.dialog || !tb.dialog.Alert) return;
-					tb.dialog.Alert({
-						title: "Performance Assessment",
-						message: "Open the Performance tab and click "Run Assessment" to generate your index.",
-					});
+				  if (!tb.dialog || !tb.dialog.Alert) return;
+				  tb.dialog.Alert({
+				    title: "Performance Assessment",
+				    message: "Open the Performance tab and click 'Run Assessment' to generate your index.",
+				  });
 				}
 			]]>
 		</Action>
 		<Action id="importSettings">
 			<![CDATA[
 				async function(context) {
-					const filePath = await new Promise(function(resolve) {
-						tb.dialog.FileBrowser({
-							title: "Choose settings json",
-							local: true,
-							onOk: function(path) {
-								resolve(path);
-							},
-						});
-					});
-					if (!filePath) return;
+				  const filePath = await new Promise(function(resolve) {
+				    tb.dialog.FileBrowser({
+				      title: "Choose settings json",
+				      local: true,
+				      onOk: function(path) {
+				        resolve(path);
+				      },
+				    });
+				  });
+				  if (!filePath) return;
 
-					const imported = JSON.parse(await tb.fs.promises.readFile(filePath, "utf8"));
-					const user = await tb.user.username();
-					const cfgPath = `/home/${user}/settings.json`;
-					await tb.fs.promises.writeFile(cfgPath, JSON.stringify(imported, null, 2), "utf8");
+				  const imported = JSON.parse(await tb.fs.promises.readFile(filePath, "utf8"));
+				  const user = await tb.user.username();
+				  const cfgPath = `/home/${user}/settings.json`;
+				  await tb.fs.promises.writeFile(cfgPath, JSON.stringify(imported, null, 2), "utf8");
 				}
 			]]>
 		</Action>
 		<Action id="exportSettings">
 			<![CDATA[
 				async function(context) {
-					const user = await tb.user.username();
-					const cfgPath = `/home/${user}/settings.json`;
-					const data = await tb.fs.promises.readFile(cfgPath, "utf8");
-					const outDir = `/home/${user}/exports`;
-					await tb.fs.promises.mkdir(outDir, { recursive: true });
-					const stamp = Date.now();
-					const outPath = `${outDir}/settings-${stamp}.json`;
-					await tb.fs.promises.writeFile(outPath, data, "utf8");
+				  const user = await tb.user.username();
+				  const cfgPath = `/home/${user}/settings.json`;
+				  const data = await tb.fs.promises.readFile(cfgPath, "utf8");
+				  const outDir = `/home/${user}/exports`;
+				  await tb.fs.promises.mkdir(outDir, { recursive: true });
+				  const stamp = Date.now();
+				  const outPath = `${outDir}/settings-${stamp}.json`;
+				  await tb.fs.promises.writeFile(outPath, data, "utf8");
 				}
 			]]>
 		</Action>
 		<Action id="importTbs">
 			<![CDATA[
 				async function(context) {
-					const tbsPath = await new Promise(function(resolve) {
-						tb.dialog.FileBrowser({
-							title: "Choose TBS file",
-							local: true,
-							onOk: function(path) {
-								resolve(path);
-							},
-						});
-					});
-					if (!tbsPath) return;
+				  const tbsPath = await new Promise(function(resolve) {
+				    tb.dialog.FileBrowser({
+				      title: "Choose TBS file",
+				      local: true,
+				      onOk: function(path) {
+				        resolve(path);
+				      },
+				    });
+				  });
+				  if (!tbsPath) return;
 
-					const raw = await tb.fs.promises.readFile(tbsPath, "utf8");
-					const tbsCfg = JSON.parse(raw);
-					const user = await tb.user.username();
-					const userPath = `/home/${user}/settings.json`;
-					const sysPath = "/system/etc/terbium/settings.json";
-					const userCfg = JSON.parse(await tb.fs.promises.readFile(userPath, "utf8"));
-					const sysCfg = JSON.parse(await tb.fs.promises.readFile(sysPath, "utf8"));
+				  const raw = await tb.fs.promises.readFile(tbsPath, "utf8");
+				  const tbsCfg = JSON.parse(raw);
+				  const user = await tb.user.username();
+				  const userPath = `/home/${user}/settings.json`;
+				  const sysPath = "/system/etc/terbium/settings.json";
+				  const userCfg = JSON.parse(await tb.fs.promises.readFile(userPath, "utf8"));
+				  const sysCfg = JSON.parse(await tb.fs.promises.readFile(sysPath, "utf8"));
 
-					if (tbsCfg.theme && tbsCfg.theme !== "default") {
-						sysCfg.theme = tbsCfg.theme;
-					}
-					if (tbsCfg.wallpaper && tbsCfg.wallpaper !== "default") {
-						userCfg.wallpaper = tbsCfg.wallpaper;
-					}
-					if (tbsCfg.wallpaperFill && tbsCfg.wallpaperFill !== "default") {
-						userCfg.wallpaperMode = tbsCfg.wallpaperFill === "contain" ? "cover" : "contain";
-					}
-					if (tbsCfg.shadow === "yes") {
-						userCfg["system-blur"] = true;
-					}
+				  if (tbsCfg.theme && tbsCfg.theme !== "default") {
+				    sysCfg.theme = tbsCfg.theme;
+				  }
+				  if (tbsCfg.wallpaper && tbsCfg.wallpaper !== "default") {
+				    userCfg.wallpaper = tbsCfg.wallpaper;
+				  }
+				  if (tbsCfg.wallpaperFill && tbsCfg.wallpaperFill !== "default") {
+				    userCfg.wallpaperMode = tbsCfg.wallpaperFill === "contain" ? "cover" : "contain";
+				  }
+				  if (tbsCfg.shadow === "yes") {
+				    userCfg["system-blur"] = true;
+				  }
 
-					await tb.fs.promises.writeFile(userPath, JSON.stringify(userCfg, null, 2), "utf8");
-					await tb.fs.promises.writeFile(sysPath, JSON.stringify(sysCfg, null, 2), "utf8");
+				  await tb.fs.promises.writeFile(userPath, JSON.stringify(userCfg, null, 2), "utf8");
+				  await tb.fs.promises.writeFile(sysPath, JSON.stringify(sysCfg, null, 2), "utf8");
 				}
 			]]>
 		</Action>
 		<Action id="invalidateCache">
 			<![CDATA[
 				async function(context) {
-					await tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", "invalid", "utf8");
+				  await tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", "invalid", "utf8");
 				}
 			]]>
 		</Action>
 		<Action id="exportFs">
 			<![CDATA[
 				async function(context) {
-					if (tb.system && tb.system.exportfs) {
-						await tb.system.exportfs();
-						return;
-					}
+				  if (tb.system && tb.system.exportfs) {
+				    await tb.system.exportfs();
+				    return;
+				  }
 				}
 			]]>
 		</Action>
@@ -194,50 +194,46 @@
 		<Script id="notifications" view="notifications">
 			<![CDATA[
 				const tb = api.tb;
-
 				const notificationOptions = [
-				{
-					id: "all",
-					title: "Allow all notifications",
-					description: "Show every notification normally",
-					className: "notification-mode-all",
-					icon: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a7 7 0 0 0-7 7v3.4l-1.8 2.9a1 1 0 0 0 .8 1.5h16a1 1 0 0 0 .8-1.5L19 13.4V10a7 7 0 0 0-7-7Zm0 18a3 3 0 0 0 2.8-2H9.2a3 3 0 0 0 2.8 2Z"/></svg>`,
-				},
-				{
-					id: "dnd",
-					title: "Do Not Disturb",
-					description: "Block all notifications",
-					className: "notification-mode-dnd",
-					icon: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a7 7 0 0 0-7 7v3.4l-1.8 2.9a1 1 0 0 0 .8 1.5h12.2l-1.8-3H6.4L7 12V10a5 5 0 0 1 8.6-3.5l1.3-2.1A7 7 0 0 0 12 3Zm8.7 15.3-1.4 1.4-2.3-2.3-2.3 2.3-1.4-1.4 2.3-2.3-2.3-2.3 1.4-1.4 2.3 2.3 2.3-2.3 1.4 1.4-2.3 2.3 2.3 2.3Z"/></svg>`,
-				},
-				{
-					id: "snooze-10",
-					title: "Snooze Notifications",
-					description: "Pause notifications for 10 minutes",
-					className: "notification-mode-snooze",
-					icon: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 12 2.5Zm1 10.1V6.5h-2v7h5v-2Z"/></svg>`,
-				},
-				{
-					id: "allow-apps",
-					title: "Allow from Certain Apps",
-					description: "Choose which apps can send notifications",
-					className: "notification-mode-allow",
-					icon: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg>`,
-				},
+					{
+						id: "all",
+						title: "Allow all notifications",
+						description: "Show every notification normally",
+						className: "notification-mode-all",
+						icon: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a7 7 0 0 0-7 7v3.4l-1.8 2.9a1 1 0 0 0 .8 1.5h16a1 1 0 0 0 .8-1.5L19 13.4V10a7 7 0 0 0-7-7Zm0 18a3 3 0 0 0 2.8-2H9.2a3 3 0 0 0 2.8 2Z"/></svg>`,
+					},
+					{
+						id: "dnd",
+						title: "Do Not Disturb",
+						description: "Block all notifications",
+						className: "notification-mode-dnd",
+						icon: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a7 7 0 0 0-7 7v3.4l-1.8 2.9a1 1 0 0 0 .8 1.5h12.2l-1.8-3H6.4L7 12V10a5 5 0 0 1 8.6-3.5l1.3-2.1A7 7 0 0 0 12 3Zm8.7 15.3-1.4 1.4-2.3-2.3-2.3 2.3-1.4-1.4 2.3-2.3-2.3-2.3 1.4-1.4 2.3 2.3 2.3-2.3 1.4 1.4-2.3 2.3 2.3 2.3Z"/></svg>`,
+					},
+					{
+						id: "snooze-10",
+						title: "Snooze Notifications",
+						description: "Pause notifications for 10 minutes",
+						className: "notification-mode-snooze",
+						icon: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 12 2.5Zm1 10.1V6.5h-2v7h5v-2Z"/></svg>`,
+					},
+					{
+						id: "allow-apps",
+						title: "Allow from Certain Apps",
+						description: "Choose which apps can send notifications",
+						className: "notification-mode-allow",
+						icon: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg>`,
+					},
 				];
-
 				let currentNotifMode = "all";
 				let currentAllowedApps = [];
-
 				function escHtml(value) {
 					return String(value || "")
-					.replace(/&/g, "&amp;")
-					.replace(/</g, "&lt;")
-					.replace(/>/g, "&gt;")
-					.replace(/\"/g, "&quot;")
-					.replace(/'/g, "&#39;");
+						.replace(/&/g, "&amp;")
+						.replace(/</g, "&lt;")
+						.replace(/>/g, "&gt;")
+						.replace(/\"/g, "&quot;")
+						.replace(/'/g, "&#39;");
 				}
-
 				async function readCurrentNotificationMode() {
 					try {
 						const user = await tb.user.username();
@@ -248,7 +244,6 @@
 						return "all";
 					}
 				}
-
 				async function readCurrentAllowedApps() {
 					try {
 						const user = await tb.user.username();
@@ -259,13 +254,11 @@
 						return [];
 					}
 				}
-
 				function publishNotificationSettings() {
 					const payload = { mode: currentNotifMode, allowList: Array.isArray(currentAllowedApps) ? currentAllowedApps : [] };
 					sessionStorage.setItem("notification-settings", JSON.stringify(payload));
 					window.dispatchEvent(new CustomEvent("notification-settings-update", { detail: payload }));
 				}
-
 				async function persistNotificationMode(mode) {
 					const value = String(mode || "all");
 					try {
@@ -280,21 +273,19 @@
 					currentNotifMode = value;
 					publishNotificationSettings();
 				}
-
 				function buildNotificationCard(option) {
 					const active = currentNotifMode === option.id;
 					return `
-					<button type="button" class="proxy-card ${option.className} ${active ? "is-active" : ""}" data-proxy-value="${escHtml(option.id)}">
-						<span class="proxy-card-icon">${option.icon}</span>
-						<span class="proxy-card-copy">
-							<span class="proxy-card-title">${escHtml(option.title)}</span>
-							<span class="proxy-card-description">${escHtml(option.description)}</span>
-						</span>
-						<span class="proxy-card-check" aria-hidden="true">${active ? "✓" : ""}</span>
-					</button>
-					`;
+				<button type="button" class="proxy-card ${option.className} ${active ? "is-active" : ""}" data-proxy-value="${escHtml(option.id)}">
+				  <span class="proxy-card-icon">${option.icon}</span>
+				  <span class="proxy-card-copy">
+					<span class="proxy-card-title">${escHtml(option.title)}</span>
+					<span class="proxy-card-description">${escHtml(option.description)}</span>
+				  </span>
+				  <span class="proxy-card-check" aria-hidden="true">${active ? "✓" : ""}</span>
+				</button>
+				`;
 				}
-
 				async function readAllowedApps() {
 					try {
 						const user = await tb.user.username();
@@ -305,7 +296,6 @@
 						return [];
 					}
 				}
-
 				async function persistAllowedApps(list) {
 					try {
 						const user = await tb.user.username();
@@ -320,12 +310,11 @@
 					publishNotificationSettings();
 					return true;
 				}
-
 				async function renderAllowAppsPanel(container) {
 					const panel = container || document.getElementById("notification-allow-panel");
-					if (!panel) return;
-					panel.innerHTML = "<div class="allow-apps-panel">Loading...</div>";
-
+					if (!panel)
+						return;
+					panel.innerHTML = '<div class="allow-apps-panel">Loading...</div>';
 					let installed = [];
 					try {
 						const raw = await tb.fs.promises.readFile("/apps/installed.json", "utf8").catch(() => null);
@@ -338,7 +327,6 @@
 					} catch {
 						installed = [];
 					}
-
 					if (installed.length === 0) {
 						try {
 							const entries = await tb.fs.promises.readdir("/apps/system");
@@ -356,31 +344,30 @@
 							installed = [];
 						}
 					}
-
 					const appsList = [{ id: "system", title: "System" }, ...installed];
 					const allowed = await readAllowedApps();
-
 					panel.innerHTML = `
-					<div class="allow-apps-panel">
-						<div style="max-width:820px;width:100%;background:transparent;display:flex;flex-direction:column;gap:8px;">
-							<div style="font-weight:700;color:#fff;margin-bottom:4px;">Select apps allowed to send notifications</div>
-							<div class="allow-apps-list">${appsList.map(app => `
-							<label class="allow-apps-item" data-app-id="${escHtml(app.id)}" style="display:flex;align-items:center;gap:8px;padding:6px;border-radius:8px;background:#ffffff06;">
-								<input type="checkbox" data-app-id="${escHtml(app.id)}" ${allowed.includes(app.id) ? "checked" : ""} />
-								<span style="font-weight:600;color:#fff;">${escHtml(app.title)}</span>
-							</label>
-							`).join("")}</div>
-						</div>
-					</div>`;
-
+				<div class="allow-apps-panel">
+				  <div style="max-width:820px;width:100%;background:transparent;display:flex;flex-direction:column;gap:8px;">
+					<div style="font-weight:700;color:#fff;margin-bottom:4px;">Select apps allowed to send notifications</div>
+					<div class="allow-apps-list">${appsList.map(app => `
+					  <label class="allow-apps-item" data-app-id="${escHtml(app.id)}" style="display:flex;align-items:center;gap:8px;padding:6px;border-radius:8px;background:#ffffff06;">
+						<input type="checkbox" data-app-id="${escHtml(app.id)}" ${allowed.includes(app.id) ? "checked" : ""} />
+						<span style="font-weight:600;color:#fff;">${escHtml(app.title)}</span>
+					  </label>
+					`).join("")}</div>
+				  </div>
+				</div>`;
 					panel.querySelectorAll("input[type=checkbox][data-app-id]").forEach(cb => {
 						cb.addEventListener("change", async () => {
 							const id = cb.getAttribute("data-app-id");
-							if (!id) return;
+							if (!id)
+								return;
 							const curr = await readAllowedApps();
 							const idx = curr.indexOf(id);
 							if (cb.checked) {
-								if (idx === -1) curr.push(id);
+								if (idx === -1)
+									curr.push(id);
 							} else if (idx !== -1) {
 								curr.splice(idx, 1);
 							}
@@ -389,25 +376,24 @@
 						});
 					});
 				}
-
 				async function renderNotificationView() {
 					currentNotifMode = await readCurrentNotificationMode();
 					currentAllowedApps = await readCurrentAllowedApps();
 					publishNotificationSettings();
 					return `
-					<section class="notification-picker-shell" style="gap:12px;">
-						<div class="notification-picker-list">${notificationOptions.map(buildNotificationCard).join("")}</div>
-						<div id="notification-allow-panel" style="width:100%;display:flex;justify-content:center;margin-top:12px;"></div>
-					</section>`;
+				<section class="notification-picker-shell" style="gap:12px;">
+				  <div class="notification-picker-list">${notificationOptions.map(buildNotificationCard).join("")}</div>
+				  <div id="notification-allow-panel" style="width:100%;display:flex;justify-content:center;margin-top:12px;"></div>
+				</section>`;
 				}
-
 				async function wireNotificationView(root) {
 					const scope = root || document;
 					scope.querySelectorAll("[data-proxy-value]").forEach(btn => {
 						btn.addEventListener("click", async ev => {
 							ev.preventDefault();
 							const mode = String(btn.getAttribute("data-proxy-value") || "").trim();
-							if (!mode || mode === currentNotifMode) return;
+							if (!mode || mode === currentNotifMode)
+								return;
 							btn.setAttribute("disabled", "true");
 							try {
 								await persistNotificationMode(mode);
@@ -425,13 +411,12 @@
 							}
 						});
 					});
-
 					if (currentNotifMode === "allow-apps") {
 						const panel = document.getElementById("notification-allow-panel");
-						if (panel) await renderAllowAppsPanel(panel);
+						if (panel)
+							await renderAllowAppsPanel(panel);
 					}
 				}
-
 				return {
 					loadingText: "Loading notification preferences...",
 					render: renderNotificationView,
@@ -445,25 +430,23 @@
 				const HW_INDEX_PATH = "/apps/system/settings.tapp/hardwareindex.json";
 				const MAINT_REPORT_PATH = "/apps/system/settings.tapp/maintenance-report.json";
 				const VERSIONS_URL = "https://cdn.terbiumon.top/updates/versions.json";
-
 				function badgeColor(level) {
-					if (level === "red") return "#ef4444";
-					if (level === "yellow") return "#f59e0b";
+					if (level === "red")
+						return "#ef4444";
+					if (level === "yellow")
+						return "#f59e0b";
 					return "#22c55e";
 				}
-
 				function normalizeVersion(v) {
 					return String(v || "")
-					.split("-")[0]
-					.trim();
+						.split("-")[0]
+						.trim();
 				}
-
 				function semverParts(v) {
 					return normalizeVersion(v)
-					.split(".")
-					.map(part => Number(part || 0));
+						.split(".")
+						.map(part => Number(part || 0));
 				}
-
 				function compareSemver(a, b) {
 					const av = semverParts(a);
 					const bv = semverParts(b);
@@ -471,12 +454,13 @@
 					for (let i = 0; i < len; i++) {
 						const ai = Number(av[i] || 0);
 						const bi = Number(bv[i] || 0);
-						if (ai > bi) return -1;
-						if (ai < bi) return 1;
+						if (ai > bi)
+							return -1;
+						if (ai < bi)
+							return 1;
 					}
 					return 0;
 				}
-
 				async function getVersionsMap() {
 					try {
 						if (tb.libcurl && tb.libcurl.fetch) {
@@ -491,14 +475,14 @@
 					}
 					try {
 						const response = await fetch(VERSIONS_URL, { cache: "no-store" });
-						if (!response.ok) return null;
+						if (!response.ok)
+							return null;
 						const data = await response.json();
 						return data && typeof data === "object" ? data : null;
 					} catch {
 						return null;
 					}
 				}
-
 				async function readJson(path) {
 					try {
 						const raw = await tb.fs.promises.readFile(path, "utf8");
@@ -507,24 +491,21 @@
 						return null;
 					}
 				}
-
 				async function buildActionCenterModel() {
 					const currentVersion = tb.system && tb.system.version ? String(typeof tb.system.version === "function" ? tb.system.version() : tb.system.version) : "unknown";
 					const versionsMap = await getVersionsMap();
 					const maintenanceReport = await readJson(MAINT_REPORT_PATH);
 					const perfResult = await readJson(HW_INDEX_PATH);
-
 					let versionStatus = { level: "yellow", title: "Version status unavailable", detail: "Could not fetch hosted versions.json right now." };
 					if (versionsMap) {
 						const supportedEntries = Object.entries(versionsMap)
-						.filter(entry => entry[1] === true)
-						.map(entry => String(entry[0]))
-						.sort(compareSemver);
+							.filter(entry => entry[1] === true)
+							.map(entry => String(entry[0]))
+							.sort(compareSemver);
 						const latestRecommended = supportedEntries.slice(0, 3);
 						const listed = Object.prototype.hasOwnProperty.call(versionsMap, currentVersion);
 						const supported = listed && versionsMap[currentVersion] === true;
 						const latest = latestRecommended.includes(currentVersion);
-
 						if (!supported) {
 							versionStatus = {
 								level: "red",
@@ -545,133 +526,121 @@
 							};
 						}
 					}
-
 					const maintenanceStatus = maintenanceReport
-					? {
-						level: Number(maintenanceReport.mismatched || 0) > 0 ? "yellow" : "green",
-						title: Number(maintenanceReport.mismatched || 0) > 0 ? "Integrity issues detected" : "System integrity healthy",
-						detail: Number(maintenanceReport.mismatched || 0) > 0
-						? `${maintenanceReport.mismatched} mismatched file(s) found in last scan. Open Maintenance to repair.`
-						: `Last scan checked ${maintenanceReport.checked || 0} file(s) and found no mismatches.`,
-					}
-					: {
-						level: "yellow",
-						title: "No maintenance scan yet",
-						detail: "Run an integrity scan in Maintenance to verify system file health.",
-					};
-
+						? {
+							level: Number(maintenanceReport.mismatched || 0) > 0 ? "yellow" : "green",
+							title: Number(maintenanceReport.mismatched || 0) > 0 ? "Integrity issues detected" : "System integrity healthy",
+							detail: Number(maintenanceReport.mismatched || 0) > 0
+								? `${maintenanceReport.mismatched} mismatched file(s) found in last scan. Open Maintenance to repair.`
+								: `Last scan checked ${maintenanceReport.checked || 0} file(s) and found no mismatches.`,
+						}
+						: {
+							level: "yellow",
+							title: "No maintenance scan yet",
+							detail: "Run an integrity scan in Maintenance to verify system file health.",
+						};
 					const perfStatus = perfResult
-					? {
-						level: perfResult.base >= 5.0 ? "green" : "yellow",
-						title: `Performance index ${Number(perfResult.base || 0).toFixed(1)}`,
-						detail: `Last assessment: ${new Date(perfResult.timestamp || Date.now()).toLocaleString()}`,
-					}
-					: {
-						level: "yellow",
-						title: "No performance assessment yet",
-						detail: "Run the Performance tab benchmark to populate this category.",
-					};
-
+						? {
+							level: perfResult.base >= 5.0 ? "green" : "yellow",
+							title: `Performance index ${Number(perfResult.base || 0).toFixed(1)}`,
+							detail: `Last assessment: ${new Date(perfResult.timestamp || Date.now()).toLocaleString()}`,
+						}
+						: {
+							level: "yellow",
+							title: "No performance assessment yet",
+							detail: "Run the Performance tab benchmark to populate this category.",
+						};
 					return {
 						currentVersion,
 						categories: [
-						{
-							id: "security",
-							name: "Security",
-							status: versionStatus.level,
-							summary: "Version trust state",
-							checks: [versionStatus],
-						},
-						{
-							id: "maintenance",
-							name: "Maintenance",
-							status: maintenanceStatus.level,
-							summary: "System file integrity and repair readiness",
-							checks: [maintenanceStatus],
-						},
-						{
-							id: "performance",
-							name: "Performance",
-							status: perfStatus.level,
-							summary: "Hardware index and responsiveness signals",
-							checks: [perfStatus],
-						},
+							{
+								id: "security",
+								name: "Security",
+								status: versionStatus.level,
+								summary: "Version trust state",
+								checks: [versionStatus],
+							},
+							{
+								id: "maintenance",
+								name: "Maintenance",
+								status: maintenanceStatus.level,
+								summary: "System file integrity and repair readiness",
+								checks: [maintenanceStatus],
+							},
+							{
+								id: "performance",
+								name: "Performance",
+								status: perfStatus.level,
+								summary: "Hardware index and responsiveness signals",
+								checks: [perfStatus],
+							},
 						],
 					};
 				}
-
 				function renderCard(title, body, badge, color) {
 					return `
-					<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
-						<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-							<h3 class="detail-section-title" style="margin:0;">${title}</h3>
-							<span style="padding:3px 10px;border-radius:999px;background:${color}22;border:1px solid ${color}66;font-size:11px;color:#f3f4f6;">${badge}</span>
-						</div>
-						<p class="detail-control-value" style="margin:0;line-height:1.45;">${body}</p>
-					</article>
-					`;
+				<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+				<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+				<h3 class="detail-section-title" style="margin:0;">${title}</h3>
+				<span style="padding:3px 10px;border-radius:999px;background:${color}22;border:1px solid ${color}66;font-size:11px;color:#f3f4f6;">${badge}</span>
+				</div>
+				<p class="detail-control-value" style="margin:0;line-height:1.45;">${body}</p>
+				</article>
+				`;
 				}
-
 				const actionCenterModule = {
-					render: async function() {
+					render: async function () {
 						const model = await buildActionCenterModel();
 						const categoryCards = model.categories
-						.map(category => {
+							.map(category => {
 							const detail = category.checks.map(check => `<li style="margin:4px 0;">${check.title}: ${check.detail}</li>`).join("");
 							const maintenanceAction = category.id === "maintenance"
-							? `<div style="margin-top:10px;"><button type="button" class="detail-action" data-action-center-maint-scan="true">Open Maintenance Scan</button></div>`
-							: "";
+								? `<div style="margin-top:10px;"><button type="button" class="detail-action" data-action-center-maint-scan="true">Open Maintenance Scan</button></div>`
+								: "";
 							const performanceAction = category.id === "performance"
-							? `<div style="margin-top:10px;"><button type="button" class="detail-action" data-action-center-perf-run="true">Open Hardware Assessment</button></div>`
-							: "";
-							return renderCard(
-							category.name,
-							`${category.summary}<ul style="margin:8px 0 0 16px;padding:0;">${detail}</ul>${maintenanceAction}${performanceAction}`,
-							category.status === "red" ? "Critical" : category.status === "yellow" ? "Attention" : "Healthy",
-							badgeColor(category.status),
-							);
+								? `<div style="margin-top:10px;"><button type="button" class="detail-action" data-action-center-perf-run="true">Open Hardware Assessment</button></div>`
+								: "";
+							return renderCard(category.name, `${category.summary}<ul style="margin:8px 0 0 16px;padding:0;">${detail}</ul>${maintenanceAction}${performanceAction}`, category.status === "red" ? "Critical" : category.status === "yellow" ? "Attention" : "Healthy", badgeColor(category.status));
 						})
-						.join("");
+							.join("");
 						return `
-						<section class="storage-dashboard" style="gap:10px;">
-							<article class="storage-main-card" style="padding:16px 18px;display:flex;flex-direction:column;gap:8px;">
-								<h2 style="font-size:18px;font-weight:800;margin:0;">Action Center</h2>
-								<p class="detail-control-value" style="margin:0;line-height:1.5;">Live security and health summary for version ${model.currentVersion}.</p>
-								<div style="display:flex;gap:8px;flex-wrap:wrap;">
-									<button type="button" class="detail-action" data-refresh-action-center="true">Refresh Action Center</button>
-								</div>
-							</article>
-							${categoryCards}
-						</section>
-						`;
+				<section class="storage-dashboard" style="gap:10px;">
+				<article class="storage-main-card" style="padding:16px 18px;display:flex;flex-direction:column;gap:8px;">
+				<h2 style="font-size:18px;font-weight:800;margin:0;">Action Center</h2>
+				<p class="detail-control-value" style="margin:0;line-height:1.5;">Live security and health summary for version ${model.currentVersion}.</p>
+				<div style="display:flex;gap:8px;flex-wrap:wrap;">
+				<button type="button" class="detail-action" data-refresh-action-center="true">Refresh Action Center</button>
+				</div>
+				</article>
+				${categoryCards}
+				</section>
+				`;
 					},
-					wire: function(root) {
-						const btn = root.querySelector("[data-refresh-action-center="true"]");
+					wire: function (root) {
+						const btn = root.querySelector("[data-refresh-action-center='true']");
 						if (btn) {
-							btn.addEventListener("click", async function() {
+							btn.addEventListener("click", async function () {
 								root.innerHTML = await actionCenterModule.render();
 								actionCenterModule.wire(root);
 							});
 						}
-
-						const openMaintenanceBtn = root.querySelector("[data-action-center-maint-scan="true"]");
+						const openMaintenanceBtn = root.querySelector("[data-action-center-maint-scan='true']");
 						if (openMaintenanceBtn) {
-							openMaintenanceBtn.addEventListener("click", function() {
+							openMaintenanceBtn.addEventListener("click", function () {
 								const maintenanceNav = api.document && api.document.querySelector
-								? api.document.querySelector("#detailSidebar [data-view-id="maintenance"]")
-								: null;
+									? api.document.querySelector("#detailSidebar [data-view-id='maintenance']")
+									: null;
 								if (maintenanceNav && typeof maintenanceNav.click === "function") {
 									maintenanceNav.click();
 								}
 							});
 						}
-
-						const openPerformanceBtn = root.querySelector("[data-action-center-perf-run="true"]");
+						const openPerformanceBtn = root.querySelector("[data-action-center-perf-run='true']");
 						if (openPerformanceBtn) {
-							openPerformanceBtn.addEventListener("click", function() {
+							openPerformanceBtn.addEventListener("click", function () {
 								const performanceNav = api.document && api.document.querySelector
-								? api.document.querySelector("#detailSidebar [data-view-id="performance"]")
-								: null;
+									? api.document.querySelector("#detailSidebar [data-view-id='performance']")
+									: null;
 								if (performanceNav && typeof performanceNav.click === "function") {
 									performanceNav.click();
 								}
@@ -686,42 +655,45 @@
 			<![CDATA[
 				const tb = api.tb;
 				const REPORT_PATH = "/apps/system/settings.tapp/maintenance-report.json";
-
 				function toBytes(input) {
-					if (input instanceof Uint8Array) return input;
-					if (input instanceof ArrayBuffer) return new Uint8Array(input);
-					if (typeof input === "string") return new TextEncoder().encode(input);
-					if (input && input.buffer instanceof ArrayBuffer) return new Uint8Array(input.buffer);
+					if (input instanceof Uint8Array)
+						return input;
+					if (input instanceof ArrayBuffer)
+						return new Uint8Array(input);
+					if (typeof input === "string")
+						return new TextEncoder().encode(input);
+					if (input && input.buffer instanceof ArrayBuffer)
+						return new Uint8Array(input.buffer);
 					return new Uint8Array(0);
 				}
-
 				function bytesEqual(a, b) {
-					if (a.byteLength !== b.byteLength) return false;
+					if (a.byteLength !== b.byteLength)
+						return false;
 					for (let i = 0; i < a.byteLength; i++) {
-						if (a[i] !== b[i]) return false;
+						if (a[i] !== b[i])
+							return false;
 					}
 					return true;
 				}
-
 				async function ensureDir(path) {
 					const dir = path.slice(0, path.lastIndexOf("/"));
-					if (!dir) return;
+					if (!dir)
+						return;
 					try {
 						await tb.fs.promises.mkdir(dir, { recursive: true });
 					} catch {
 						/* ignore */
 					}
 				}
-
 				async function scanIntegrity(repair) {
 					let broken = [];
 					try {
 						const res = await tb.system.scanintegrity();
-						if (Array.isArray(res)) broken = res;
+						if (Array.isArray(res))
+							broken = res;
 					} catch (err) {
 						throw new Error("scanintegrity API failed: " + (err && err.message ? err.message : String(err)));
 					}
-
 					let checked = broken.length;
 					let mismatched = broken.length;
 					let repaired = 0;
@@ -731,14 +703,12 @@
 					const repairedFiles = [];
 					const failedFiles = [];
 					const packageWarningPaths = [];
-
 					const systemFiles = [
-					"/system/etc/terbium/settings.json",
-					"/system/var/terbium/dock.json",
-					"/system/var/terbium/start.json",
-					"/system/etc/terbium/file-icons.json",
+						"/system/etc/terbium/settings.json",
+						"/system/var/terbium/dock.json",
+						"/system/var/terbium/start.json",
+						"/system/etc/terbium/file-icons.json",
 					];
-
 					async function writeArrayBufferPath(targetPath, buffer) {
 						try {
 							await ensureDir(targetPath);
@@ -748,17 +718,18 @@
 							return false;
 						}
 					}
-
 					for (const pRaw of broken) {
 						const p = String(pRaw || "");
-						if (!p) continue;
+						if (!p)
+							continue;
 						if (p.startsWith("/system/")) {
 							for (const sys of systemFiles) {
-								if (!mismatchedFiles.includes(sys)) mismatchedFiles.push(sys);
+								if (!mismatchedFiles.includes(sys))
+									mismatchedFiles.push(sys);
 								if (repair) {
 									try {
-										await tb.fs.promises.mkdir("/system/etc/terbium", { recursive: true }).catch(() => {});
-										await tb.fs.promises.mkdir("/system/var/terbium", { recursive: true }).catch(() => {});
+										await tb.fs.promises.mkdir("/system/etc/terbium", { recursive: true }).catch(() => { });
+										await tb.fs.promises.mkdir("/system/var/terbium", { recursive: true }).catch(() => { });
 										if (sys.endsWith("settings.json")) {
 											const stockSettings = {
 												theme: "dark",
@@ -798,14 +769,12 @@
 							}
 							continue;
 						}
-
 						try {
 							let remoteUrl = p;
 							if (p.startsWith("/apps/system/")) {
 								const rel = p.slice("/apps/system/".length);
 								remoteUrl = `/apps/${rel}`;
 							}
-
 							const response = await fetch(remoteUrl, { cache: "no-store" });
 							if (!response.ok) {
 								failed += 1;
@@ -813,7 +782,6 @@
 								mismatchedFiles.push(p);
 								continue;
 							}
-
 							const data = new Uint8Array(await response.arrayBuffer());
 							if (repair) {
 								const ok = await writeArrayBufferPath(p, data.buffer);
@@ -833,7 +801,6 @@
 							mismatchedFiles.push(p);
 						}
 					}
-
 					if (repair && packageWarnings > 0) {
 						try {
 							await tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", "invalid", "utf8");
@@ -841,7 +808,6 @@
 							/* ignore */
 						}
 					}
-
 					const report = {
 						timestamp: Date.now(),
 						checked,
@@ -858,7 +824,6 @@
 					await tb.fs.promises.writeFile(REPORT_PATH, JSON.stringify(report, null, 2), "utf8");
 					return report;
 				}
-
 				async function loadReport() {
 					try {
 						const raw = await tb.fs.promises.readFile(REPORT_PATH, "utf8");
@@ -867,13 +832,13 @@
 						return null;
 					}
 				}
-
 				function renderReport(report) {
 					function renderFileList(title, items) {
-						if (!Array.isArray(items) || items.length === 0) return "";
+						if (!Array.isArray(items) || items.length === 0)
+							return "";
 						const rows = items
-						.slice(0, 12)
-						.map(item => {
+							.slice(0, 12)
+							.map(item => {
 							if (typeof item === "string") {
 								return `<li style="margin:2px 0;word-break:break-word;">${item}</li>`;
 							}
@@ -881,69 +846,66 @@
 							const reason = item && item.reason ? ` (${item.reason})` : "";
 							return `<li style="margin:2px 0;word-break:break-word;">${path}${reason}</li>`;
 						})
-						.join("");
+							.join("");
 						const extra = items.length > 12 ? `<p class="detail-control-value" style="margin:4px 0 0 0;">+${items.length - 12} more</p>` : "";
 						return `
-						<div style="margin-top:8px;">
-							<p class="detail-control-value" style="margin:0;font-weight:800;">${title}</p>
-							<ul style="margin:4px 0 0 16px;padding:0;max-height:170px;overflow:auto;">${rows}</ul>
-							${extra}
-						</div>
-						`;
+				<div style="margin-top:8px;">
+				<p class="detail-control-value" style="margin:0;font-weight:800;">${title}</p>
+				<ul style="margin:4px 0 0 16px;padding:0;max-height:170px;overflow:auto;">${rows}</ul>
+				${extra}
+				</div>
+				`;
 					}
-
 					if (!report) {
 						return `
-						<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
-							<h3 class="detail-section-title" style="margin:0;">No integrity report yet</h3>
-							<p class="detail-control-value" style="margin:0;">Run a scan to detect mismatched system files.</p>
-						</article>
-						`;
+				<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+				<h3 class="detail-section-title" style="margin:0;">No integrity report yet</h3>
+				<p class="detail-control-value" style="margin:0;">Run a scan to detect mismatched system files.</p>
+				</article>
+				`;
 					}
 					return `
-					<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
-						<h3 class="detail-section-title" style="margin:0;">Last integrity report</h3>
-						<p class="detail-control-value" style="margin:0;">Mode: ${report.mode}</p>
-						<p class="detail-control-value" style="margin:0;">Checked files: ${report.checked}</p>
-						<p class="detail-control-value" style="margin:0;">Mismatched: ${report.mismatched}</p>
-						<p class="detail-control-value" style="margin:0;">Repaired: ${report.repaired}</p>
-						<p class="detail-control-value" style="margin:0;">Fetch/write failures: ${report.failed}</p>
-						<p class="detail-control-value" style="margin:0;">Package warnings: ${report.packageWarnings}</p>
-						<p class="detail-control-value" style="margin:0;">Timestamp: ${new Date(report.timestamp || Date.now()).toLocaleString()}</p>
-						${renderFileList("Corrupted / mismatched files", report.mismatchedFiles)}
-						${renderFileList("Repaired files", report.repairedFiles)}
-						${renderFileList("Failed files", report.failedFiles)}
-						${renderFileList("Package warning paths", report.packageWarningPaths)}
-					</article>
-					`;
+				<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+				<h3 class="detail-section-title" style="margin:0;">Last integrity report</h3>
+				<p class="detail-control-value" style="margin:0;">Mode: ${report.mode}</p>
+				<p class="detail-control-value" style="margin:0;">Checked files: ${report.checked}</p>
+				<p class="detail-control-value" style="margin:0;">Mismatched: ${report.mismatched}</p>
+				<p class="detail-control-value" style="margin:0;">Repaired: ${report.repaired}</p>
+				<p class="detail-control-value" style="margin:0;">Fetch/write failures: ${report.failed}</p>
+				<p class="detail-control-value" style="margin:0;">Package warnings: ${report.packageWarnings}</p>
+				<p class="detail-control-value" style="margin:0;">Timestamp: ${new Date(report.timestamp || Date.now()).toLocaleString()}</p>
+				${renderFileList("Corrupted / mismatched files", report.mismatchedFiles)}
+				${renderFileList("Repaired files", report.repairedFiles)}
+				${renderFileList("Failed files", report.failedFiles)}
+				${renderFileList("Package warning paths", report.packageWarningPaths)}
+				</article>
+				`;
 				}
-
 				const maintenanceModule = {
-					render: async function() {
+					render: async function () {
 						const report = await loadReport();
 						return `
-						<section class="storage-dashboard" style="gap:10px;">
-							<article class="storage-main-card" style="padding:16px 18px;display:flex;flex-direction:column;gap:8px;">
-								<h2 style="font-size:18px;font-weight:800;margin:0;">Maintenance Center</h2>
-								<p class="detail-control-value" style="margin:0;line-height:1.5;">Scan for corrupted system files and repair mismatches with hosted files.</p>
-								<div style="display:flex;gap:8px;flex-wrap:wrap;">
-									<button type="button" class="detail-action" data-run-integrity-scan="true">Run Integrity Scan</button>
-									<button type="button" class="detail-action" data-run-integrity-repair="true">Repair Corrupted Files</button>
-									<button type="button" class="detail-action" data-mark-update-invalid="true">Mark Cache Invalid</button>
-									<button type="button" class="detail-action" data-export-fs="true">Export File System</button>
-								</div>
-							</article>
-							${renderReport(report)}
-						</section>
-						`;
+				<section class="storage-dashboard" style="gap:10px;">
+				<article class="storage-main-card" style="padding:16px 18px;display:flex;flex-direction:column;gap:8px;">
+				<h2 style="font-size:18px;font-weight:800;margin:0;">Maintenance Center</h2>
+				<p class="detail-control-value" style="margin:0;line-height:1.5;">Scan for corrupted system files and repair mismatches with hosted files.</p>
+				<div style="display:flex;gap:8px;flex-wrap:wrap;">
+				<button type="button" class="detail-action" data-run-integrity-scan="true">Run Integrity Scan</button>
+				<button type="button" class="detail-action" data-run-integrity-repair="true">Repair Corrupted Files</button>
+				<button type="button" class="detail-action" data-mark-update-invalid="true">Mark Cache Invalid</button>
+				<button type="button" class="detail-action" data-export-fs="true">Export File System</button>
+				</div>
+				</article>
+				${renderReport(report)}
+				</section>
+				`;
 					},
-					wire: function(root) {
-						const rerender = async function() {
+					wire: function (root) {
+						const rerender = async function () {
 							root.innerHTML = await maintenanceModule.render();
 							maintenanceModule.wire(root);
 						};
-
-						const runOp = async function(btn, repair) {
+						const runOp = async function (btn, repair) {
 							const original = btn.textContent;
 							btn.textContent = repair ? "Repairing..." : "Scanning...";
 							btn.setAttribute("disabled", "disabled");
@@ -969,24 +931,21 @@
 								await rerender();
 							}
 						};
-
-						const scanBtn = root.querySelector("[data-run-integrity-scan="true"]");
+						const scanBtn = root.querySelector("[data-run-integrity-scan='true']");
 						if (scanBtn) {
-							scanBtn.addEventListener("click", async function() {
+							scanBtn.addEventListener("click", async function () {
 								await runOp(scanBtn, false);
 							});
 						}
-
-						const repairBtn = root.querySelector("[data-run-integrity-repair="true"]");
+						const repairBtn = root.querySelector("[data-run-integrity-repair='true']");
 						if (repairBtn) {
-							repairBtn.addEventListener("click", async function() {
+							repairBtn.addEventListener("click", async function () {
 								await runOp(repairBtn, true);
 							});
 						}
-
-						const invalidateBtn = root.querySelector("[data-mark-update-invalid="true"]");
+						const invalidateBtn = root.querySelector("[data-mark-update-invalid='true']");
 						if (invalidateBtn) {
-							invalidateBtn.addEventListener("click", async function() {
+							invalidateBtn.addEventListener("click", async function () {
 								await tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", "invalid", "utf8");
 								if (tb.dialog && tb.dialog.Alert) {
 									tb.dialog.Alert({
@@ -996,10 +955,9 @@
 								}
 							});
 						}
-
-						const exportBtn = root.querySelector("[data-export-fs="true"]");
+						const exportBtn = root.querySelector("[data-export-fs='true']");
 						if (exportBtn) {
-							exportBtn.addEventListener("click", async function() {
+							exportBtn.addEventListener("click", async function () {
 								if (tb.system && tb.system.exportfs) {
 									await tb.system.exportfs();
 								}
@@ -1015,22 +973,20 @@
 				const tb = api.tb;
 				const nav = api.navigator;
 				const RESULTS_PATH = "/apps/system/settings.tapp/hardwareindex.json";
-
 				function clamp(value, min, max) {
 					return Math.max(min, Math.min(max, value));
 				}
-
 				function toFixedScore(value) {
 					return Number(clamp(value, 1, 9.9).toFixed(1));
 				}
-
 				function scoreFromRange(value, good, bad) {
-					if (value <= good) return 9.9;
-					if (value >= bad) return 1.0;
+					if (value <= good)
+						return 9.9;
+					if (value >= bad)
+						return 1.0;
 					const ratio = (value - good) / Math.max(1, bad - good);
 					return toFixedScore(9.9 - ratio * 8.9);
 				}
-
 				async function benchmarkCpu() {
 					const loops = 1400000;
 					let sink = 0;
@@ -1039,13 +995,13 @@
 						sink += Math.sqrt((i % 1024) + 1);
 					}
 					const elapsed = performance.now() - start;
-					if (sink < 0) console.log("noop", sink);
+					if (sink < 0)
+						console.log("noop", sink);
 					return {
 						elapsed,
 						score: scoreFromRange(elapsed, 90, 580),
 					};
 				}
-
 				async function benchmarkMemory() {
 					const bytes = 16 * 1024 * 1024;
 					const arr = new Uint8Array(bytes);
@@ -1062,13 +1018,13 @@
 						score: toFixedScore(memCapacityScore * 0.45 + throughputScore * 0.55),
 					};
 				}
-
 				async function benchmarkGraphics() {
 					const canvas = document.createElement("canvas");
 					canvas.width = 360;
 					canvas.height = 220;
 					const ctx = canvas.getContext("2d");
-					if (!ctx) return { elapsed: 999, score: 1.0 };
+					if (!ctx)
+						return { elapsed: 999, score: 1.0 };
 					const iterations = 420;
 					const start = performance.now();
 					for (let i = 0; i < iterations; i++) {
@@ -1084,24 +1040,21 @@
 						score: scoreFromRange(elapsed, 14, 260),
 					};
 				}
-
 				async function benchmarkStorage() {
 					const dir = "/system/tmp";
 					const path = "/system/tmp/tb-perf-index.bin";
 					const payload = new Uint8Array(320 * 1024);
-					for (let i = 0; i < payload.length; i++) payload[i] = i % 251;
-
+					for (let i = 0; i < payload.length; i++)
+						payload[i] = i % 251;
 					try {
 						await tb.fs.promises.mkdir(dir, { recursive: true });
 						const writeStart = performance.now();
 						await tb.fs.promises.writeFile(path, payload.buffer, "arraybuffer");
 						const writeElapsed = performance.now() - writeStart;
-
 						const readStart = performance.now();
 						await tb.fs.promises.readFile(path);
 						const readElapsed = performance.now() - readStart;
-
-						await tb.fs.promises.unlink(path).catch(() => {});
+						await tb.fs.promises.unlink(path).catch(() => { });
 						const elapsed = writeElapsed + readElapsed;
 						return {
 							elapsed,
@@ -1114,7 +1067,6 @@
 						};
 					}
 				}
-
 				async function benchmarkResponsiveness() {
 					const runs = 12;
 					let totalLag = 0;
@@ -1129,83 +1081,81 @@
 						score: scoreFromRange(avgLag, 1.3, 22),
 					};
 				}
-
 				function qualityLabel(score) {
-					if (score >= 8.5) return "Excellent";
-					if (score >= 7.0) return "Very Good";
-					if (score >= 5.5) return "Good";
-					if (score >= 4.0) return "Fair";
+					if (score >= 8.5)
+						return "Excellent";
+					if (score >= 7.0)
+						return "Very Good";
+					if (score >= 5.5)
+						return "Good";
+					if (score >= 4.0)
+						return "Fair";
 					return "Needs Improvement";
 				}
-
 				async function getSavedResult() {
 					try {
 						const raw = await tb.fs.promises.readFile(RESULTS_PATH, "utf8");
-						if (!raw) return null;
+						if (!raw)
+							return null;
 						return JSON.parse(String(raw));
 					} catch {
 						return null;
 					}
 				}
-
 				async function saveResult(result) {
 					await tb.fs.promises.writeFile(RESULTS_PATH, JSON.stringify(result, null, 2), "utf8");
 				}
-
 				function scoreRow(label, value) {
 					const width = Math.max(10, Math.round((Number(value) / 9.9) * 100));
 					return `
-					<div style="display:grid;grid-template-columns:minmax(130px,1fr) 1.8fr auto;align-items:center;gap:10px;">
-						<span class="detail-control-value" style="font-weight:600;">${label}</span>
-						<span style="display:block;height:8px;border-radius:999px;background:#ffffff14;overflow:hidden;"><span style="display:block;height:100%;width:${width}%;background:linear-gradient(90deg,#6ee7b7,#93c5fd,#f9a8d4);"></span></span>
-						<span style="font-weight:800;font-size:13px;">${Number(value).toFixed(1)}</span>
-					</div>
-					`;
+				<div style="display:grid;grid-template-columns:minmax(130px,1fr) 1.8fr auto;align-items:center;gap:10px;">
+				<span class="detail-control-value" style="font-weight:600;">${label}</span>
+				<span style="display:block;height:8px;border-radius:999px;background:#ffffff14;overflow:hidden;"><span style="display:block;height:100%;width:${width}%;background:linear-gradient(90deg,#6ee7b7,#93c5fd,#f9a8d4);"></span></span>
+				<span style="font-weight:800;font-size:13px;">${Number(value).toFixed(1)}</span>
+				</div>
+				`;
 				}
-
 				function renderResult(result) {
 					if (!result) {
 						return `
-						<article class="storage-main-card" style="padding:18px;display:flex;flex-direction:column;gap:10px;">
-							<h3 class="detail-section-title" style="margin:0;">No assessment yet</h3>
-							<p class="detail-control-value" style="margin:0;">Run the assessment to generate a base score and subsystem ratings.</p>
-						</article>
-						`;
+				<article class="storage-main-card" style="padding:18px;display:flex;flex-direction:column;gap:10px;">
+				<h3 class="detail-section-title" style="margin:0;">No assessment yet</h3>
+				<p class="detail-control-value" style="margin:0;">Run the assessment to generate a base score and subsystem ratings.</p>
+				</article>
+				`;
 					}
 					return `
-					<article class="storage-main-card" style="padding:18px;display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:start;">
-						<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;border-radius:12px;background:#ffffff10;border:1px solid #ffffff20;">
-							<div style="font-size:13px;opacity:0.8;">Base Score</div>
-							<div style="font-size:42px;font-weight:900;line-height:1;">${result.base.toFixed(1)}</div>
-							<div style="font-size:11px;opacity:0.85;">${qualityLabel(result.base)}</div>
-						</div>
-						<div style="display:flex;flex-direction:column;gap:9px;">
-							${scoreRow("Processor", result.scores.cpu)}
-							${scoreRow("Memory (RAM)", result.scores.memory)}
-							${scoreRow("Graphics", result.scores.graphics)}
-							${scoreRow("Storage", result.scores.storage)}
-							${scoreRow("Responsiveness", result.scores.responsiveness)}
-						</div>
-					</article>
-					<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
-						<h3 class="detail-section-title" style="margin:0;">System Snapshot</h3>
-						<p class="detail-control-value" style="margin:0;">Logical cores: ${result.specs.cores}</p>
-						<p class="detail-control-value" style="margin:0;">Estimated memory (GB): ${result.specs.deviceMemory}</p>
-						<p class="detail-control-value" style="margin:0;">Platform: ${result.specs.platform}</p>
-						<p class="detail-control-value" style="margin:0;">Last run: ${new Date(result.timestamp).toLocaleString()}</p>
-					</article>
-					`;
+				<article class="storage-main-card" style="padding:18px;display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:start;">
+				<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;border-radius:12px;background:#ffffff10;border:1px solid #ffffff20;">
+				<div style="font-size:13px;opacity:0.8;">Base Score</div>
+				<div style="font-size:42px;font-weight:900;line-height:1;">${result.base.toFixed(1)}</div>
+				<div style="font-size:11px;opacity:0.85;">${qualityLabel(result.base)}</div>
+				</div>
+				<div style="display:flex;flex-direction:column;gap:9px;">
+				${scoreRow("Processor", result.scores.cpu)}
+				${scoreRow("Memory (RAM)", result.scores.memory)}
+				${scoreRow("Graphics", result.scores.graphics)}
+				${scoreRow("Storage", result.scores.storage)}
+				${scoreRow("Responsiveness", result.scores.responsiveness)}
+				</div>
+				</article>
+				<article class="storage-main-card" style="padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
+				<h3 class="detail-section-title" style="margin:0;">System Snapshot</h3>
+				<p class="detail-control-value" style="margin:0;">Logical cores: ${result.specs.cores}</p>
+				<p class="detail-control-value" style="margin:0;">Estimated memory (GB): ${result.specs.deviceMemory}</p>
+				<p class="detail-control-value" style="margin:0;">Platform: ${result.specs.platform}</p>
+				<p class="detail-control-value" style="margin:0;">Last run: ${new Date(result.timestamp).toLocaleString()}</p>
+				</article>
+				`;
 				}
-
 				async function runAssessment() {
 					const [cpu, memory, graphics, storage, responsiveness] = await Promise.all([
-					benchmarkCpu(),
-					benchmarkMemory(),
-					benchmarkGraphics(),
-					benchmarkStorage(),
-					benchmarkResponsiveness(),
+						benchmarkCpu(),
+						benchmarkMemory(),
+						benchmarkGraphics(),
+						benchmarkStorage(),
+						benchmarkResponsiveness(),
 					]);
-
 					const scores = {
 						cpu: cpu.score,
 						memory: memory.score,
@@ -1213,7 +1163,6 @@
 						storage: storage.score,
 						responsiveness: responsiveness.score,
 					};
-
 					const base = toFixedScore(Math.min(scores.cpu, scores.memory, scores.graphics, scores.storage, scores.responsiveness));
 					const result = {
 						timestamp: Date.now(),
@@ -1235,35 +1184,33 @@
 					await saveResult(result);
 					return result;
 				}
-
 				const performanceModule = {
-					render: async function() {
+					render: async function () {
 						const saved = await getSavedResult();
 						return `
-						<section class="storage-dashboard" style="gap:10px;">
-							<article class="storage-main-card" style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-								<div>
-									<h2 style="font-size:18px;font-weight:800;margin:0;">Terbium Performance Index</h2>
-									<p class="detail-control-value" style="margin:4px 0 0 0;">Runs a local benchmark and scores your machine from 1.0 to 9.9.</p>
-								</div>
-								<div style="display:flex;gap:8px;flex-wrap:wrap;">
-									<button type="button" class="detail-action" data-run-assessment="true">Run Assessment</button>
-									<button type="button" class="detail-action" data-refresh-assessment="true">Refresh View</button>
-								</div>
-							</article>
-							${renderResult(saved)}
-						</section>
-						`;
+				<section class="storage-dashboard" style="gap:10px;">
+				<article class="storage-main-card" style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+				<div>
+				<h2 style="font-size:18px;font-weight:800;margin:0;">Terbium Performance Index</h2>
+				<p class="detail-control-value" style="margin:4px 0 0 0;">Runs a local benchmark and scores your machine from 1.0 to 9.9.</p>
+				</div>
+				<div style="display:flex;gap:8px;flex-wrap:wrap;">
+				<button type="button" class="detail-action" data-run-assessment="true">Run Assessment</button>
+				<button type="button" class="detail-action" data-refresh-assessment="true">Refresh View</button>
+				</div>
+				</article>
+				${renderResult(saved)}
+				</section>
+				`;
 					},
-					wire: function(root) {
-						const rerender = async function() {
+					wire: function (root) {
+						const rerender = async function () {
 							root.innerHTML = await performanceModule.render();
 							performanceModule.wire(root);
 						};
-
-						const runBtn = root.querySelector("[data-run-assessment="true"]");
+						const runBtn = root.querySelector("[data-run-assessment='true']");
 						if (runBtn) {
-							runBtn.addEventListener("click", async function() {
+							runBtn.addEventListener("click", async function () {
 								const original = runBtn.textContent;
 								runBtn.textContent = "Assessing...";
 								runBtn.setAttribute("disabled", "disabled");
@@ -1284,10 +1231,9 @@
 								}
 							});
 						}
-
-						const refreshBtn = root.querySelector("[data-refresh-assessment="true"]");
+						const refreshBtn = root.querySelector("[data-refresh-assessment='true']");
 						if (refreshBtn) {
-							refreshBtn.addEventListener("click", async function() {
+							refreshBtn.addEventListener("click", async function () {
 								await rerender();
 							});
 						}
