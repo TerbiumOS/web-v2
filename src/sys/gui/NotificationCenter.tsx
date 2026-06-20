@@ -26,7 +26,6 @@ export default function NotificationCenter() {
 
 	useEffect(() => {
 		const updateCount = (event: CustomEvent) => {
-			console.log(event.detail);
 			if (typeof event.detail.count === "number") {
 				setNotificationCount(event.detail.count);
 			} else if (event.detail.count === "dnd") {
