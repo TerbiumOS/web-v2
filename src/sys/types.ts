@@ -422,7 +422,8 @@ export interface UserSettings {
 	accent: string;
 	windowOptimizations?: boolean;
 	showFPS?: boolean;
-	notificationMode: "all" | "dnd" | "snooze-10" | [];
+	notificationMode: "all" | "dnd" | "snooze-10" | "allow-apps";
+	notificationAllowList?: string[];
 	times: {
 		format: "12h" | "24h";
 		internet: boolean;

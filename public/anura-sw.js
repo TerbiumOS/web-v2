@@ -21,9 +21,6 @@ importScripts("/tfs/tfs.js");
 // Importing mime
 importScripts("/assets/libs/mime.iife.js");
 
-// Download handler
-importScripts("/assets/libs/dl-handler.min.js");
-
 // self.fs = new Filer.FileSystem({
 //     name: "anura-mainContext",
 //     provider: new Filer.FileSystem.providers.IndexedDB(),
@@ -854,7 +851,6 @@ methods.forEach(method => {
 			console.log("Got SJ req");
 			if ($scramjetController.shouldRoute(event)) {
 				return await $scramjetController.route(event);
-				//return await saveFP(response, event.request, "Scramjet");
 			}
 			return fetch(event.request);
 		},

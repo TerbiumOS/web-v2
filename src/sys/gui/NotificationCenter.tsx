@@ -16,6 +16,7 @@ export default function NotificationCenter() {
 		const savedCount = JSON.parse(sessionStorage.getItem("notifications") || "[]").length;
 		return savedCount ? parseInt(savedCount) : 0;
 	});
+	const [iconLoad, seticonLoad] = useState(`/assets/img/notif_${notificationCount > 9 ? "plus" : Math.max(0, Math.min(notificationCount, 9))}.svg`);
 	const iconRef = useRef<HTMLImageElement>(null);
 	const updateIcon = () => {
 		if (iconRef.current) {
@@ -25,7 +26,16 @@ export default function NotificationCenter() {
 
 	useEffect(() => {
 		const updateCount = (event: CustomEvent) => {
-			setNotificationCount(event.detail.count);
+			console.log(event.detail);
+			if (typeof event.detail.count === "number") {
+				setNotificationCount(event.detail.count);
+			} else if (event.detail.count === "dnd") {
+				seticonLoad(`/assets/img/notif_dnd.svg`);
+			} else if (event.detail.count === "sleep") {
+				seticonLoad(`/assets/img/notif_0.svg`);
+			} else {
+				seticonLoad(`/assets/img/notif_${notificationCount > 9 ? "plus" : Math.max(0, Math.min(notificationCount, 9))}.svg`);
+			}
 		};
 		window.addEventListener("notification-count", updateCount as EventListener);
 		updateIcon();
@@ -40,7 +50,7 @@ export default function NotificationCenter() {
 		<img
 			alt="notifimg"
 			ref={iconRef}
-			src={`/assets/img/notif_${notificationCount > 9 ? "plus" : Math.max(0, Math.min(notificationCount, 9))}.svg`}
+			src={iconLoad}
 			className="tooltip_item w-6 h-6 cursor-pointer duration-150 select-none"
 			onMouseUp={() => {
 				iconRef.current?.classList.remove("scale-90");

@@ -267,6 +267,13 @@
 						const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
 						cfg.notificationMode = value;
 						await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+						if (value === "dnd") {
+							await window.parent.dispatchEvent(new CustomEvent("notification-count", { detail: { count: "dnd" } }));
+						} else if (value === "snooze-10") {
+							await window.parent.dispatchEvent(new CustomEvent("notification-count", { detail: { count: "sleep" } }));
+						} else {
+							await window.parent.dispatchEvent(new CustomEvent("notification-count", { detail: { count: undefined } }));
+						}
 					} catch {
 						/* ignore */
 					}

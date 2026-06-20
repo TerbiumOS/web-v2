@@ -419,12 +419,39 @@ export default async function Api() {
 		},
 		notification: {
 			Message(props: NotificationProps) {
+				window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8").then(settingsData => {
+					const settings: UserSettings = JSON.parse(settingsData);
+					if (settings.notificationMode === "dnd") return;
+					if (settings.notificationMode === "allow-apps") {
+						if (!settings.notificationAllowList?.includes(props.application)) {
+							return;
+						}
+					}
+				});
 				setNotifFn("message", props);
 			},
 			Toast(props: NotificationProps) {
+				window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8").then(settingsData => {
+					const settings: UserSettings = JSON.parse(settingsData);
+					if (settings.notificationMode === "dnd") return;
+					if (settings.notificationMode === "allow-apps") {
+						if (!settings.notificationAllowList?.includes(props.application)) {
+							return;
+						}
+					}
+				});
 				setNotifFn("toast", props);
 			},
 			Installing<T>(props: NotificationProps, task?: Promise<T> | (() => Promise<T>), doneToast?: Partial<NotificationProps> | null, failToast?: Partial<NotificationProps> | null) {
+				window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8").then(settingsData => {
+					const settings: UserSettings = JSON.parse(settingsData);
+					if (settings.notificationMode === "dnd") return;
+					if (settings.notificationMode === "allow-apps") {
+						if (!settings.notificationAllowList?.includes(props.application)) {
+							return;
+						}
+					}
+				});
 				if (!task) {
 					setNotifFn("installing", props);
 					return;
