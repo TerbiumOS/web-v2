@@ -434,6 +434,7 @@ export interface UserSettings {
 		alwaysMaximized: boolean;
 		alwaysFullscreen: boolean;
 	};
+	scramjetFlags?: SJFlags;
 }
 
 export interface SysSettings {

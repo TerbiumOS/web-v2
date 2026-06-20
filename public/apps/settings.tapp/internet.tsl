@@ -14,13 +14,13 @@
 				<Item id="transport" title="Transport" icon="swap_horiz" />
 			</Sidebar>
 			<RecommendedOptions>
-				<Option id="internet.quick.proxy" text="Change scramjet flags" view="proxy" />
+				<Option id="internet.quick.flags" text="Change scramjet flags" view="flags" />
 				<Option id="internet.quick.wisp" text="Change wisp server" view="wisp" />
 				<Option id="internet.quick.transport" text="Change transport" view="transport" />
 			</RecommendedOptions>
 			<Content>
-				<View id="proxy">
-					<Section title="Proxy" custom="true">
+				<View id="flags">
+					<Section title="flags" custom="true">
 						<Text label="Scramjet Flags" bind="internet.proxy.flags" />
 					</Section>
 				</View>
