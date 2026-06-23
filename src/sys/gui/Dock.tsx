@@ -46,7 +46,9 @@ interface IUser {
 }
 
 const Dock: FC<IDockProps> = ({ pinned }) => {
-	const windowStore = useWindowStore();
+	const windows = useWindowStore(s => s.windows);
+	const addWindow = useWindowStore(s => s.addWindow);
+	const windowStore = { windows, addWindow };
 	const searchMenuStore = useSearchMenuStore();
 
 	const [isStartOpen, setStartOpen] = useState<boolean>(false);
@@ -577,7 +579,10 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 };
 
 const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onContextMenu, size, snapable, pid, wid, proxy }) => {
-	const windowStore = useWindowStore();
+	const windows = useWindowStore(s => s.windows);
+	const matchedWindows = useWindowStore(s => s.matchedWindows);
+	const addWindow = useWindowStore(s => s.addWindow);
+	const windowStore = { windows, matchedWindows, addWindow };
 	const dockItemRef = useRef<HTMLDivElement>(null);
 	const hoverPreviewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [currWID, setcurrWID] = useState(wid);
@@ -738,7 +743,8 @@ const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onConte
 };
 
 const PinnedDockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onContextMenu, size, snapable, proxy }) => {
-	const windowStore = useWindowStore();
+	const addWindow = useWindowStore(s => s.addWindow);
+	const windowStore = { addWindow };
 	return (
 		<dock-item
 			// @ts-expect-error

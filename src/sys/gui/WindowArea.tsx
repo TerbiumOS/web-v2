@@ -26,7 +26,11 @@ interface DesktopItem {
 }
 
 const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, onSnapPreview }) => {
-	const windowStore = useWindowStore();
+	const arrange = useWindowStore(s => s.arrange);
+	const getWindow = useWindowStore(s => s.getWindow);
+	const removeWindow = useWindowStore(s => s.removeWindow);
+	const minimize = useWindowStore(s => s.minimize);
+	const windowStore = { arrange, getWindow, removeWindow, minimize };
 	const [optimizationsEnabled, setOptimizationsEnabled] = useState(true);
 
 	const windowRef = useRef<HTMLDivElement>(null);
@@ -567,18 +571,21 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			window.removeEventListener("mousemove", onMove);
 			window.removeEventListener("mouseup", onUp);
 			window.removeEventListener("blur", onUp);
+			document.documentElement.removeEventListener("mouseleave", onLeave);
 			setIsMouseDown(false);
 			setIsResizing(false);
 		};
 
-		window.onmouseleave = () => {
+		const onLeave = () => {
 			setIsDragging(false);
 			setIsMouseDown(false);
 			window.removeEventListener("mousemove", onMove);
 			window.removeEventListener("mouseup", onUp);
 			window.removeEventListener("blur", onUp);
+			document.documentElement.removeEventListener("mouseleave", onLeave);
 		};
 
+		document.documentElement.addEventListener("mouseleave", onLeave);
 		window.addEventListener("mousemove", onMove);
 		window.addEventListener("mouseup", onUp);
 		window.addEventListener("blur", onUp);
@@ -709,21 +716,24 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 						window.removeEventListener("mousemove", onMove);
 						window.removeEventListener("mouseup", onUp);
 						window.removeEventListener("blur", onUp);
+						document.documentElement.removeEventListener("mouseleave", onLeave);
 						setIsMouseDown(false);
 						setIsDragging(false);
 					};
 
-					window.addEventListener("mousemove", onMove);
-					window.addEventListener("mouseup", onUp);
-					window.addEventListener("blur", onUp);
-
-					window.onmouseleave = () => {
+					const onLeave = () => {
 						setIsDragging(false);
 						setIsMouseDown(false);
 						window.removeEventListener("mousemove", onMove);
 						window.removeEventListener("mouseup", onUp);
 						window.removeEventListener("blur", onUp);
+						document.documentElement.removeEventListener("mouseleave", onLeave);
 					};
+
+					window.addEventListener("mousemove", onMove);
+					window.addEventListener("mouseup", onUp);
+					window.addEventListener("blur", onUp);
+					document.documentElement.addEventListener("mouseleave", onLeave);
 
 					setIsMouseDown(true);
 				}}
@@ -1293,9 +1303,11 @@ const DesktopItems = () => {
 				holdTimeout = null;
 			}
 		};
-		window.onmouseup = async (e: MouseEvent) => {
+		const onWindowMouseUp = async (e: MouseEvent) => {
 			setDragging(false);
 			window.removeEventListener("mousemove", onMouseMove);
+			window.removeEventListener("mouseup", onWindowMouseUp);
+			document.documentElement.removeEventListener("mouseleave", onWindowMouseLeave);
 			if (draggedItemIndex.current !== null && !holdTimeout) {
 				const draggedApp = items[draggedItemIndex.current];
 				const updatedApp = {
@@ -1310,10 +1322,12 @@ const DesktopItems = () => {
 			setDragradius(false);
 		};
 
-		window.onmouseleave = async () => {
+		const onWindowMouseLeave = async () => {
 			clearHoldTimeout();
 			setDragging(false);
 			window.removeEventListener("mousemove", onMouseMove);
+			window.removeEventListener("mouseup", onWindowMouseUp);
+			document.documentElement.removeEventListener("mouseleave", onWindowMouseLeave);
 			if (draggedItemIndex.current !== null && dragging) {
 				const draggedApp = items[draggedItemIndex.current];
 				const updatedApp = {
@@ -1325,6 +1339,8 @@ const DesktopItems = () => {
 			}
 			draggedItemIndex.current = null;
 		};
+		window.addEventListener("mouseup", onWindowMouseUp);
+		document.documentElement.addEventListener("mouseleave", onWindowMouseLeave);
 
 		e.preventDefault();
 		e.target.addEventListener("mouseup", clearHoldTimeout, { once: true });
@@ -1642,7 +1658,8 @@ interface WindowAreaProps {
 }
 
 const WindowArea: React.FC<WindowAreaProps> = ({ className }) => {
-	const windowStore = useWindowStore();
+	const windows = useWindowStore(s => s.windows);
+	const windowStore = { windows };
 	const [prevShowing, showPrev] = useState(false);
 	const [direction, setDirection] = useState<string | null>(null);
 	const snapPrev = (pos: string) => {

@@ -236,6 +236,19 @@ const Desktop: FC<IDesktopProps> = ({ desktop, onContextMenu }) => {
 		getPins();
 	}, []);
 
+	useEffect(() => {
+		const cache = thumbnailCacheRef.current;
+		return () => {
+			cache.clear();
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!winPrev?.open) {
+			thumbnailCacheRef.current.clear();
+		}
+	}, [winPrev?.open]);
+
 	return (
 		<div
 			className={`desktop flex flex-col h-[inherit] overflow-hidden `}
