@@ -58,7 +58,7 @@ export default function Updater() {
 				await ensureDirForPath(path);
 				const output = new Uint8Array(content.byteLength);
 				output.set(content);
-				await window.tb.fs.promises.writeFile(path, output.buffer);
+				await window.tb.fs.promises.writeFile(path, output.buffer, "arraybuffer");
 				return true;
 			};
 			const syncDirectoryDiff = async (sourceDir: string, targetDir: string): Promise<{ updated: number; removed: number; skipped: number }> => {

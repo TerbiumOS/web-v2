@@ -36,8 +36,8 @@ body {
 	background: rgba(255, 255, 255, 0.04);
 	color: #94a3b8;
 	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-	font-size: 0.85rem;
-	line-height: 1.65;
+	font-size: 0.92rem;
+	line-height: 1.55;
 	text-align: right;
 	user-select: none;
 	overflow: hidden;
@@ -45,7 +45,7 @@ body {
 
 .editor-gutter span {
 	display: block;
-	padding: 0 0.5rem 0.15rem;
+	padding: 0 0.5rem 0 0;
 }
 
 .editor-content {

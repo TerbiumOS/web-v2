@@ -1686,6 +1686,7 @@ export default async function Api() {
 	document.addEventListener("keyup", up);
 	wsld();
 	await window.tb.proxy.updateSWs();
+	await window.tb.vfs.mountAll();
 	const getchangelog = async () => {
 		const reCache: Record<string, { hash: string; changeFile: string }> = await (await window.tb.libcurl.fetch("https://cdn.terbiumon.top/changelogs/versions.json")).json();
 		const vInf = reCache[system.version("string") as string];
