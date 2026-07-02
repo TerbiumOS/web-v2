@@ -145,52 +145,42 @@ async function installTappZip(path) {
 					.replace(`/home/${user}/`, "")
 					.replace(/\//g, ".")
 					.replace(/\.zip$/, "");
-				tb.notification.Installing({
-					message: `Installing ${appName}...`,
-					application: "Files",
-					iconSrc: "/fs/apps/system/files.tapp/icon.svg",
-					time: 500,
-				});
-				try {
-					const targetDir = `/apps/user/${user}/${appName}`;
-					await extractZip(path, targetDir);
-					const appConf = await tb.fs.promises.readFile(`${targetDir}/.tbconfig`, "utf8");
-					const appData = JSON.parse(appConf);
-					await tb.launcher.addApp({
-						name: appData.title,
-						icon: appData.icon?.includes("http") ? appData.icon : `/fs/${targetDir}/${appData.icon}`,
-						title: appData.wmArgs.title,
-						src: `/fs/${targetDir}/${appData.wmArgs.src}`,
-						size: appData.wmArgs.size,
-						single: appData.wmArgs.single,
-						resizable: appData.wmArgs.resizable,
-						controls: appData.wmArgs.controls,
-						message: appData.wmArgs.message,
-						snapable: appData.wmArgs.snapable,
-						user,
-					});
-					try {
-						const apps = JSON.parse(await tb.fs.promises.readFile("/apps/installed.json", "utf8"));
-						apps.push({ name: appName, user, config: `/apps/user/${user}/${appName}/.tbconfig` });
-						await tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify(apps));
-					} catch {
-						await tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify([{ name: appName, user, config: `/apps/user/${user}/${appName}/.tbconfig` }]));
-					}
-					tb.notification.Toast({
-						message: `${appName} has been installed!`,
+				
+				await tb.notification.Installing(
+					{
+						message: `Installing ${appName}...`,
 						application: "Files",
 						iconSrc: "/fs/apps/system/files.tapp/icon.svg",
-						time: 5000,
-					});
-				} catch (e) {
-					console.error("Install failed:", e);
-					tb.notification.Toast({
-						message: `Failed to install ${appName}.`,
-						application: "Files",
-						iconSrc: "/fs/apps/system/files.tapp/icon.svg",
-						time: 5000,
-					});
-				}
+					},
+					async () => {
+						const targetDir = `/apps/user/${user}/${appName}`;
+						await extractZip(path, targetDir);
+						const appConf = await tb.fs.promises.readFile(`${targetDir}/.tbconfig`, "utf8");
+						const appData = JSON.parse(appConf);
+						await tb.launcher.addApp({
+							name: appData.title,
+							icon: appData.icon?.includes("http") ? appData.icon : `/fs/${targetDir}/${appData.icon}`,
+							title: appData.wmArgs.title,
+							src: `/fs/${targetDir}/${appData.wmArgs.src}`,
+							size: appData.wmArgs.size,
+							single: appData.wmArgs.single,
+							resizable: appData.wmArgs.resizable,
+							controls: appData.wmArgs.controls,
+							message: appData.wmArgs.message,
+							snapable: appData.wmArgs.snapable,
+							user,
+						});
+						try {
+							const apps = JSON.parse(await tb.fs.promises.readFile("/apps/installed.json", "utf8"));
+							apps.push({ name: appName, user, config: `/apps/user/${user}/${appName}/.tbconfig` });
+							await tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify(apps));
+						} catch {
+							await tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify([{ name: appName, user, config: `/apps/user/${user}/${appName}/.tbconfig` }]));
+						}
+					},
+					{ message: `${appName} installed successfully!` },
+					{ message: `Failed to install ${appName}` }
+				);
 			},
 		});
 	} catch (e) {

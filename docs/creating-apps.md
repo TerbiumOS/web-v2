@@ -1,5 +1,7 @@
 # <span style="color: #32ae62;">Creating new applications</span>
 
+**Last Updated**: v2.4.0 - 07/02/2026
+
 Table of Contents:
 
 - [Introduction](#introduction)
@@ -17,7 +19,271 @@ This guide shows current, developer-friendly examples for building apps on Terbi
 
 ## <span style="color: #32ae62;">Introduction</span>
 
-Decide whether your app will be a PWA (web app) or a TAPP (packaged Terbium app). PWAs use `wmArgs` and the built-in proxy support; TAPPs are distributed as packaged archives with a download URL.
+Terbium v2 supports three types of applications, each suited for different use cases:
+
+### 1. PWAs (Progressive Web Apps)
+Progressive Web Apps are web applications that run in Terbium's window system. They're perfect for:
+- Web-based services (YouTube, Discord, etc.)
+- Applications that need network access through Terbium's proxy
+- Quick prototypes and simple tools
+- Apps that don't need local file system access
+
+**Pros:**
+- Easy to create and deploy
+- No packaging required
+- Can use external URLs
+- Automatic updates when the source changes
+
+**Cons:**
+- Limited file system access
+- Depends on network connectivity for external sources
+- Less control over window behavior
+
+### 2. TAPPs (Terbium Application Packages)
+TAPPs are packaged applications distributed as `.tapp.zip` files. They're ideal for:
+- Native-feeling applications
+- Apps requiring extensive file system access
+- Offline-capable applications
+- Complex multi-file applications
+
+**Pros:**
+- Full access to Terbium APIs
+- Can include multiple files and assets
+- Work offline after installation
+- Better integration with the system
+
+**Cons:**
+- Require packaging and distribution
+- Need to be installed by users
+- Updates require redistributing the package
+
+### 3. Anura Apps
+Anura applications are legacy apps from Anura v2.1. Include them if:
+- You're porting existing Anura apps
+- You need backward compatibility
+- You're targeting both platforms
+
+**Choosing the Right Type:**
+- **Use PWAs** for web services, simple tools, or when you want easy deployment
+- **Use TAPPs** for full-featured applications that need system integration
+- **Use Anura Apps** only for legacy compatibility
+
+This guide focuses primarily on PWAs and TAPPs, as they're the recommended formats for new Terbium v2 applications.
+
+## <span style="color: #32ae62;">Building Your First App - Quick Start</span>
+
+Let's create a simple TAPP application from scratch. This example demonstrates the core concepts you'll need.
+
+### Step 1: Create Your App Directory
+
+Create a new folder for your app:
+```
+/apps/user/[username]/myapp.tapp/
+```
+
+### Step 2: Create the Configuration File
+
+Create `.tbconfig` in your app directory with the following content:
+
+```json
+{
+  "title": "My First App",
+  "wmArgs": {
+    "title": { "text": "My First App", "weight": 600 },
+    "icon": "icon.svg",
+    "src": "index.html",
+    "size": { "width": 600, "height": 400 },
+    "single": false,
+    "resizable": true,
+    "snapable": true,
+    "controls": ["minimize", "maximize", "close"]
+  }
+}
+```
+
+### Step 3: Create Your HTML File
+
+Create `index.html`:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My First App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Hello, Terbium!</h1>
+        <p>This is my first Terbium application.</p>
+        <button id="clickMe">Click Me!</button>
+        <p id="counter">Clicks: 0</p>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
+```
+
+### Step 4: Add Styling
+
+Create `style.css`:
+
+```css
+@font-face {
+    font-family: 'Inter';
+    src: url('/fonts/inter.ttf') format('truetype');
+    font-display: swap;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+.container {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+button {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+#counter {
+    margin-top: 1rem;
+    font-size: 1.25rem;
+}
+```
+
+### Step 5: Add Functionality
+
+Create `app.js`:
+
+```javascript
+// Get reference to parent window's Terbium API
+const tb = parent.window.tb;
+
+let clickCount = 0;
+const button = document.getElementById('clickMe');
+const counter = document.getElementById('counter');
+
+button.addEventListener('click', () => {
+    clickCount++;
+    counter.textContent = `Clicks: ${clickCount}`;
+    
+    // Show a notification after 10 clicks
+    if (clickCount === 10) {
+        tb.notification.Toast({
+            message: 'You clicked 10 times!',
+            application: 'My First App',
+            iconSrc: '/fs/apps/user/' + sessionStorage.getItem('currAcc') + '/myapp.tapp/icon.svg',
+            time: 3000
+        });
+    }
+});
+
+// Add a simple island control
+tb.window.island.addControl({
+    text: 'File',
+    appname: 'My First App',
+    id: 'myapp_file',
+    click: () => {
+        const appIsland = window.parent.document.querySelector('.app_island');
+        const options = [
+            { 
+                text: 'Reset Counter', 
+                click: () => {
+                    clickCount = 0;
+                    counter.textContent = 'Clicks: 0';
+                }
+            },
+            null, // Separator
+            { 
+                text: 'About', 
+                click: () => {
+                    tb.dialog.Alert({
+                        title: 'About My First App',
+                        message: 'This is a simple demo app for Terbium v2!'
+                    });
+                }
+            }
+        ];
+        
+        tb.contextmenu.create({
+            x: 6,
+            y: appIsland.clientHeight + 12,
+            iframe: false,
+            options: options
+        });
+    }
+});
+```
+
+### Step 6: Create an Icon
+
+Create a simple SVG icon file named `icon.svg`:
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+    <path d="M10 17l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="white"/>
+</svg>
+```
+
+### Step 7: Test Your App
+
+1. Open the Terbium File Manager
+2. Navigate to `/apps/user/[username]/myapp.tapp/`
+3. Open `index.html` with the Webview application to test locally
+4. Or add your app to the launcher (see section below)
+
+### Step 8: Package for Distribution (Optional)
+
+To create a `.tapp.zip` file for distribution:
+
+1. Compress your `myapp.tapp` folder to a ZIP file
+2. Rename it to `myapp.tapp.zip`
+3. Users can double-click to install it
+
+Your app folder should now look like this:
+```
+myapp.tapp/
+├── .tbconfig
+├── index.html
+├── style.css
+├── app.js
+└── icon.svg
+```
 
 ## <span style="color: #32ae62;">Using TB Features</span>
 
@@ -44,11 +310,92 @@ Use `wmArgs` to describe window behaviour and initial state. Example shape:
 - single: open only one window instance
 - resizable / snapable / maximizable / minimizable / closable: standard window flags
 
-API notes:
+### Common wmArgs Properties Explained
 
-- Create a window at runtime: `parent.window.tb.window.create(wmArgs)`
-- Open files via built-in handler: `parent.window.tb.file.handler.openFile(path, ext)`
-- See runtime APIs for dialogs, notifications and fs in the API docs.
+**title**: Window title configuration
+- String: `"My App"` - Simple text title
+- Object: `{ text: "My App", weight: 600, html: "<b>My App</b>" }` - Rich title with styling
+
+**icon**: Application icon
+- Local path: `"icon.svg"` (relative to app directory)
+- Absolute path: `"/apps/myapp/icon.svg"`
+- External URL: `"https://example.com/icon.png"`
+
+**src**: Application content source
+- Local HTML: `"index.html"`
+- External URL: `"https://example.com/app"`
+- For PWAs using proxy, set `proxy: true`
+
+**size**: Window dimensions
+```json
+{
+    "width": 800,
+    "height": 600,
+    "minWidth": 400,
+    "minHeight": 300
+}
+```
+
+**Window Behavior Flags:**
+- `single: true` - Only allow one instance of the app window
+- `resizable: true` - Allow window resizing
+- `snapable: true` - Allow window snapping to screen edges
+- `maximizable: true` - Show maximize button (default: true)
+- `minimizable: true` - Show minimize button (default: true)
+- `closable: true` - Show close button (default: true)
+
+**native**: Set to `true` if your app has a custom/native UI that doesn't need Terbium's default window chrome
+
+**controls**: Array of control buttons to show
+```json
+["minimize", "maximize", "close"]
+```
+
+### Accessing the Terbium API
+
+All Terbium APIs are accessed through the `tb` object in the parent window:
+
+```javascript
+// Always use parent.window.tb to access the API
+const tb = parent.window.tb;
+
+// File system operations
+await tb.fs.promises.readFile('/path/to/file', 'utf8');
+await tb.fs.promises.writeFile('/path/to/file', 'content', 'utf8');
+await tb.fs.promises.readdir('/path/to/directory');
+
+// Dialogs
+tb.dialog.Alert({ title: 'Info', message: 'Hello!' });
+tb.dialog.Message({ 
+    title: 'Input', 
+    defaultValue: 'Default',
+    onOk: (value) => console.log('User entered:', value)
+});
+
+// Notifications
+tb.notification.Toast({
+    message: 'Operation complete',
+    application: 'My App',
+    iconSrc: '/path/to/icon.svg',
+    time: 3000
+});
+
+// Create new windows
+tb.window.create({
+    title: { text: 'New Window' },
+    icon: '/icon.svg',
+    src: '/page.html',
+    size: { width: 500, height: 400 }
+});
+
+// Open files with default handlers
+tb.file.handler.openFile('/path/to/file.txt', 'text');
+
+// User information
+const username = await tb.user.username();
+```
+
+For complete API documentation, see [/docs/apis/readme.md](/docs/apis/readme.md)
 
 ### <a id="island-controls" style="color: #32ae52;">Island Controls</a>
 

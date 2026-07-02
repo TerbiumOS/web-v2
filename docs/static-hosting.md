@@ -6,7 +6,7 @@ For this tutorial, Cloudflare pages will be used however the instructions will b
 
 Fork this repository and connect your github account to the static host of your choise.
 
-> <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> On Cloudflare pages, Terbium is automatically configured to use Node 20. If your using a different host check with them that you are using Node 20 or later as Terbium **WILL NOT** build on older versions.
+> <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> On Cloudflare pages, Terbium is automatically configured to use Node 20. If you're using a different host check with them that you are using Node 20 or later as Terbium **WILL NOT** build on older versions.
 
 ### <span style="color: #32ae62;">Step 2.</span>
 

@@ -197,6 +197,72 @@ body {
 	display: block;
 }
 
+/* Breadcrumb Hover Panel */
+.breadcrumb-hover-panel {
+	position: fixed;
+	z-index: 1001;
+	display: flex;
+	flex-direction: column;
+	min-width: 220px;
+	max-width: 320px;
+	max-height: 400px;
+	overflow-y: auto;
+	padding: 6px;
+	border-radius: 10px;
+	background: rgba(20, 20, 24, 0.75);
+	box-shadow:
+		inset 0 0 0 1px var(--glass-edge),
+		0 12px 28px rgba(0, 0, 0, 0.4);
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
+	animation: fade-in 140ms ease-out forwards;
+}
+
+.tree-item {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 8px;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: background 100ms ease;
+	user-select: none;
+}
+
+.tree-item:hover {
+	background: var(--item-bg-hover);
+}
+
+.tree-item.is-child {
+	opacity: 0.85;
+	font-size: 12px;
+}
+
+.tree-icon {
+	width: 16px;
+	height: 16px;
+	flex: 0 0 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-dim);
+}
+
+.tree-icon svg {
+	width: 100%;
+	height: 100%;
+}
+
+.tree-name {
+	flex: 1;
+	color: var(--text);
+	font-size: 13px;
+	font-weight: 500;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 /* Search */
 .search-wrap {
 	position: relative;

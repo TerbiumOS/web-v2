@@ -1,4 +1,4 @@
-import { emit, on, state } from "../state.js";
+import { emit, on, state, tb } from "../state.js";
 import { basename } from "../utils.js";
 
 let els = null;
@@ -147,7 +147,133 @@ function addCrumb(label, path) {
 		e.stopPropagation();
 		emit("crumb:click", path);
 	});
+	
+	if (label === "/") {
+		let hoverPanel = null;
+		let hoverTimeout = null;
+		let hideTimeout = null;
+		
+		const showPanel = async () => {
+			if (hoverPanel) return;
+			
+			hoverPanel = document.createElement("div");
+			hoverPanel.className = "breadcrumb-hover-panel";
+			
+			const currentPath = state.currentPath || "/";
+			const parts = currentPath.split("/").filter(Boolean);
+			
+			const rootItem = createTreeItem("/", "/", 0);
+			hoverPanel.appendChild(rootItem);
+			
+			let accPath = "";
+			for (let i = 0; i < parts.length; i++) {
+				accPath += `/${parts[i]}`;
+				try {
+					const item = createTreeItem(parts[i], accPath, i + 1);
+					hoverPanel.appendChild(item);
+					
+					if (i < parts.length - 1) {
+						const children = await loadFolderChildren(accPath);
+						for (const child of children) {
+							const childItem = createTreeItem(child.name, child.path, i + 2, true);
+							hoverPanel.appendChild(childItem);
+						}
+					}
+				} catch (e) {
+					console.error("Error loading tree item:", e);
+				}
+			}
+			
+			const rect = c.getBoundingClientRect();
+			hoverPanel.style.left = `${rect.left}px`;
+			hoverPanel.style.top = `${rect.bottom + 4}px`;
+			
+			hoverPanel.addEventListener("mouseenter", () => {
+				clearTimeout(hideTimeout);
+			});
+			
+			hoverPanel.addEventListener("mouseleave", () => {
+				hideTimeout = setTimeout(() => {
+					if (hoverPanel) {
+						hoverPanel.remove();
+						hoverPanel = null;
+					}
+				}, 100);
+			});
+			
+			document.body.appendChild(hoverPanel);
+		};
+		
+		const hidePanel = () => {
+			hideTimeout = setTimeout(() => {
+				if (hoverPanel) {
+					hoverPanel.remove();
+					hoverPanel = null;
+				}
+			}, 100);
+		};
+		
+		c.addEventListener("mouseenter", () => {
+			clearTimeout(hideTimeout);
+			hoverTimeout = setTimeout(showPanel, 300);
+		});
+		
+		c.addEventListener("mouseleave", () => {
+			clearTimeout(hoverTimeout);
+			hidePanel();
+		});
+	}
+	
 	els.breadcrumbs.appendChild(c);
+}
+
+function createTreeItem(label, path, depth, isChild = false) {
+	const item = document.createElement("div");
+	item.className = "tree-item";
+	if (isChild) item.classList.add("is-child");
+	item.style.paddingLeft = `${depth * 16}px`;
+	
+	const icon = document.createElement("span");
+	icon.className = "tree-icon";
+	icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.25 3.5h-5.5A1.75 1.75 0 0 0 2 5.25v13.5c0 .966.784 1.75 1.75 1.75h16.5A1.75 1.75 0 0 0 22 18.75v-11a1.75 1.75 0 0 0-1.75-1.75h-8.5a.25.25 0 0 1-.186-.084l-1.626-1.83a1.75 1.75 0 0 0-1.188-.586Z"/></svg>`;
+	
+	const name = document.createElement("span");
+	name.className = "tree-name";
+	name.textContent = label;
+	
+	item.appendChild(icon);
+	item.appendChild(name);
+	
+	item.addEventListener("click", e => {
+		e.stopPropagation();
+		emit("crumb:click", path);
+		const panel = item.closest(".breadcrumb-hover-panel");
+		if (panel) panel.remove();
+	});
+	
+	return item;
+}
+
+async function loadFolderChildren(path) {
+	try {
+		const entries = await tb.fs.promises.readdir(path);
+		const children = [];
+		for (const name of entries) {
+			if (name.startsWith(".")) continue;
+			const fullPath = path === "/" ? `/${name}` : `${path}/${name}`;
+			try {
+				const stats = await tb.fs.promises.stat(fullPath);
+				if (stats.isDirectory()) {
+					children.push({ name, path: fullPath });
+				}
+			} catch (e) {
+				// Skip files that can't be stat'd
+			}
+		}
+		return children.slice(0, 10);
+	} catch (e) {
+		return [];
+	}
 }
 
 function addSep() {

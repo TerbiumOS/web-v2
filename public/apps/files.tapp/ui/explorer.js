@@ -27,7 +27,9 @@ export function initExplorer({ openPath, openFile, contextMenu }) {
 
 	on("view:change", mode => {
 		applyViewMode(mode);
-		renderItems();
+		if (state.currentPath !== "storage devices") {
+			renderItems();
+		}
 	});
 	on("selection:change", () => updateSelectionUI());
 	on("search:change", () => renderItems());
@@ -39,6 +41,13 @@ export function initExplorer({ openPath, openFile, contextMenu }) {
 
 	expEl.addEventListener("contextmenu", e => {
 		e.preventDefault();
+		
+		if (state.currentPath === "storage devices" || 
+		    state.currentPath === "local storage" || 
+		    state.currentPath.startsWith("local storage/")) {
+			return;
+		}
+		
 		const itemEl = e.target.closest(".item");
 		if (itemEl) {
 			const path = itemEl.dataset.path;

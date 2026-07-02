@@ -146,7 +146,6 @@ async function loadDavItems(path) {
 		for (const item of contents) {
 			const name = item.basename;
 			if (!name) continue;
-			// Skip self-reference: some servers include the current directory in the listing
 			if (item.type === "directory") {
 				const filenameNorm = String(item.filename || "")
 					.replace(/^\/+/g, "")
@@ -192,23 +191,22 @@ async function openPath(rawPath, opts = {}) {
 		return;
 	}
 
-	if (path === "storage devices") {
-		state.currentPath = path;
+	if (path === "storage devices" || path === "/mnt" || path === "/mnt/") {
+		const actualPath = "storage devices";
+		state.currentPath = actualPath;
 		state.items = [];
 		clearSelection();
-		if (expEl) expEl.setAttribute("path", path);
-		if (!opts.skipHistory) pushHistory(path);
-		emit("path:change", path);
+		if (expEl) expEl.setAttribute("path", actualPath);
+		if (!opts.skipHistory) pushHistory(actualPath);
+		emit("path:change", actualPath);
 		await renderStorageDevices(expEl, openPath);
 		return;
 	}
 
-	// Trim trailing slash on normal & dav paths (but keep root and local storage as-is)
 	if (path !== "/" && path !== "//" && !path.startsWith("local storage") && path.endsWith("/")) {
 		path = path.replace(/\/+$/g, "") || "/";
 	}
 
-	// .app sideload prompt for Anura apps (unless override)
 	if (!opts.override && /\.app$/i.test(path) && !path.startsWith("local storage") && !path.startsWith("/mnt/")) {
 		try {
 			const s = await statAsync(path);
@@ -223,16 +221,21 @@ async function openPath(rawPath, opts = {}) {
 					],
 					onOk: async val => {
 						if (val === "yes") {
-							try {
-								const anura = window.parent.anura;
-								const appPath = `/fs${path}`.replace("//", "/");
-								await anura.registerExternalApp(appPath);
-							} catch (e) {
-								tb.dialog.Alert({
-									title: "Unexpected Error",
-									message: `Failed to sideload ${path}: ${e}`,
-								});
-							}
+							const appName = basename(path);
+							await tb.notification.Installing(
+								{
+									message: `Installing ${appName}...`,
+									application: "Files",
+									iconSrc: "/fs/apps/system/files.tapp/icon.svg",
+								},
+								async () => {
+									const anura = window.parent.anura;
+									const appPath = `/fs${path}`.replace("//", "/");
+									await anura.registerExternalApp(appPath);
+								},
+								{ message: `${appName} installed successfully!` },
+								{ message: `Failed to install ${appName}` }
+							);
 							openPath(HOME);
 						} else if (val === "source") {
 							openPath(path, { override: true });
@@ -254,7 +257,6 @@ async function openPath(rawPath, opts = {}) {
 	} else if (path === "//" || path === "/") {
 		items = await loadDirItems("/");
 	} else {
-		// existence guard for regular paths
 		try {
 			const ex = await tb.fs.promises.exists(path);
 			if (!ex) {
@@ -289,7 +291,6 @@ async function itemContextMenu(targetEl) {
 	const type = targetEl?.dataset.type;
 	const sysFolder = targetEl?.dataset?.systemFolder === "true";
 
-	// Local-storage entries get their own context menu (no file ops apply)
 	if (single && type === "file" && paths[0].startsWith("local storage/")) {
 		const key = paths[0].slice("local storage/".length);
 		const lsOptions = [];

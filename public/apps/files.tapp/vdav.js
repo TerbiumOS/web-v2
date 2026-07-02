@@ -38,7 +38,6 @@ export async function getDavClient(path) {
 	} else {
 		filePath = path.replace(tb.vfs.currentServer.url || "", "/");
 	}
-	// Normalize any double slashes
 	filePath = filePath.replace(/\/+/g, "/");
 	let mntPath;
 	if (path.startsWith("/mnt/")) {

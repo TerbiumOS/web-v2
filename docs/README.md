@@ -7,11 +7,11 @@ Welcome to Terbium v2's Documentation. Here is a simple table of contents to hel
 - [Creating Custom Settings Interfaces](./creating-custom-settings-interfaces.md)
 - [Creating Apps](./creating-apps.md)
 - [Backend Configuration Options](./backend-configuration.md)
-- [Anura Compatability & API Support](./anura-compat.md)
-- [Electron Compatability & API Support](./lemonade-compat.md)
+- [Anura Compatibility & API Support](./anura-compat.md)
+- [Electron Compatibility & API Support](./lemonade-compat.md)
 - [Introduction to Lemonade](./lemonade.md)
 - [Terbium API Documentation](./apis/readme.md)
 - [Static Hosting](./static-hosting.md)
 - [UPK Builds](./upk-build.md)
 
-If you cannot find what your looking for feel free to ask in the Terbium Discord or in the TN Discord
+If you cannot find what you're looking for, feel free to ask in the Terbium Discord or in the TN Discord
