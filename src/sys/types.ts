@@ -424,6 +424,7 @@ export interface UserSettings {
 	showFPS?: boolean;
 	notificationMode: "all" | "dnd" | "snooze-10" | "allow-apps";
 	notificationAllowList?: string[];
+	notificationSnoozeUntil?: number;
 	times: {
 		format: "12h" | "24h";
 		internet: boolean;
@@ -548,9 +549,9 @@ export interface COM {
 		decode(url: string, decoder: string): Promise<string>;
 	};
 	notification: {
-		Message(props: NotificationProps): void;
-		Toast(props: NotificationProps): void;
-		Installing<T>(props: NotificationProps, task?: Promise<T> | (() => Promise<T>), doneToast?: Partial<NotificationProps> | null, failToast?: Partial<NotificationProps> | null): Promise<T> | void;
+		Message(props: NotificationProps): void | Promise<void>;
+		Toast(props: NotificationProps): void | Promise<void>;
+		Installing<T>(props: NotificationProps, task?: Promise<T> | (() => Promise<T>), doneToast?: Partial<NotificationProps> | null, failToast?: Partial<NotificationProps> | null): Promise<T | undefined> | void;
 	};
 	dialog: {
 		Alert(props: dialogProps): void;

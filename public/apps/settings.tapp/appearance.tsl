@@ -197,7 +197,8 @@
 				  cfg.times = cfg.times || {};
 				  cfg.times.format = context.bindings && context.bindings["appearance.time.twentyFourHour"] ? "24h" : "12h";
 				  cfg.times.showSeconds = !!(context.bindings && context.bindings["appearance.time.showSeconds"]);
-				  await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+				  await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");				  
+				  window.dispatchEvent(new Event("settings-changed"));
 				}
 			]]>
 		</Action>
@@ -853,8 +854,8 @@
 					<div class="appearance-location-card">
 					  <div class="appearance-title-sm">Location</div>
 					  <div class="appearance-location-row">
-						<span class="appearance-location-value ${coords ? "" : "is-empty"}" data-weather-coords>${escHtml(coords || "Location not set")}</span>
-						<button type="button" class="appearance-icon-btn" data-weather-toggle-coords>Show</button>
+						<span class="appearance-location-value ${coords ? "is-hidden" : "is-empty"}" data-weather-coords style="${coords ? "display: none;" : ""}">${escHtml(coords || "Location not set")}</span>
+						<button type="button" class="appearance-icon-btn" data-weather-toggle-coords>${coords ? "Show" : "Show"}</button>
 					  </div>
 					  <button type="button" class="detail-action appearance-primary-btn" data-weather-update-location>Update Location</button>
 					</div>
@@ -927,9 +928,9 @@
 								return;
 							await updateUserSettings(settings => {
 								settings.wallpaperMode = nextMode;
-								window.parent.dispatchEvent(new Event("updWallpaper"));
 								return settings;
 							});
+							window.parent.dispatchEvent(new Event("updWallpaper"));
 						});
 					}
 				}

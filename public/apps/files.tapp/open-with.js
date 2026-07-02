@@ -75,7 +75,19 @@ export async function openFile(path, opts = {}) {
 
 	if (extensions.extractables?.includes(ext) || ext === "app.zip" || ext === "lib.zip") {
 		const target = path.replace(/\.zip$/i, "");
-		await extractZip(path, target);
+		const fileName = path.split("/").pop();
+		await tb.notification.Installing(
+			{
+				message: `Extracting ${fileName}...`,
+				application: "Files",
+				iconSrc: "/fs/apps/system/files.tapp/icon.svg",
+			},
+			async () => {
+				await extractZip(path, target);
+			},
+			{ message: `${fileName} extracted successfully!` },
+			{ message: `Failed to extract ${fileName}` },
+		);
 		opts.onAfterExtract?.();
 		return;
 	}
@@ -145,7 +157,7 @@ async function installTappZip(path) {
 					.replace(`/home/${user}/`, "")
 					.replace(/\//g, ".")
 					.replace(/\.zip$/, "");
-				
+
 				await tb.notification.Installing(
 					{
 						message: `Installing ${appName}...`,
@@ -179,7 +191,7 @@ async function installTappZip(path) {
 						}
 					},
 					{ message: `${appName} installed successfully!` },
-					{ message: `Failed to install ${appName}` }
+					{ message: `Failed to install ${appName}` },
 				);
 			},
 		});

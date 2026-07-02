@@ -1,4 +1,4 @@
-import { copyRecursive, createFile, createFolder, duplicateItem, emptyTrash as emptyTrashOp, extractZip, getFolderStats, moveRecursive, moveToTrash, pasteFromClipboard, removeRecursive, renameItem, zipPath } from "./fs-ops.js";
+import { copyRecursive, createFile, createFolder, duplicateItem, emptyTrash as emptyTrashOp, extractZip, getFolderStats, moveRecursive, moveToTrash, pasteFromClipboard, removeRecursive, renameItem, zipPath, zipMultiplePaths } from "./fs-ops.js";
 import { openFile as openFileExternal, showOpenWithDialog } from "./open-with.js";
 import { clearSelection, emit, on, setClipboard, state, tb, user } from "./state.js";
 import { showContextMenu } from "./ui/context-menu.js";
@@ -234,7 +234,7 @@ async function openPath(rawPath, opts = {}) {
 									await anura.registerExternalApp(appPath);
 								},
 								{ message: `${appName} installed successfully!` },
-								{ message: `Failed to install ${appName}` }
+								{ message: `Failed to install ${appName}` },
 							);
 							openPath(HOME);
 						} else if (val === "source") {
@@ -430,9 +430,14 @@ async function itemContextMenu(targetEl) {
 		options.push({
 			text: "Compress to ZIP",
 			click: async () => {
-				for (const p of paths) {
-					const dest = await uniquePath(dirname(p), `${basename(p)}.zip`);
-					await zipPath(p, dest);
+				if (paths.length === 1) {
+					const dest = await uniquePath(dirname(paths[0]), `${basename(paths[0])}.zip`);
+					await zipPath(paths[0], dest);
+				} else {
+					const parentDir = dirname(paths[0]);
+					const zipName = `Archive.zip`;
+					const dest = await uniquePath(parentDir, zipName);
+					await zipMultiplePaths(paths, dest);
 				}
 				openPath(state.currentPath, { skipHistory: true });
 			},
@@ -442,7 +447,19 @@ async function itemContextMenu(targetEl) {
 				text: "Extract here",
 				click: async () => {
 					const target = paths[0].replace(/\.zip$/i, "");
-					await extractZip(paths[0], target);
+					const fileName = basename(paths[0]);
+					await tb.notification.Installing(
+						{
+							message: `Extracting ${fileName}...`,
+							application: "Files",
+							iconSrc: "/fs/apps/system/files.tapp/icon.svg",
+						},
+						async () => {
+							await extractZip(paths[0], target);
+						},
+						{ message: `${fileName} extracted successfully!` },
+						{ message: `Failed to extract ${fileName}` },
+					);
 					openPath(state.currentPath, { skipHistory: true });
 				},
 			});

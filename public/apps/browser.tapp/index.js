@@ -214,9 +214,13 @@ function newTab() {
 			document.querySelector(".left-arrow").classList.remove("disabled");
 		}
 		if (updateTab === false) {
-			window.parent.tb.proxy.decode(tab_content.contentWindow.window.location.href.replace(/^.*\/service\//, ""), "XOR").then(decodedUrl => {
-				urlbar.value = decodedUrl;
-			});
+			const scramjetFrame = tab_content._scramjetFrame;
+			if (scramjetFrame && scramjetFrame.url) {
+				urlbar.value = scramjetFrame.url;
+			} else {
+				const encodedUrl = tab_content.contentWindow.window.location.href.replace(/^.*\/service\//, "");
+				urlbar.value = customDecode(encodedUrl);
+			}
 		}
 		if (!tab_content.contentDocument.getElementById("tb-cursor-controller")) {
 			const cursor_controller = document.createElement("script");
@@ -522,10 +526,6 @@ document.querySelector(".opt-menu").addEventListener("click", () => {
 				click: () => showTabs(),
 			},
 			{
-				text: "Add site as PWA (beta)",
-				click: async () => pwaIns(),
-			},
-			{
 				text: "Change default search engine",
 				click: async () => newengine(),
 			},
@@ -560,8 +560,6 @@ window.addEventListener("keydown", e => {
 		const activeTabContent = document.querySelector(".tab-content.active");
 		window.parent.tb.mediaplayer.hide();
 		activeTabContent.contentWindow.location.reload();
-	} else if (e.altKey && e.key.toLowerCase() === "b") {
-		pwaIns();
 	} else if (e.altKey && e.key.toLowerCase() === "k") {
 		showTabs();
 	} else if (e.altKey && e.key.toLowerCase() === "i") {

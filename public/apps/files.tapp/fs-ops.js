@@ -309,6 +309,41 @@ export async function zipPath(srcPath, zipDest) {
 	return zipDest;
 }
 
+export async function zipMultiplePaths(srcPaths, zipDest) {
+	const fflate = tb.fflate;
+	const zip = {};
+	async function add(p, rel) {
+		if (isDavMount(p)) {
+			if (await isDirectory(p)) {
+				const entries = await davListDir(p);
+				for (const entry of entries) {
+					await add(joinPath(p, entry.name), rel ? `${rel}/${entry.name}` : entry.name);
+				}
+			} else {
+				const data = await readFileAny(p);
+				zip[rel] = new Uint8Array(data);
+			}
+			return;
+		}
+		const s = await statAsync(p);
+		if (s.isDirectory()) {
+			const entries = await readdirAsync(p);
+			for (const entry of entries) {
+				await add(joinPath(p, entry), rel ? `${rel}/${entry}` : entry);
+			}
+		} else {
+			const data = await tb.fs.promises.readFile(p);
+			zip[rel] = new Uint8Array(data);
+		}
+	}
+	for (const srcPath of srcPaths) {
+		await add(srcPath, basename(srcPath));
+	}
+	const zipped = fflate.zipSync(zip);
+	await writeFileAny(zipDest, tb.buffer.from(zipped));
+	return zipDest;
+}
+
 export async function extractZip(zipPath, targetDir) {
 	const fflate = tb.fflate;
 	let buf;

@@ -63,6 +63,7 @@ export function toggleSelect(path, options = {}) {
 			const [lo, hi] = a < b ? [a, b] : [b, a];
 			if (!additive) state.selection.clear();
 			for (let i = lo; i <= hi; i++) state.selection.add(paths[i]);
+			state.lastSelected = path;
 			emit("selection:change", state.selection);
 			return;
 		}

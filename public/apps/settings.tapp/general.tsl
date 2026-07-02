@@ -266,6 +266,11 @@
 						const cfgPath = `/home/${user}/settings.json`;
 						const cfg = JSON.parse(await tb.fs.promises.readFile(cfgPath, "utf8"));
 						cfg.notificationMode = value;
+						if (value === "snooze-10") {
+							cfg.notificationSnoozeUntil = Date.now() + 10 * 60 * 1000;
+						} else {
+							delete cfg.notificationSnoozeUntil;
+						}
 						await tb.fs.promises.writeFile(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
 						if (value === "dnd") {
 							await window.parent.dispatchEvent(new CustomEvent("notification-count", { detail: { count: "dnd" } }));
