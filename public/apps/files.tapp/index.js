@@ -234,7 +234,7 @@ async function openPath(rawPath, opts = {}) {
 									await anura.registerExternalApp(appPath);
 								},
 								{ message: `${appName} installed successfully!` },
-								{ message: `Failed to install ${appName}` }
+								{ message: `Failed to install ${appName}` },
 							);
 							openPath(HOME);
 						} else if (val === "source") {

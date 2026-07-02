@@ -145,7 +145,7 @@ async function installTappZip(path) {
 					.replace(`/home/${user}/`, "")
 					.replace(/\//g, ".")
 					.replace(/\.zip$/, "");
-				
+
 				await tb.notification.Installing(
 					{
 						message: `Installing ${appName}...`,
@@ -179,7 +179,7 @@ async function installTappZip(path) {
 						}
 					},
 					{ message: `${appName} installed successfully!` },
-					{ message: `Failed to install ${appName}` }
+					{ message: `Failed to install ${appName}` },
 				);
 			},
 		});

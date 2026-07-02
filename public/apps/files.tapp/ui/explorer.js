@@ -41,13 +41,11 @@ export function initExplorer({ openPath, openFile, contextMenu }) {
 
 	expEl.addEventListener("contextmenu", e => {
 		e.preventDefault();
-		
-		if (state.currentPath === "storage devices" || 
-		    state.currentPath === "local storage" || 
-		    state.currentPath.startsWith("local storage/")) {
+
+		if (state.currentPath === "storage devices" || state.currentPath === "local storage" || state.currentPath.startsWith("local storage/")) {
 			return;
 		}
-		
+
 		const itemEl = e.target.closest(".item");
 		if (itemEl) {
 			const path = itemEl.dataset.path;
