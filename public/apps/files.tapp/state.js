@@ -8,6 +8,7 @@ export const state = {
 	selection: new Set(),
 	lastSelected: null,
 	items: [],
+	displayedItems: [],
 	clipboard: null,
 	viewMode: "grid",
 	sortKey: "name",
@@ -56,7 +57,7 @@ export function setSelection(paths) {
 export function toggleSelect(path, options = {}) {
 	const { additive = false, range = false } = options;
 	if (range && state.lastSelected) {
-		const paths = state.items.map(i => i.path);
+		const paths = state.displayedItems.map(i => i.path);
 		const a = paths.indexOf(state.lastSelected);
 		const b = paths.indexOf(path);
 		if (a !== -1 && b !== -1) {

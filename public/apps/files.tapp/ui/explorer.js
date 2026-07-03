@@ -141,6 +141,7 @@ async function renderItems() {
 		items = items.filter(i => i.name.toLowerCase().includes(q));
 	}
 	items = sortItems(items);
+	state.displayedItems = items;
 	if (!items.length) {
 		const empty = document.createElement("div");
 		empty.className = "exp-empty";
