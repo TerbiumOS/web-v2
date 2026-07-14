@@ -752,7 +752,8 @@ const PinnedDockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, o
 			onContextMenu={() => {
 				return;
 			}}
-			title={title}
+			// @ts-expect-error
+			title={typeof title === "string" ? title : title?.text}
 			onClick={() => {
 				onClick?.(new MouseEvent("click"));
 				windowStore.addWindow({
