@@ -269,9 +269,19 @@ Create a simple SVG icon file named `icon.svg`:
 
 ### Step 8: Package for Distribution (Optional)
 
-To create a `.tapp.zip` file for distribution:
+To create a `.tapp.zip` file for distribution, you can use the built-in File Manager (available since v2.4):
 
-1. Compress your `myapp.tapp` folder to a ZIP file
+**Using File Manager (Recommended - v2.4+):**
+1. Open the Terbium File Manager
+2. Navigate to your app folder (e.g., `/apps/user/[username]/myapp.tapp/`)
+3. Select all the files in your app folder (`.tbconfig`, `index.html`, `style.css`, `app.js`, `icon.svg`)
+4. Right-click on the selection and choose **"Compress to zip"** from the context menu
+5. A zip file will be created in the same directory
+6. Rename the zip file to `myapp.tapp.zip`
+7. Users can double-click the `.tapp.zip` file to install it
+
+**Manual Method:**
+1. Compress your `myapp.tapp` folder to a ZIP file using your preferred compression tool
 2. Rename it to `myapp.tapp.zip`
 3. Users can double-click to install it
 
@@ -283,6 +293,11 @@ myapp.tapp/
 ├── style.css
 ├── app.js
 └── icon.svg
+```
+
+After compression, you'll also have:
+```
+myapp.tapp.zip (for distribution)
 ```
 
 ## <span style="color: #32ae62;">Using TB Features</span>

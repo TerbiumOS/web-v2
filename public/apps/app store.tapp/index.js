@@ -569,15 +569,6 @@ async function install(app, type) {
 				return false;
 			}
 		}
-		if (app.requirements.proxy && app.requirements.proxy !== window.parent.tb.proxy.get()) {
-			window.parent.tb.notification.Toast({
-				message: `Failed to install ${app.name}. The current selected proxy does not meet the minimum requirements.`,
-				application: "App Store",
-				iconSrc: "/fs/apps/system/app store.tapp/icon.svg",
-				time: 5000,
-			});
-			return false;
-		}
 	}
 	switch (type) {
 		case "Terbium":

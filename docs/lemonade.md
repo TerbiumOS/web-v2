@@ -1,4 +1,7 @@
-# # <span style="color: #32ae62;">Introduction to Lemonade</span>
+# <span style="color: #32ae62;">Introduction to Lemonade</span>
+
+**Last Updated**: v2.4.0 - 07/16/2026  
+**Targets**: Electron v36.4.0 APIs
 
 Lemonade provides an Electron-compatible API layer for web-based applications, allowing Electron apps to run in a browser environment with minimal modifications.
 

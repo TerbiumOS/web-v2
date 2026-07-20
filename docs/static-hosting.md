@@ -1,19 +1,44 @@
 # <span style="color: #32ae62;">Static Hosting Terbium</span>
 
-For this tutorial, Cloudflare pages will be used however the instructions will be similar on other static hosts.
+**Last Updated**: v2.4.0 - 07/16/2026
 
-### <span style="color: #32ae62;">Step 1.</span>
+This guide covers deploying Terbium to static hosting platforms. For this tutorial, Cloudflare Pages will be used, however the instructions will be similar on other static hosts.
 
-Fork this repository and connect your github account to the static host of your choise.
+### <span style="color: #32ae62;">Step 1: Fork and Connect Repository</span>
 
-> <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> On Cloudflare pages, Terbium is automatically configured to use Node 20. If you're using a different host check with them that you are using Node 20 or later as Terbium **WILL NOT** build on older versions.
+Fork this repository and connect your GitHub account to the static host of your choice.
 
-### <span style="color: #32ae62;">Step 2.</span>
+> **⚠️ NOTE**: On Cloudflare Pages, Terbium is automatically configured to use Node 20. If you're using a different host, check with them that you are using Node 20 or later, as Terbium **WILL NOT** build on older versions.
 
-Under the `build` section command put: `npm i; npm run build-static` **LEAVE THE START COMMAND BLANK IF IT EXISTS**
+### <span style="color: #32ae62;">Step 2: Configure Build Settings</span>
 
-Then under the output directory put the folder: `dist` and click Deploy
+Under the `build` section command, enter: 
+```bash
+npm i; npm run build-static
+```
 
-### <span style="color: #32ae62;">Step 3. (Optional)</span>
+**LEAVE THE START COMMAND BLANK IF IT EXISTS**
 
-Now that the sites deployed, you have probably noticed that the Default wisp server wont be running since your static hosting. If you wish to change this navigate to `sys/init/index.ts` scroll down to Line 41 and replace the line: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/` with the wisp server of your choice as a string. If you dont want to do this you dont have to as you can change it in the OOBE.
+Then under the output directory, enter: `dist`
+
+Click **Deploy** to start the build process.
+
+### <span style="color: #32ae62;">Step 3: Configure Wisp Server (Optional)</span>
+
+Now that the site is deployed, you have probably noticed that the default Wisp server won't be running since you're on static hosting. 
+
+**Option 1: Configure during OOBE**  
+You can configure the Wisp server URL during the Out-of-Box Experience (OOBE) when you first load Terbium.
+
+**Option 2: Hardcode before deployment**  
+If you wish to set a default Wisp server before deployment:
+1. Navigate to `src/init/index.ts`
+2. Find the Wisp server configuration (around line 41)
+3. Replace the default expression:  
+   ```typescript
+   `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`
+   ```
+   With your Wisp server URL as a string:
+   ```typescript
+   "wss://your-wisp-server.example.com/wisp/"
+   ```
