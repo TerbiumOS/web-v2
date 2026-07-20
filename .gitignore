@@ -15,6 +15,8 @@ dist-ssr
 *.tsbuildinfo
 .npmrc
 package-lock.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
 
 # Editor directories and files
 .idea
