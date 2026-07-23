@@ -94,3 +94,7 @@ body {
 	position: absolute;
 	opacity: 0;
 }
+
+.xterm-scrollable-element {
+	height: 100%;
+}

@@ -21,9 +21,6 @@ importScripts("/tfs/tfs.js");
 // Importing mime
 importScripts("/assets/libs/mime.iife.js");
 
-// Download handler
-importScripts("/assets/libs/dl-handler.min.js");
-
 // self.fs = new Filer.FileSystem({
 //     name: "anura-mainContext",
 //     provider: new Filer.FileSystem.providers.IndexedDB(),
@@ -732,14 +729,7 @@ workbox.routing.registerRoute(/^(?!.*(\/config.json|\/MILESTONE|\/x86images\/|\/
 	}
 });
 
-importScripts("/uv/uv.bundle.js");
-importScripts("/uv/uv.config.js");
-importScripts("/uv/uv.sw.js");
-importScripts("/scram/scramjet.all.js");
-
-const { ScramjetServiceWorker } = $scramjetLoadWorker();
-const scramjet = new ScramjetServiceWorker();
-const uv = new UVServiceWorker();
+importScripts("/sj-control/controller.sw.js");
 
 const methods = ["GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "PATCH"];
 
@@ -821,20 +811,6 @@ async function saveFP(response, request, proxyName) {
 	}
 }
 
-methods.forEach(method => {
-	workbox.routing.registerRoute(
-		/\/uv\/service\//,
-		async event => {
-			console.debug("Got UV req");
-			uv.on("request", event => {
-				event.data.headers["user-agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0 Safari/537.36 Terbium-Browser/2.3.0";
-			});
-			return await uv.fetch(event);
-		},
-		method,
-	);
-});
-
 // Route w-corp-staticblitz.com and subdomains through BareMux, so that the Node.js subsystem doesn't get blocked by filters
 methods.forEach(method => {
 	workbox.routing.registerRoute(
@@ -868,17 +844,13 @@ methods.forEach(method => {
 	);
 });
 
-scramjet.loadConfig();
-
 methods.forEach(method => {
 	workbox.routing.registerRoute(
 		/\/service\//,
 		async ({ event }) => {
 			console.log("Got SJ req");
-			await scramjet.loadConfig();
-			if (scramjet.route(event)) {
-				const response = await scramjet.fetch(event);
-				return await saveFP(response, event.request, "Scramjet");
+			if ($scramjetController.shouldRoute(event)) {
+				return await $scramjetController.route(event);
 			}
 			return fetch(event.request);
 		},

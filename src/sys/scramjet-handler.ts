@@ -1,0 +1,99 @@
+import LibcurlClient from "../sys/apis/utils/libcurl-wrapper";
+import { SJConfig, SJFlags, SysSettings, UserSettings } from "./types";
+import { defaultConfigDev } from "@mercuryworkshop/scramjet";
+import { AnuraBareClient } from "./liquor/bcc";
+
+export class ScramjetHandler {
+	transportVar!: UserSettings["transport"];
+	wispUrl!: string;
+	initReady: Promise<void>;
+	libcurl!: LibcurlClient;
+	controller: any;
+	private activeTransport: string = "epoxy";
+	private readonly controllerConfig: SJConfig;
+	private readonly scramjetFlags: SJFlags;
+	private settingsReady!: Promise<void>;
+
+	constructor(Controller: any, SW: any, config: SJConfig, flags: SJFlags) {
+		this.controllerConfig = config;
+		this.scramjetFlags = flags;
+		this.settingsReady = (async () => {
+			if (localStorage.getItem("setup")) {
+				if (sessionStorage.getItem("currAcc")) {
+					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
+					this.wispUrl = settings.wispServer;
+					this.transportVar = settings.transport;
+					this.scramjetFlags = settings.scramjetFlags || flags;
+				} else {
+					const syssettings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
+					const usersettings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${syssettings.defaultUser}/settings.json`, "utf8"));
+					this.wispUrl = usersettings.wispServer;
+					this.transportVar = usersettings.transport;
+					this.scramjetFlags = usersettings.scramjetFlags || flags;
+				}
+			} else {
+				this.wispUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/wisp/`;
+				this.transportVar = "Default (Libcurl)";
+			}
+		})();
+		this.initReady = (async () => {
+			await this.settingsReady;
+			const transportConfig = await this.buildTransportConfig();
+			this.controller = new Controller({
+				serviceworker: navigator.serviceWorker.controller ?? SW.active,
+				transport: transportConfig.instance,
+				config: config,
+				scramjetConfig: defaultConfigDev || flags,
+			});
+			await this.controller.wait();
+		})();
+	}
+
+	async TransportMapping(): Promise<Record<any, any>> {
+		return {
+			"Default (Libcurl)": {
+				constructor: LibcurlClient,
+				opts: ["wisp", "proxy"],
+			},
+			"Anura BCC": {
+				constructor: AnuraBareClient,
+				opts: ["wisp"],
+			},
+		};
+	}
+
+	private async buildTransportConfig() {
+		const transportMap = await this.TransportMapping();
+		const selectedTransport = this.transportVar || "Default (Libcurl)";
+		const fallbackTransport = transportMap["Anura BCC"];
+		const mappedTransport = transportMap[selectedTransport] || fallbackTransport;
+		this.activeTransport = transportMap[selectedTransport] ? selectedTransport : "Default (Libcurl)";
+		const wispUrl = this.wispUrl;
+		const clientOptions: Record<string, any> = {
+			wisp: wispUrl,
+		};
+		const transportOptions: Record<string, any> = {
+			wisp: wispUrl,
+		};
+		if (clientOptions.proxy) {
+			transportOptions.proxy = clientOptions.proxy;
+		}
+		return {
+			key: this.activeTransport,
+			instance: new mappedTransport.constructor(clientOptions),
+			connectionOptions: transportOptions,
+		};
+	}
+
+	async setTransports() {
+		await this.initReady;
+		console.log("[Proxy] setTransports() called, wispUrl:", this.wispUrl);
+		const transportConfig = await this.buildTransportConfig();
+		if (this.controller && typeof this.controller.setTransport === "function") {
+			await this.controller.setTransport(transportConfig.instance);
+		}
+		console.log("[Proxy] Transport set with options:", {
+			controller: transportConfig.key,
+		});
+	}
+}

@@ -49,6 +49,13 @@ new_tab.addEventListener("click", () => {
 function closeTab(id) {
 	const tab = document.getElementById(id);
 	const tab_content = document.getElementById(id + "-content");
+	if (tab_content && tab_content._scramjetFrame) {
+		const frames = window.parent.scramjetTb.controller.frames;
+		const frameIndex = frames?.indexOf(tab_content._scramjetFrame);
+		if (frameIndex >= 0) {
+			frames.splice(frameIndex, 1);
+		}
+	}
 	tab.remove();
 	window.parent.tb.mediaplayer.hide();
 	tab_content.remove();
@@ -156,11 +163,8 @@ function newTab() {
 						} else {
 							targetUrl = `${searchEngine}${encodeURIComponent(input)}`;
 						}
-						if (settings.proxy === "Scramjet") {
-							activeTabContent.src = `${window.location.origin}/service/${await window.parent.tb.proxy.encode(targetUrl, "XOR")}`;
-						} else {
-							activeTabContent.src = `${window.location.origin}/uv/service/${await window.parent.tb.proxy.encode(targetUrl, "XOR")}`;
-						}
+						//activeTabContent.src = `${window.location.origin}${x.prefix}${await window.parent.tb.proxy.encode(targetUrl, "XOR")}`;
+						x.go(targetUrl);
 					});
 					break;
 			}
@@ -173,7 +177,9 @@ function newTab() {
 			};
 		}
 	});
-	const tab_content = document.createElement("iframe");
+	const x = window.parent.scramjetTb.controller.createFrame();
+	const tab_content = x.element;
+	tab_content._scramjetFrame = x;
 	Filer.promises.readFile(`/home/${user}/settings.json`, "utf8").then(data => {
 		let settings = JSON.parse(data);
 		let proxy = settings["proxy"];
@@ -190,11 +196,7 @@ function newTab() {
 				});
 			});
 		} else {
-			if (proxy === "Ultraviolet") {
-				tab_content.src = parent.window.location.origin + "/uv/service/" + customEncode(localStorage.getItem("defUrl") || "about:newtab");
-			} else if (proxy === "Scramjet") {
-				tab_content.src = parent.window.location.origin + "/service/" + customEncode(localStorage.getItem("defUrl") || "about:newtab");
-			}
+			tab_content.src = parent.window.location.origin + "/service/" + customEncode(localStorage.getItem("defUrl") || "about:newtab");
 		}
 	});
 	const unloadHandler = function () {
@@ -211,15 +213,13 @@ function newTab() {
 		if (document.querySelector(".left-arrow").classList.contains("disabled")) {
 			document.querySelector(".left-arrow").classList.remove("disabled");
 		}
-		if ("__uv$location" in tab_content.contentDocument) {
-			if (updateTab === false) {
-				urlbar.value = tab_content.contentDocument.__uv$location?.href;
-			}
-		} else {
-			if (updateTab === false) {
-				window.parent.tb.proxy.decode(tab_content.contentWindow.window.location.href.replace(/^.*\/service\//, ""), "XOR").then(decodedUrl => {
-					urlbar.value = decodedUrl;
-				});
+		if (updateTab === false) {
+			const scramjetFrame = tab_content._scramjetFrame;
+			if (scramjetFrame && scramjetFrame.url) {
+				urlbar.value = scramjetFrame.url;
+			} else {
+				const encodedUrl = tab_content.contentWindow.window.location.href.replace(/^.*\/service\//, "");
+				urlbar.value = customDecode(encodedUrl);
 			}
 		}
 		if (!tab_content.contentDocument.getElementById("tb-cursor-controller")) {
@@ -526,10 +526,6 @@ document.querySelector(".opt-menu").addEventListener("click", () => {
 				click: () => showTabs(),
 			},
 			{
-				text: "Add site as PWA (beta)",
-				click: async () => pwaIns(),
-			},
-			{
 				text: "Change default search engine",
 				click: async () => newengine(),
 			},
@@ -564,8 +560,6 @@ window.addEventListener("keydown", e => {
 		const activeTabContent = document.querySelector(".tab-content.active");
 		window.parent.tb.mediaplayer.hide();
 		activeTabContent.contentWindow.location.reload();
-	} else if (e.altKey && e.key.toLowerCase() === "b") {
-		pwaIns();
 	} else if (e.altKey && e.key.toLowerCase() === "k") {
 		showTabs();
 	} else if (e.altKey && e.key.toLowerCase() === "i") {

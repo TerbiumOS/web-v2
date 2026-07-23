@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { version } from "../package.json";
 import { dirExists, fileExists } from "./sys/types";
+import { BootEntry, DEFAULT_BOOT_ENTRIES, upgradeLegacyBootEntries } from "./sys/bootentries";
 
 export default function Boot() {
 	const [selected, setSelected] = useState(0);
 	const [showCursor, setShowCursor] = useState(false);
-	const [bootentries, setentries] = useState<{ name: string; action: void | any }[]>([]);
+	const [bootentries, setentries] = useState<BootEntry[]>([]);
 
 	const boot = () => {
 		sessionStorage.setItem("boot", "true");
@@ -39,20 +40,43 @@ export default function Boot() {
 		window.location.reload();
 	};
 
+	const executeBootEntry = (entry: BootEntry) => {
+		if (!entry || typeof entry.file !== "string") return;
+		if (entry.file === "tb:root") {
+			boot();
+			return;
+		}
+		if (entry.file === "tb:root-cloak") {
+			cloak();
+			return;
+		}
+		if (entry.file === "tb:recovery") {
+			recovery();
+			return;
+		}
+		sessionStorage.setItem("cusboot", "true");
+		sessionStorage.setItem("bootfile", entry.file);
+		window.location.reload();
+	};
+
 	useEffect(() => {
 		const getEntries = async () => {
-			let entries = [];
+			let entries: any[] = [];
 			if (!(await fileExists("/bootentries.json"))) {
-				const ent = [
-					{ name: "TB React", action: boot.toString() },
-					{ name: "TB React (Cloaked)", action: cloak.toString() },
-					{ name: "TB System Recovery", action: recovery.toString() },
-				];
-				await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify(ent));
+				entries = DEFAULT_BOOT_ENTRIES;
+				await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify(entries, null, 2), "utf8");
 				console.log("Added default bootentries");
-				entries = ent;
 			} else {
-				entries = JSON.parse(await window.tb.fs.promises.readFile("/bootentries.json", "utf8"));
+				try {
+					const raw = await window.tb.fs.promises.readFile("/bootentries.json", "utf8");
+					entries = JSON.parse(raw);
+					if (!Array.isArray(entries)) {
+						entries = DEFAULT_BOOT_ENTRIES;
+					}
+				} catch (err) {
+					console.warn("Failed to read /bootentries.json, replacing with default entries", err);
+					entries = DEFAULT_BOOT_ENTRIES;
+				}
 			}
 
 			const FilerDirExists = async (path: string): Promise<boolean> => {
@@ -73,22 +97,21 @@ export default function Boot() {
 				});
 			};
 
-			// @ts-expect-error
-			const recreatedEntries = entries.map(entry => ({
-				...entry,
-				action: eval(`(${entry.action})`),
-			}));
+			const { entries: normalizedEntries, changed } = upgradeLegacyBootEntries(entries);
+			if (changed) {
+				await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify(normalizedEntries, null, 2), "utf8");
+			}
 			if (localStorage.getItem("setup") === "true" && (!(await dirExists("/system/etc/terbium/")) || !(await dirExists("/apps/system/")))) {
-				const bootent = recreatedEntries.filter((entry: any) => entry.name !== "TB React" && entry.name !== "TB React (Cloaked)");
+				const bootent = normalizedEntries.filter((entry: BootEntry) => entry.name !== "TB React" && entry.name !== "TB React (Cloaked)");
 				const fsxr = await FilerDirExists("/system/etc/terbium");
 				if (fsxr) {
 					sessionStorage.setItem("migrateFs", "true");
-					setentries(recreatedEntries);
+					setentries(normalizedEntries);
 				} else {
 					setentries(bootent);
 				}
 			} else {
-				setentries(recreatedEntries);
+				setentries(normalizedEntries);
 			}
 		};
 		getEntries();
@@ -107,6 +130,7 @@ export default function Boot() {
 		if (getPlatform() === "mobile") {
 			setShowCursor(true);
 		}
+
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "ArrowUp") {
 				setSelected(prevSelected => (bootentries.length === 0 ? 0 : prevSelected === 0 ? bootentries.length - 1 : prevSelected - 1));
@@ -114,7 +138,7 @@ export default function Boot() {
 				setSelected(prevSelected => (prevSelected === bootentries.length - 1 ? 0 : prevSelected + 1));
 			} else if (e.key === "Enter") {
 				const selectedEntry = bootentries[selected];
-				selectedEntry.action();
+				executeBootEntry(selectedEntry);
 			} else if (e.key === "Escape") {
 				setShowCursor(prev => !prev);
 			}
@@ -127,16 +151,16 @@ export default function Boot() {
 	}, [selected, bootentries]);
 
 	return (
-		<div className={`overflow-hidden w-full h-full flex justify-center pt-[30px] bg-[#0e0e0e] ${showCursor ? null : "cursor-none"}`}>
+		<div className={`overflow-hidden w-full h-full flex justify-center pt-7.5 bg-[#0e0e0e] ${showCursor ? null : "cursor-none"}`}>
 			<div className="flex flex-col items-center w-full p-2 text-[#ffffff48] overflow-hidden">
 				<div className="py-10 w-full flex justify-center text-[#ffffff68] font-bold text-2xl duration-150">Terbium Boot Loader - Version {version}</div>
 				<div className="mt-1 p-2 flex flex-col grow overflow-auto w-full border-solid border-[#ffffff68] border-2 rounded-xl">
 					{bootentries.map((entry, index) => (
 						<span
 							key={index}
-							className={`p-2 px-2.5 text-sm font-extrabold lg:text-lg md:text-base border-[1px] rounded-md ${selected === index && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"} ${showCursor ? "hover:bg-[#ffffff18] hover:border-[#ffffff20]" : null}`}
+							className={`p-2 px-2.5 text-sm font-extrabold lg:text-lg md:text-base border rounded-md ${selected === index && showCursor !== true ? "bg-[#ffffff18] border-[#ffffff20]" : "border-transparent"} ${showCursor ? "hover:bg-[#ffffff18] hover:border-[#ffffff20]" : null}`}
 							onClick={() => {
-								showCursor ? entry.action() : null;
+								showCursor ? executeBootEntry(entry) : null;
 							}}
 						>
 							{entry.name}

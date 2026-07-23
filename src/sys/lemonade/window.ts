@@ -1,5 +1,3 @@
-import { UserSettings } from "../types";
-
 interface ElectronWinArgs {
 	width?: number;
 	height?: number;
@@ -60,8 +58,7 @@ export class BrowserWindow {
 	}
 
 	async loadURL(src: string) {
-		const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
-		window.tb.window.changeSrc(settings.proxy === "Ultraviolet" ? `/uv/service/${await window.tb.proxy.encode(src, "XOR")}` : `/service/${await window.tb.proxy.encode(src, "XOR")}`);
+		window.tb.window.changeSrc(`/service/${await window.tb.proxy.encode(src, "XOR")}`);
 	}
 
 	destroy() {

@@ -10,7 +10,8 @@
 - [TailwindCSS](https://tailwindcss.com)
 - [TFS](https://github.com/terbiumos/tfs)
 - [Fflate](https://github.com/101arrowz/fflate/)
-- [BareMux](https://github.com/mercuryworkshop/bare-mux)
+- [Scramjet](https://github.com/mercuryworkshop/scramjet)
+- [mrrowisp](https://github.com/soap-phia/mrrowisp)
 
 ## <span style="color: #32ae62;">Features</span>
 

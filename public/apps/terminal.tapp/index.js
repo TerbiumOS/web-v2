@@ -1,7 +1,7 @@
-import parser from "https://unpkg.com/yargs-parser@22.0.0/browser.js";
-import http from "https://cdn.jsdelivr.net/npm/isomorphic-git@1.37.1/http/web/index.js";
-import git from "https://cdn.jsdelivr.net/npm/isomorphic-git@1.37.1/+esm";
-import { Terminal } from "https://cdn.jsdelivr.net/npm/@xterm/xterm@latest/+esm";
+import parser from "https://esm.sh/yargs-parser@22.0.0/browser";
+import http from "https://esm.sh/isomorphic-git@1.37.1/http/web";
+import git from "https://esm.sh/isomorphic-git@1.37.1";
+import { Terminal } from "https://esm.sh/@xterm/xterm";
 
 /**
  * @typedef {import("yargs-parser").Arguments} argv

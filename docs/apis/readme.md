@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">API Docs</span>
 
-**Last Updated**: v2.3.0 - 03/31/2026
+**Last Updated**: v2.4.0 - 07/02/2026
 
 So you're looking to use Terbium APIs. Well, you're in the right place! Terbium has a decent amount of components which I will break down below. The pages will include a description of the functions and code examples.
 
@@ -363,7 +363,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       ```
 
 ### Proxy
-  - **get**
+  - **get** [⚠ Deprecated]
     - Description: Gets the current proxy settings.
     - Returns: `Promise<string>` - Proxy settings.
     - Example:
@@ -372,7 +372,7 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       console.log("Using:", proxySettings);
       ```
 
-  - **set**
+  - **set** [⚠ Deprecated]
     - Description: Selects the proxy.
     - Parameters:
       - `proxy: string` - New proxy settings.
@@ -382,6 +382,8 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       await tb.proxy.set("Ultraviolet");
       console.log("Proxy set successfully");
       ```
+
+  > <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> The Proxy switching APIs is deprecated as Ultraviolet has reached End of Life and has been replaced with the latest scramjet version. It remains as a stub for legacy applications and will be removed in the future
 
   - **updateSWs**
     - Description: Updates the Transport and Wisp Server of the proxy.
@@ -931,9 +933,11 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
     - Description: Opens an installed application
     - Parameters:
       - `pkg: string` - Package ID of the app.
+      - `options?: Partial<WindowConfig>` - Any other window configuration options you want to provide
     - Example:
       ```javascript
       await tb.system.openApp("browser");
+      await tb.system.openApp("settings", { message: { type: "process", path: "wallpaper" }})
       ```
 
   - **download**
@@ -956,6 +960,14 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
     - Example:
       ```javascript
       await tb.system.exportfs("/home/", "backup.zip");
+      ```
+
+  - **scanintegrity**
+    - Description: Scans the integrity of the file system and returns an array of courupted paths
+    - Returns: `Array` - Array of the courupted file paths
+    - Example:
+      ```javascript
+      await tb.system.scanintegrity()
       ```
 
   - **users**

@@ -52,9 +52,12 @@ export class vFS {
 			});
 		}
 		const vfs = new vFS(servers);
-		window.addEventListener("libcurl_load", async () => {
-			await vfs.mountAll();
-		});
+		const checkLibcurlReady = async () => {
+			while (!window.tb.libcurl?.ready) {
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+		};
+		checkLibcurlReady();
 		return vfs;
 	}
 
@@ -127,6 +130,16 @@ export class vFS {
 				iconSrc: "/fs/apps/system/about.tapp/icon.svg",
 				message: "Dav Drive not found",
 			});
+		}
+	}
+
+	async refreshServer(serverName: string): Promise<void> {
+		await this.mount(serverName);
+	}
+
+	async refreshAll(): Promise<void> {
+		for (const serverName of this.servers.keys()) {
+			await this.mount(serverName);
 		}
 	}
 

@@ -248,7 +248,12 @@ const WinSwitcher: React.FC = () => {
 		};
 	}, []);
 	useEffect(() => {
-		if (!isVisible) return;
+		if (!isVisible) {
+			setThumbnails({});
+			setLoadingThumbs(new Set());
+			isCapturingRef.current = new Set();
+			return;
+		}
 		if (windowOptimizationsEnabled) return;
 		orderedWindows.forEach(windowConfig => {
 			captureForWindow(windowConfig);

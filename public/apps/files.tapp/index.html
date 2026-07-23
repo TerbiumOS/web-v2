@@ -1,45 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terbium File Manager</title>
-    <link rel="stylesheet" href="./index.css">
-    <link rel="stylesheet" href="./cm.css">
-    <script src="/assets/libs/filer.min.js"></script>
-    <script src="/assets/libs/tailwind.min.js"></script>
-    <script src="./files.com.js"></script>
-    <link rel="stylesheet" href="/assets/materialsymbols.css" />
-  </head>
-  <body>
-    <div class="topbar">
-      <div class="nav-buttons">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="icon-button" id="back" action="back">
-          <path fill-rule="evenodd" d="M7.72 12.53a.75.75 0 010-1.06l7.5-7.5a.75.75 0 111.06 1.06L9.31 12l6.97 6.97a.75.75 0 11-1.06 1.06l-7.5-7.5z" clip-rule="evenodd" />
-        </svg>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="icon-button" id="forward" action="forward">
-          <path fill-rule="evenodd" d="M16.28 11.47a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 01-1.06-1.06L14.69 12 7.72 5.03a.75.75 0 011.06-1.06l7.5 7.5z" clip-rule="evenodd" />
-        </svg>
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon-button" id="reload">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-        </svg>
-      </div>
-      <div style="display: flex; flex-direction: row; gap: 4px;">
-        <div class="nav-input drive-modal" style="display: none; flex-direction: row; gap: 3px;">
-        </div>
-      </div>
-      <input class="nav-input dir focus-within:outline-none" type="text">
-      <div class="relative flex">
-        <input class="nav-input search focus-within:outline-none max-w-48" type="text" placeholder="Search" />
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="clear-search absolute size-6 right-1 top-1/2 -translate-y-1/2 stroke-[currentColor] stroke-[1px] opacity-0 pointer-events-none duration-150">
-          <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
-        </svg>
-      </div>
-    </div>
-    <main>
-      <div class="sidebar"></div>
-      <div class="exp"></div>
-    </main>
-    <script src="./index.js" type="module"></script>
-  </body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Terbium File Manager</title>
+		<link rel="stylesheet" href="./index.css" />
+		<link rel="stylesheet" href="./cm.css" />
+		<link rel="stylesheet" href="/assets/materialsymbols.css" />
+		<script src="/assets/libs/filer.min.js"></script>
+		<script src="/assets/libs/tailwind.min.js"></script>
+		<script src="./files.com.js"></script>
+	</head>
+	<body class="files-body">
+		<header class="topbar">
+			<div class="nav-buttons">
+				<button type="button" class="icon-btn" id="back" title="Back" aria-label="Back">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Back">
+						<path fill-rule="evenodd" d="M7.72 12.53a.75.75 0 010-1.06l7.5-7.5a.75.75 0 111.06 1.06L9.31 12l6.97 6.97a.75.75 0 11-1.06 1.06l-7.5-7.5z" clip-rule="evenodd" />
+					</svg>
+				</button>
+				<button type="button" class="icon-btn" id="forward" title="Forward" aria-label="Forward">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Forward">
+						<path fill-rule="evenodd" d="M16.28 11.47a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 01-1.06-1.06L14.69 12 7.72 5.03a.75.75 0 011.06-1.06l7.5 7.5z" clip-rule="evenodd" />
+					</svg>
+				</button>
+				<button type="button" class="icon-btn" id="up" title="Up" aria-label="Up one level">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Up one level">
+						<path fill-rule="evenodd" d="M11.47 7.72a.75.75 0 011.06 0l7.5 7.5a.75.75 0 11-1.06 1.06L12 9.31l-6.97 6.97a.75.75 0 01-1.06-1.06l7.5-7.5z" clip-rule="evenodd" />
+					</svg>
+				</button>
+				<button type="button" class="icon-btn" id="reload" title="Reload" aria-label="Reload">
+					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" role="img" aria-label="Reload">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+					</svg>
+				</button>
+			</div>
+			<div class="drive-modal" style="display: none"></div>
+			<div class="breadcrumbs" id="breadcrumbs"></div>
+			<input class="nav-input dir" type="text" spellcheck="false" />
+			<div class="search-wrap">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="search-icon" role="img" aria-label="Search">
+					<path fill-rule="evenodd" d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z" clip-rule="evenodd" />
+				</svg>
+				<input class="nav-input search" type="text" placeholder="Search" />
+				<button type="button" class="clear-search" aria-label="Clear search">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Clear search">
+						<path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+					</svg>
+				</button>
+			</div>
+			<div class="view-modes" id="viewModes">
+				<button type="button" class="icon-btn view-mode-btn" data-mode="grid" title="Grid view" aria-label="Grid view">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Grid view">
+						<path d="M3 3.75A.75.75 0 0 1 3.75 3h6a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-.75.75h-6A.75.75 0 0 1 3 9.75v-6Zm10.5 0A.75.75 0 0 1 14.25 3h6a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-.75.75h-6a.75.75 0 0 1-.75-.75v-6ZM3 14.25a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-.75.75h-6a.75.75 0 0 1-.75-.75v-6Zm10.5 0a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-.75.75h-6a.75.75 0 0 1-.75-.75v-6Z" />
+					</svg>
+				</button>
+				<button type="button" class="icon-btn view-mode-btn" data-mode="list" title="List view" aria-label="List view">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="List view">
+						<path fill-rule="evenodd" d="M2.625 6.75a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0A.75.75 0 0 1 8.25 6h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75ZM2.625 12a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0ZM7.5 12a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12A.75.75 0 0 1 7.5 12Zm-4.875 5.25a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
+					</svg>
+				</button>
+				<button type="button" class="icon-btn view-mode-btn" data-mode="details" title="Details view" aria-label="Details view">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Details view">
+						<path d="M3 4.5h18v2.25H3V4.5Zm0 6.375h18v2.25H3v-2.25ZM3 17.25h18V19.5H3v-2.25Z" />
+					</svg>
+				</button>
+			</div>
+		</header>
+		<main class="main-area">
+			<aside class="sidebar"></aside>
+			<section class="exp-wrap">
+				<div class="exp-header" id="expHeader"></div>
+				<div class="exp"></div>
+				<div class="exp-status" id="expStatus"></div>
+				<div class="marquee" id="marquee" hidden></div>
+			</section>
+		</main>
+		<script src="./index.js" type="module"></script>
+	</body>
 </html>

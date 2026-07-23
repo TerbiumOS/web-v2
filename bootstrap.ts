@@ -1,12 +1,12 @@
+import AdmZip from "adm-zip";
+import { exec } from "child_process";
+import consola from "consola";
 import fs from "fs";
+import open from "open";
 import path from "path";
 import { fileURLToPath } from "url";
-import consola from "consola";
-import { TServer } from "./server";
 import { version } from "./package.json";
-import open from "open";
-import { exec } from "child_process";
-import AdmZip from "adm-zip";
+import { TServer } from "./server";
 
 consola.info("Bootstrapping TerbiumOS [v" + version + "]");
 
@@ -175,7 +175,7 @@ export async function CreateEnv() {
 	if (reputation) {
 		fs.writeFileSync(".env", `REPUTATION_STORE=${reputation}\n`);
 	} else {
-		fs.writeFileSync(".env", `REPUTATION_STORE=\n`);
+		fs.writeFileSync(".env", "REPUTATION_STORE=\n");
 	}
 	if (masqr === "no" || masqr === "false" || masqr === "n") {
 		fs.writeFileSync(".env", `MASQR=${false}\nPORT=${port}\nWISP_PORT=${wispPort}`);
@@ -216,10 +216,10 @@ export async function Updater() {
 						await CreateAppsPaths();
 					});
 					return;
-				} else return;
-			} else {
-				consola.success("Terbium is up to date");
+				}
+				return;
 			}
+			consola.success("Terbium is up to date");
 		} catch (e) {
 			consola.error(`Failed to check for updates, ${e}`);
 		}

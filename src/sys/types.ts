@@ -11,6 +11,9 @@ import { WindowInformation } from "./liquor/AliceWM";
 import { createAuthClient } from "better-auth/client";
 import type { HTTPSession, libcurl } from "libcurl.js";
 import * as fflate from "fflate";
+import { TSLParser } from "./apis/utils/TSLParser";
+import type { ProxyTransport } from "@mercuryworkshop/proxy-transports";
+import type * as ScramjetControllerGlobal from "@mercuryworkshop/scramjet-controller";
 
 declare global {
 	namespace React.JSX {
@@ -32,6 +35,9 @@ declare global {
 		loadLock: boolean;
 		libcurlLock: boolean;
 		libcurlSession: HTTPSession;
+		__scramjet$config: SJConfig;
+		__scramjet$flags: SJFlags;
+		scramjetTb: SJController;
 	}
 }
 
@@ -343,19 +349,82 @@ export interface MediaProps {
 	onBack?: void;
 }
 
+export interface SJConfig {
+	prefix: string;
+	injectPath: string;
+	scramjetPath: string;
+	virtualWasmPath: string;
+	wasmPath: string;
+	codec: {
+		encode: (url: string) => string;
+		decode: (url: string) => string;
+	};
+}
+
+export interface SJFlags {
+	globals: {
+		wrapfn: string;
+		wrappropertybase: string;
+		wrappropertyfn: string;
+		cleanrestfn: string;
+		importfn: string;
+		rewritefn: string;
+		metafn: string;
+		wrappostmessagefn: string;
+		pushsourcemapfn: string;
+		trysetfn: string;
+		templocid: string;
+		tempunusedid: string;
+	};
+	flags: {
+		syncxhr: boolean;
+		strictRewrites: boolean;
+		rewriterLogs: boolean;
+		captureErrors: boolean;
+		cleanErrors: boolean;
+		scramitize: boolean;
+		sourcemaps: boolean;
+		destructureRewrites: boolean;
+		allowInvalidJs: boolean;
+		debugTrampolines: boolean;
+		allowFailedIntercepts: boolean;
+		encapsulateWorkers: boolean;
+		debugSourceURL: boolean;
+	};
+	siteFlags: Record<string, any>;
+	maskedfiles: string[];
+}
+
+export interface SJController {
+	id: string;
+	config: SJConfig;
+	scramjetConfig: SJFlags;
+	frames: ScramjetControllerGlobal.Frame[];
+	serviceWorkerController: ServiceWorker | null;
+	rpc: any;
+	transport: ProxyTransport | null;
+	controller: {
+		createFrame: (e?: any) => ScramjetControllerGlobal.Frame;
+	};
+}
+
 export type websocketUrl = `wss://${string}` | `ws://${string}`;
 
 export interface UserSettings {
 	wallpaper: string;
 	wallpaperMode: "cover" | "contain" | "stretch";
 	animations: boolean;
+	/** @deprecated The proxy switching API is deprecated as Ultraviolet has reached End of Life and has been replaced with the latest scramjet version. It remains as a stub for legacy applications and will be removed in the future */
 	proxy: "Ultraviolet" | "Scramjet";
-	transport: string;
+	transport: "Default (Libcurl)" | "Anura BCC" | string;
 	wispServer: websocketUrl | string | any;
 	"battery-percent": boolean;
 	accent: string;
 	windowOptimizations?: boolean;
 	showFPS?: boolean;
+	notificationMode: "all" | "dnd" | "snooze-10" | "allow-apps";
+	notificationAllowList?: string[];
+	notificationSnoozeUntil?: number;
 	times: {
 		format: "12h" | "24h";
 		internet: boolean;
@@ -367,6 +436,7 @@ export interface UserSettings {
 		alwaysMaximized: boolean;
 		alwaysFullscreen: boolean;
 	};
+	scramjetFlags?: SJFlags;
 }
 
 export interface SysSettings {
@@ -466,16 +536,22 @@ export interface COM {
 		pfp(): Promise<string>;
 	};
 	proxy: {
+		/**
+		 * @deprecated The Proxy switching APIs is deprecated as Ultraviolet has reached End of Life and has been replaced with the latest scramjet version. It remains as a stub for legacy applications and will be removed in the future
+		 */
 		get(): Promise<"Ultraviolet" | "Scramjet">;
+		/**
+		 * @deprecated The Proxy switching APIs is deprecated as Ultraviolet has reached End of Life and has been replaced with the latest scramjet version. It remains as a stub for legacy applications and will be removed in the future
+		 */
 		set(proxy: string): Promise<boolean>;
 		updateSWs(): Promise<boolean>;
 		encode(url: string, encoder: string): Promise<string>;
 		decode(url: string, decoder: string): Promise<string>;
 	};
 	notification: {
-		Message(props: NotificationProps): void;
-		Toast(props: NotificationProps): void;
-		Installing<T>(props: NotificationProps, task?: Promise<T> | (() => Promise<T>), doneToast?: Partial<NotificationProps> | null, failToast?: Partial<NotificationProps> | null): Promise<T> | void;
+		Message(props: NotificationProps): void | Promise<void>;
+		Toast(props: NotificationProps): void | Promise<void>;
+		Installing<T>(props: NotificationProps, task?: Promise<T> | (() => Promise<T>), doneToast?: Partial<NotificationProps> | null, failToast?: Partial<NotificationProps> | null): Promise<T | undefined> | void;
 	};
 	dialog: {
 		Alert(props: dialogProps): void;
@@ -492,9 +568,11 @@ export interface COM {
 	system: {
 		version(): string | number | unknown;
 		instance: System["instance"];
-		openApp(pkg: string): Promise<void>;
+		openApp(pkg: string, options?: Partial<WindowConfig>): Promise<void>;
 		download(url: string, location: string): Promise<void>;
 		exportfs(): void;
+		scanintegrity(): void;
+		TSLParser: TSLParser;
 		users: {
 			list(): Promise<string[]>;
 			add(user: User): Promise<boolean>;

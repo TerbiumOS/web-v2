@@ -1,4 +1,4 @@
-import { FC, ReactNode, useEffect, useRef, useState } from "react";
+import { FC, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { MagnifyingGlassIcon, ChevronRightIcon, PuzzlePieceIcon } from "@heroicons/react/24/solid";
 import "./styles/dock.css";
 import { dirExists, isURL, WindowConfig } from "../types";
@@ -46,7 +46,9 @@ interface IUser {
 }
 
 const Dock: FC<IDockProps> = ({ pinned }) => {
-	const windowStore = useWindowStore();
+	const windows = useWindowStore(s => s.windows);
+	const addWindow = useWindowStore(s => s.addWindow);
+	const windowStore = { windows, addWindow };
 	const searchMenuStore = useSearchMenuStore();
 
 	const [isStartOpen, setStartOpen] = useState<boolean>(false);
@@ -72,6 +74,29 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 	const [searchMatch, setSearchMatch] = useState<boolean>(false);
 	const [systemApps, setSysApps] = useState<Array<TDockItem>>([]);
 	const [pins, setPins] = useState<Array<TDockItem>>([]);
+	const startOutsideClickRef = useRef<((e: MouseEvent) => void) | null>(null);
+	const searchOutsideClickRef = useRef<((e: MouseEvent) => void) | null>(null);
+
+	const clearStartOutsideClick = () => {
+		if (startOutsideClickRef.current) {
+			window.removeEventListener("mousedown", startOutsideClickRef.current);
+			startOutsideClickRef.current = null;
+		}
+	};
+
+	const clearSearchOutsideClick = () => {
+		if (searchOutsideClickRef.current) {
+			window.removeEventListener("mousedown", searchOutsideClickRef.current);
+			searchOutsideClickRef.current = null;
+		}
+	};
+
+	useEffect(() => {
+		return () => {
+			clearStartOutsideClick();
+			clearSearchOutsideClick();
+		};
+	}, []);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -113,6 +138,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 
 	var openStart = (focusSearch?: boolean | null, close?: boolean) => {
 		if (close) {
+			clearStartOutsideClick();
 			setStartOpen(false);
 			setSearchHasText(false);
 			setSearchMatch(false);
@@ -141,6 +167,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 		}
 		const clickElsewhere = (e: MouseEvent) => {
 			if (e.target !== startRef.current && e.target !== startButtonRef.current && !startRef.current?.contains(e.target as Node) && !searchDockRef.current?.contains(e.target as Node)) {
+				clearStartOutsideClick();
 				setStartOpen(false);
 				setSearchHasText(false);
 				setSearchMatch(false);
@@ -165,11 +192,16 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 						child.classList.remove("opacity-0");
 					}
 				}
-				window.removeEventListener("mousedown", clickElsewhere);
 			}
 		};
+		clearStartOutsideClick();
+		startOutsideClickRef.current = clickElsewhere;
 		window.addEventListener("mousedown", clickElsewhere);
-		setStartOpen(prev => !prev);
+		const nextOpen = !isStartOpen;
+		setStartOpen(nextOpen);
+		if (!nextOpen) {
+			clearStartOutsideClick();
+		}
 		openSearchMenu(true);
 		if (focusSearch) {
 			setTimeout(() => {
@@ -208,17 +240,24 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 			searchMenuStore.setOpen(false);
 		};
 		if (close) {
+			clearSearchOutsideClick();
 			clearout();
 			return;
 		}
 		const clickElsewhere = (e: MouseEvent) => {
 			if (e.target !== searchDockRef.current && e.target !== startButtonRef.current && !searchDockRef.current?.contains(e.target as Node) && !searchMenuStore.searchMenuRef.current?.contains(e.target as Node)) {
+				clearSearchOutsideClick();
 				clearout();
-				window.removeEventListener("mousedown", clickElsewhere);
 			}
 		};
+		clearSearchOutsideClick();
+		searchOutsideClickRef.current = clickElsewhere;
 		window.addEventListener("mousedown", clickElsewhere);
-		searchMenuStore.setOpen(!searchMenuStore.open);
+		const nextOpen = !searchMenuStore.open;
+		searchMenuStore.setOpen(nextOpen);
+		if (!nextOpen) {
+			clearSearchOutsideClick();
+		}
 		openStart(null, true);
 	};
 
@@ -266,7 +305,6 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 								const query = e.currentTarget.value.toLowerCase();
 								const systemApps = systemAppsRef.current;
 								const pinnedApps = pinnedAppsRef.current;
-								console.log(systemApps, pinnedApps);
 								if (systemApps !== null) {
 									const systemAppsChildren = systemApps.children;
 									let systemAppsMatch = 0;
@@ -446,11 +484,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 						<span
 							className="font-medium hover:text-[#ffffff98] cursor-pointer duration-150"
 							onClick={() => {
-								window.tb.window.create({
-									title: "Settings",
-									src: "/fs/apps/system/settings.tapp/index.html",
-									icon: "/fs/apps/system/settings.tapp/icon.svg",
-								});
+								window.tb.system.openApp("settings");
 								setStartOpen(false);
 							}}
 						>
@@ -459,11 +493,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 						<span
 							className="font-medium hover:text-[#ffffff98] cursor-pointer duration-150"
 							onClick={() => {
-								window.tb.window.create({
-									title: "About",
-									src: "/fs/apps/system/about.tapp/index.html",
-									icon: "/fs/apps/system/about.tapp/icon.svg",
-								});
+								window.tb.system.openApp("about");
 								setStartOpen(false);
 							}}
 						>
@@ -473,15 +503,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 							className="font-medium hover:text-[#ffffff98] cursor-pointer duration-150"
 							onClick={() => {
 								sessionStorage.setItem("ldir", `/home/${user.username}/Documents`);
-								window.tb.window.create({
-									title: "Files",
-									icon: "/fs/apps/system/files.tapp/icon.svg",
-									src: "/fs/apps/system/files.tapp/index.html",
-									size: {
-										width: 600,
-										height: 500,
-									},
-								});
+								window.tb.system.openApp("files");
 								setStartOpen(false);
 							}}
 						>
@@ -557,28 +579,42 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 };
 
 const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onContextMenu, size, snapable, pid, wid, proxy }) => {
-	const windowStore = useWindowStore();
+	const windows = useWindowStore(s => s.windows);
+	const matchedWindows = useWindowStore(s => s.matchedWindows);
+	const addWindow = useWindowStore(s => s.addWindow);
+	const windowStore = { windows, matchedWindows, addWindow };
 	const dockItemRef = useRef<HTMLDivElement>(null);
+	const hoverPreviewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const [currWID, setcurrWID] = useState(wid);
 	const [winfocused, setwinfocused] = useState(windowStore.windows.find((w: any) => w.wid === currWID)?.focused);
-	const mm = (e: MouseEvent) => {
-		const target = e.target;
-		if (target instanceof Element && target.closest("[data-win-preview='true']")) {
-			return;
-		}
-		const withinRadius = (e: MouseEvent) => {
-			if (!dockItemRef.current) return false;
-			const rect = dockItemRef.current.getBoundingClientRect();
-			const xDistance = Math.abs(e.clientX - (rect.left + rect.width / 2));
-			const yDistance = Math.abs(e.clientY - (rect.top + rect.height / 2));
-			const distance = Math.sqrt(xDistance * xDistance + yDistance * yDistance);
-			return distance > 350;
-		};
-		if (withinRadius(e)) {
-			window.removeEventListener("mousemove", mm);
-			window.dispatchEvent(new CustomEvent("windows-prev", { detail: JSON.stringify({ open: false, location: null }) }));
+	const clearHoverPreviewTimeout = () => {
+		if (hoverPreviewTimeoutRef.current) {
+			clearTimeout(hoverPreviewTimeoutRef.current);
+			hoverPreviewTimeoutRef.current = null;
 		}
 	};
+	const mm = useCallback(
+		(e: MouseEvent) => {
+			const target = e.target;
+			if (target instanceof Element && target.closest("[data-win-preview='true']")) {
+				return;
+			}
+			const withinRadius = (e: MouseEvent) => {
+				if (!dockItemRef.current) return false;
+				const rect = dockItemRef.current.getBoundingClientRect();
+				const xDistance = Math.abs(e.clientX - (rect.left + rect.width / 2));
+				const yDistance = Math.abs(e.clientY - (rect.top + rect.height / 2));
+				const distance = Math.sqrt(xDistance * xDistance + yDistance * yDistance);
+				return distance > 350;
+			};
+			if (withinRadius(e)) {
+				window.removeEventListener("mousemove", mm);
+				clearHoverPreviewTimeout();
+				window.dispatchEvent(new CustomEvent("windows-prev", { detail: JSON.stringify({ open: false, location: null }) }));
+			}
+		},
+		[title],
+	);
 	useEffect(() => {
 		const setWID = (e: CustomEvent) => {
 			setcurrWID(e.detail);
@@ -594,10 +630,12 @@ const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onConte
 		window.addEventListener("selwin-upd", updsel as EventListener);
 		window.addEventListener("currWID", setWID as EventListener);
 		return () => {
+			window.removeEventListener("selwin-upd", updsel as EventListener);
 			window.removeEventListener("currWID", setWID as EventListener);
 			window.removeEventListener("mousemove", mm);
+			clearHoverPreviewTimeout();
 		};
-	}, [currWID, winfocused]);
+	}, [currWID, winfocused, mm]);
 	return (
 		<dock-item
 			ref={dockItemRef}
@@ -612,7 +650,8 @@ const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onConte
             `
 			}
 			onMouseEnter={() => {
-				setTimeout(() => {
+				clearHoverPreviewTimeout();
+				hoverPreviewTimeoutRef.current = setTimeout(() => {
 					const rect = dockItemRef.current?.getBoundingClientRect();
 					const x = rect ? rect.x : 0;
 					window.addEventListener("mousemove", mm);
@@ -638,6 +677,7 @@ const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onConte
 					);
 				}, 950);
 			}}
+			onMouseLeave={clearHoverPreviewTimeout}
 			onClick={() => {
 				onClick?.(new MouseEvent("click"));
 				window.dispatchEvent(new CustomEvent("sel-win", { detail: currWID }));
@@ -703,7 +743,8 @@ const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onConte
 };
 
 const PinnedDockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onContextMenu, size, snapable, proxy }) => {
-	const windowStore = useWindowStore();
+	const addWindow = useWindowStore(s => s.addWindow);
+	const windowStore = { addWindow };
 	return (
 		<dock-item
 			// @ts-expect-error
@@ -711,7 +752,8 @@ const PinnedDockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, o
 			onContextMenu={() => {
 				return;
 			}}
-			title={title}
+			// @ts-expect-error
+			title={typeof title === "string" ? title : title?.text}
 			onClick={() => {
 				onClick?.(new MouseEvent("click"));
 				windowStore.addWindow({
@@ -769,7 +811,7 @@ export const StartItem: FC<TStartItem> = ({ icon, title, onClick, inPins, classN
 	// @ts-expect-error
 	const chars = typeof title === "string" ? title.split("") : title?.text.split("");
 	const [resolvedIcon, setResolvedIcon] = useState<string | boolean | undefined>(false);
-	let sysapps = [{ title: { text: "Terminal" } }, { title: "Files" }, { title: "Settings" }, { title: { text: "App Store" } }, { title: "Browser" }, { title: "Calculator" }, { title: "Feedback" }, { title: "About" }, { title: "Text Editor" }, { title: "Task Manager" }, { title: "Anura File Manager" }];
+	let sysapps = [{ title: { text: "Terminal" } }, { title: "Files" }, { title: { text: "Settings" } }, { title: { text: "App Store" } }, { title: "Browser" }, { title: "Calculator" }, { title: "Feedback" }, { title: "About" }, { title: "Text Editor" }, { title: "Task Manager" }, { title: "Anura File Manager" }];
 	// @ts-expect-error
 	const isSystemApp = sysapps.map(app => (typeof app.title === "string" ? app.title : app.title.text)).includes(typeof title === "string" ? title : title?.text);
 

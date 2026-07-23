@@ -3,6 +3,10 @@
 	"config": {
 		"title": "About",
 		"icon": "/fs/apps/system/about.tapp/icon.svg",
-		"src": "/fs/apps/system/about.tapp/index.html"
+		"src": "/fs/apps/system/about.tapp/index.html",
+		"size": {
+			"width": 750,
+			"height": 450
+		}
 	}
 }

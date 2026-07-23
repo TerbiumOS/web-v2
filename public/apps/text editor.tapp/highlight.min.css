@@ -23,11 +23,11 @@ code.hljs {
 }
 .hljs-punctuation,
 .hljs-tag {
-	color: #444a;
+	color: rgba(255, 255, 255, 0.667);
 }
 .hljs-tag .hljs-attr,
 .hljs-tag .hljs-name {
-	color: #444;
+	color: #ffffff;
 }
 .hljs-attribute,
 .hljs-doctag,

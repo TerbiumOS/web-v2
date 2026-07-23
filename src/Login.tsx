@@ -18,6 +18,7 @@ export default function Login() {
 	const [wallpaper, setWallpaper] = useState<string | null>(null);
 	const [changingpw, setChangepw] = useState(false);
 	const passwordRef = useRef<HTMLInputElement>(null);
+	const passwordErrorResetRef = useRef<((e: KeyboardEvent) => void) | null>(null);
 	useEffect(() => {
 		const intervalId = setInterval(() => {
 			setTime(GetTime());
@@ -102,17 +103,34 @@ export default function Login() {
 	};
 	const Err = () => {
 		if (passwordRef.current) {
+			if (passwordErrorResetRef.current) {
+				passwordRef.current.removeEventListener("keydown", passwordErrorResetRef.current);
+			}
+			const clearPasswordError = () => {
+				if (!passwordRef.current) return;
+				passwordRef.current.classList.remove("ring-[#ff7e7e5a]", "ring-[2px]", "border-[#ff7e7ed5]", "placeholder-[#ff7e7e6b]");
+				passwordRef.current.placeholder = "Password";
+				if (passwordErrorResetRef.current) {
+					passwordRef.current.removeEventListener("keydown", passwordErrorResetRef.current);
+					passwordErrorResetRef.current = null;
+				}
+			};
+			passwordErrorResetRef.current = clearPasswordError;
 			passwordRef.current.classList.add("ring-[#ff7e7e5a]", "ring-[2px]", "border-[#ff7e7ed5]", "placeholder-[#ff7e7e6b]");
 			passwordRef.current.value = "";
 			passwordRef.current.placeholder = "Incorrect Password";
-			passwordRef.current.addEventListener("keydown", () => {
-				if (passwordRef.current) {
-					passwordRef.current.classList.remove("ring-[#ff7e7e5a]", "ring-[2px]", "border-[#ff7e7ed5]", "placeholder-[#ff7e7e6b]");
-					passwordRef.current.placeholder = "Password";
-				}
-			});
+			passwordRef.current.addEventListener("keydown", clearPasswordError);
 		}
 	};
+
+	useEffect(() => {
+		return () => {
+			if (passwordRef.current && passwordErrorResetRef.current) {
+				passwordRef.current.removeEventListener("keydown", passwordErrorResetRef.current);
+				passwordErrorResetRef.current = null;
+			}
+		};
+	}, []);
 
 	useEffect(() => {
 		const keyCheck = async (e: KeyboardEvent) => {

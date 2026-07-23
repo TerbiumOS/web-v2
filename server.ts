@@ -116,7 +116,6 @@ export function TServer() {
 
 	const wisp = new Mrrowisp({
 		port: wispPort,
-
 		allowTCP: true,
 		allowUDP: true,
 		allowDirectIP: false,
@@ -124,27 +123,21 @@ export function TServer() {
 		allowLoopbackIPs: false,
 		enableV2: true,
 		enableTwisp: false,
-
 		tcpNoDelay: true,
 		tcpBufferSize: 65535,
 		bufferRemainingLength: 1 << 20,
 		websocketPermessageDeflate: false,
-
 		dnsServers: ["1.1.1.3", "1.0.0.3"],
 		dnsMethod: "resolve",
 		dnsResultOrder: "ipv4first",
-
 		parseRealIP: true,
 		trustedProxies: ["127.0.0.1", "::1"],
 		trustedHeaders: ["CF-Connecting-IP", "X-Forwarded-For", "X-Real-IP"],
-
 		maxMessageSize: 4 * 1024 * 1024,
 		logLevel: "info",
-
 		bandwidthLimitKbps: 200 * 1024,
 		connectionsLimitPerIP: 600,
 		connectionWindowSeconds: 10,
-
 		floodProtection: {
 			enabled: true,
 			maxConnectsPerSourceIPPerSecond: 200,
@@ -162,7 +155,6 @@ export function TServer() {
 			wsCloseAfterViolations: 24,
 			logBlockedDials: false,
 		},
-
 		reputation: {
 			enabled: reputation ? true : false,
 			storePath: reputation,
@@ -188,9 +180,7 @@ export function TServer() {
 				distinctSourcesEscalation: 1,
 			},
 		},
-
 		staticDir: "",
-
 		blacklist: { hostnames: [], ports: [] },
 		whitelist: { hostnames: [], ports: [] },
 	});

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, memo } from "react";
 import { fileExists, UserSettings, WindowConfig } from "../types";
 import { clearInfo, updateInfo } from "./AppIsland";
 import { useWindowStore } from "../Store";
+import ScramjetFrame from "../apis/scramjet-frame";
 
 interface WindowProps {
 	config: WindowConfig;
@@ -25,7 +26,11 @@ interface DesktopItem {
 }
 
 const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, onSnapPreview }) => {
-	const windowStore = useWindowStore();
+	const arrange = useWindowStore(s => s.arrange);
+	const getWindow = useWindowStore(s => s.getWindow);
+	const removeWindow = useWindowStore(s => s.removeWindow);
+	const minimize = useWindowStore(s => s.minimize);
+	const windowStore = { arrange, getWindow, removeWindow, minimize };
 	const [optimizationsEnabled, setOptimizationsEnabled] = useState(true);
 
 	const windowRef = useRef<HTMLDivElement>(null);
@@ -104,11 +109,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
 				setSrc("about:blank");
 				console.log(settings.proxy);
-				if (settings.proxy === "Ultraviolet") {
-					setSrc(`${window.location.origin}/uv/service/${await window.tb.proxy.encode(config.src, "XOR")}`);
-				} else {
-					setSrc(`${window.location.origin}/service/${await window.tb.proxy.encode(config.src, "XOR")}`);
-				}
+				setSrc(`${window.location.origin}/service/${await window.tb.proxy.encode(config.src, "XOR")}`);
 				const instanceWin = (await window.anura.wm.getWeakRef(Number(config.pid))) || {};
 				Object.assign(srcRef.current?.contentWindow as typeof window, {
 					tb: window.parent.tb,
@@ -570,18 +571,21 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			window.removeEventListener("mousemove", onMove);
 			window.removeEventListener("mouseup", onUp);
 			window.removeEventListener("blur", onUp);
+			document.documentElement.removeEventListener("mouseleave", onLeave);
 			setIsMouseDown(false);
 			setIsResizing(false);
 		};
 
-		window.onmouseleave = () => {
+		const onLeave = () => {
 			setIsDragging(false);
 			setIsMouseDown(false);
 			window.removeEventListener("mousemove", onMove);
 			window.removeEventListener("mouseup", onUp);
 			window.removeEventListener("blur", onUp);
+			document.documentElement.removeEventListener("mouseleave", onLeave);
 		};
 
+		document.documentElement.addEventListener("mouseleave", onLeave);
 		window.addEventListener("mousemove", onMove);
 		window.addEventListener("mouseup", onUp);
 		window.addEventListener("blur", onUp);
@@ -712,21 +716,24 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 						window.removeEventListener("mousemove", onMove);
 						window.removeEventListener("mouseup", onUp);
 						window.removeEventListener("blur", onUp);
+						document.documentElement.removeEventListener("mouseleave", onLeave);
 						setIsMouseDown(false);
 						setIsDragging(false);
 					};
 
-					window.addEventListener("mousemove", onMove);
-					window.addEventListener("mouseup", onUp);
-					window.addEventListener("blur", onUp);
-
-					window.onmouseleave = () => {
+					const onLeave = () => {
 						setIsDragging(false);
 						setIsMouseDown(false);
 						window.removeEventListener("mousemove", onMove);
 						window.removeEventListener("mouseup", onUp);
 						window.removeEventListener("blur", onUp);
+						document.documentElement.removeEventListener("mouseleave", onLeave);
 					};
+
+					window.addEventListener("mousemove", onMove);
+					window.addEventListener("mouseup", onUp);
+					window.addEventListener("blur", onUp);
+					document.documentElement.addEventListener("mouseleave", onLeave);
 
 					setIsMouseDown(true);
 				}}
@@ -1006,34 +1013,38 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				)}
 			</div>
 			<div ref={contentRef} className="w-full h-full" style={optimizationsEnabled ? { contain: "strict" } : {}}>
-				<iframe
-					key={config.src}
-					ref={srcRef}
-					src={src}
-					id={`proc-${config.pid}`}
-					loading={optimizationsEnabled && minimized ? "lazy" : "eager"}
-					onLoad={() => {
-						if (config.message) {
-							srcRef.current?.contentWindow!.postMessage(config.message, "*");
-						}
-						const sr1 = document.createElement("script");
-						const sr2 = document.createElement("script");
-						sr1.src = "/cursor_changer.js";
-						sr2.src = "/media_interactions.js";
-						srcRef.current?.contentDocument?.head.appendChild(sr1);
-						srcRef.current?.contentDocument?.head.appendChild(sr2);
-					}}
-					referrerPolicy="no-referrer"
-					style={{
-						border: "none",
-						all: "initial",
-						width: "100%",
-						height: "calc(100% - 40px)",
-						pointerEvents: isMouseDown ? "none" : "auto",
-						userSelect: "none",
-						...(optimizationsEnabled && { contain: "strict" }),
-					}}
-				></iframe>
+				{config.proxy ? (
+					<ScramjetFrame url={config.src} />
+				) : (
+					<iframe
+						key={config.src}
+						ref={srcRef}
+						src={src}
+						id={`proc-${config.pid}`}
+						loading={optimizationsEnabled && minimized ? "lazy" : "eager"}
+						onLoad={() => {
+							if (config.message) {
+								srcRef.current?.contentWindow!.postMessage(config.message, "*");
+							}
+							const sr1 = document.createElement("script");
+							const sr2 = document.createElement("script");
+							sr1.src = "/cursor_changer.js";
+							sr2.src = "/media_interactions.js";
+							srcRef.current?.contentDocument?.head.appendChild(sr1);
+							srcRef.current?.contentDocument?.head.appendChild(sr2);
+						}}
+						referrerPolicy="no-referrer"
+						style={{
+							border: "none",
+							all: "initial",
+							width: "100%",
+							height: "calc(100% - 40px)",
+							pointerEvents: isMouseDown ? "none" : "auto",
+							userSelect: "none",
+							...(optimizationsEnabled && { contain: "strict" }),
+						}}
+					></iframe>
+				)}
 			</div>
 		</div>
 	);
@@ -1292,9 +1303,11 @@ const DesktopItems = () => {
 				holdTimeout = null;
 			}
 		};
-		window.onmouseup = async (e: MouseEvent) => {
+		const onWindowMouseUp = async (e: MouseEvent) => {
 			setDragging(false);
 			window.removeEventListener("mousemove", onMouseMove);
+			window.removeEventListener("mouseup", onWindowMouseUp);
+			document.documentElement.removeEventListener("mouseleave", onWindowMouseLeave);
 			if (draggedItemIndex.current !== null && !holdTimeout) {
 				const draggedApp = items[draggedItemIndex.current];
 				const updatedApp = {
@@ -1309,10 +1322,12 @@ const DesktopItems = () => {
 			setDragradius(false);
 		};
 
-		window.onmouseleave = async () => {
+		const onWindowMouseLeave = async () => {
 			clearHoldTimeout();
 			setDragging(false);
 			window.removeEventListener("mousemove", onMouseMove);
+			window.removeEventListener("mouseup", onWindowMouseUp);
+			document.documentElement.removeEventListener("mouseleave", onWindowMouseLeave);
 			if (draggedItemIndex.current !== null && dragging) {
 				const draggedApp = items[draggedItemIndex.current];
 				const updatedApp = {
@@ -1324,6 +1339,8 @@ const DesktopItems = () => {
 			}
 			draggedItemIndex.current = null;
 		};
+		window.addEventListener("mouseup", onWindowMouseUp);
+		document.documentElement.addEventListener("mouseleave", onWindowMouseLeave);
 
 		e.preventDefault();
 		e.target.addEventListener("mouseup", clearHoldTimeout, { once: true });
@@ -1641,7 +1658,8 @@ interface WindowAreaProps {
 }
 
 const WindowArea: React.FC<WindowAreaProps> = ({ className }) => {
-	const windowStore = useWindowStore();
+	const windows = useWindowStore(s => s.windows);
+	const windowStore = { windows };
 	const [prevShowing, showPrev] = useState(false);
 	const [direction, setDirection] = useState<string | null>(null);
 	const snapPrev = (pos: string) => {
@@ -1703,11 +1721,7 @@ const WindowArea: React.FC<WindowAreaProps> = ({ className }) => {
 						{
 							text: "Change Wallpaper",
 							click: () => {
-								window.tb.window.create({
-									title: "Settings",
-									icon: "/fs/apps/system/settings.tapp/icon.svg",
-									src: "/fs/apps/system/settings.tapp/index.html",
-								});
+								window.tb.system.openApp("settings", { message: { type: "process", path: { view: "wallpaper", catid: "settings.appearance", dest: "appearance.quick.wallpaper" } } });
 							},
 						},
 						{

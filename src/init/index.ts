@@ -1,7 +1,7 @@
-import { dirExists, TAuthSSData, UserSettings } from "../sys/types";
 import apps from "../apps.json";
-import { copyfs } from "./fs.init";
 import { hash } from "../hash.json";
+import { dirExists, type TAuthSSData, type UserSettings } from "../sys/types";
+import { copyfs } from "./fs.init";
 
 export async function init() {
 	/**
@@ -44,7 +44,7 @@ export async function init() {
 		await window.tb.fs.promises.mkdir("/system/bin");
 		await window.tb.fs.promises.mkdir("/system/etc");
 		await window.tb.fs.promises.mkdir("/system/etc/terbium");
-		let stockSettings = {
+		const stockSettings = {
 			theme: "dark",
 			"system-blur": true,
 			"dock-full": false,
@@ -66,54 +66,25 @@ export async function init() {
 		await window.tb.fs.promises.mkdir("/system/var");
 		await window.tb.fs.promises.mkdir("/system/var/terbium");
 		await window.tb.fs.promises.writeFile("/system/etc/terbium/hash.cache", hash);
-		let startApps = {
+		const startApps = {
 			system_apps: apps.map(app => app.config),
 			pinned_apps: [],
 		};
 		await window.tb.fs.promises.writeFile("/system/var/terbium/start.json", JSON.stringify(startApps));
-		await window.tb.fs.promises.writeFile(`/apps/installed.json`, JSON.stringify([]));
+		await window.tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify([]));
 		await window.tb.fs.promises.mkdir("/apps/anura/");
-		let dockPins = [
+		const dockPins = [
 			{
-				title: {
-					text: "Terminal",
-					html: '<div class="term-tab-container">\n<style>.term-tabs{display:flex;align-items:center;gap:6px;width:100%;height:100%;}.term-tab-list{display:flex;gap:6px;align-items:center;overflow:hidden;white-space:nowrap}.term-tab{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:8px;background:transparent;color:#fff;font-weight:700;cursor:pointer;user-select:none;border:1px solid transparent}.term-tab.active{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.08)}.term-tab .close{opacity:0.6;font-weight:600;margin-left:8px}.term-tab-controls{display:flex;gap:6px;align-items:center}.term-add{background:#ffffff0f;color:#fff;border-radius:6px;padding:2px 6px;border:none;font-weight:700;cursor:pointer}</style>\n<div class="term-tabs">\n<div class="term-tab-list" aria-hidden="false"></div>\n<div class="term-tab-controls">\n<button class="term-add" title="New tab">+</button>\n</div>\n</div>\n</div>',
-				},
-				icon: "/fs/apps/system/terminal.tapp/icon.svg",
-				isPinnable: true,
-				src: "/fs/apps/system/terminal.tapp/index.html",
-				size: {
-					width: 612,
-					height: 415,
-				},
+				...apps.find(app => app.name === "Terminal")?.config,
 			},
 			{
-				title: "Files",
-				icon: "/fs/apps/system/files.tapp/icon.svg",
-				isPinnable: true,
-				src: "/fs/apps/system/files.tapp/index.html",
-				size: {
-					width: 600,
-					height: 500,
-				},
+				...apps.find(app => app.name === "Files")?.config,
 			},
 			{
-				title: "Settings",
-				icon: "/fs/apps/system/settings.tapp/icon.svg",
-				isPinnable: true,
-				src: "/fs/apps/system/settings.tapp/index.html",
-				single: true,
+				...apps.find(app => app.name === "Settings")?.config,
 			},
 			{
-				title: "Feedback",
-				icon: "/fs/apps/system/feedback.tapp/icon.svg",
-				proxy: true,
-				isPinnable: true,
-				src: "https://forms.gle/m664xxmrugWQADQt9",
-				size: {
-					width: 600,
-					height: 500,
-				},
+				...apps.find(app => app.name === "Feedback")?.config,
 			},
 		];
 		await window.tb.fs.promises.writeFile("/system/var/terbium/dock.json", JSON.stringify(dockPins));
@@ -122,7 +93,7 @@ export async function init() {
 		await window.tb.fs.promises.mkdir("/system/lib/anura");
 		await window.tb.fs.promises.mkdir("/system/tmp");
 
-		let recentApps: any[] = [];
+		const recentApps: any[] = [];
 		await window.tb.fs.promises.writeFile("/system/var/terbium/recent.json", JSON.stringify(recentApps));
 	}
 
@@ -135,9 +106,9 @@ export async function init() {
 			wallpaper: "/assets/wallpapers/1.png",
 			wallpaperMode: "cover",
 			animations: true,
-			// @ts-ignore
+			// @ts-expect-error
 			proxy: sessionStorage.getItem("selectedProxy") || "Scramjet",
-			transport: "Default (Epoxy)",
+			transport: sessionStorage.getItem("selectedTransport") || "Default (Libcurl)",
 			wispServer: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`,
 			"battery-percent": false,
 			accent: "#32ae62",
@@ -148,6 +119,7 @@ export async function init() {
 			},
 			showFPS: false,
 			windowOptimizations: false,
+			notificationMode: "all",
 			window: {
 				winAccent: "#ffffff",
 				blurlevel: 18,
@@ -163,13 +135,13 @@ export async function init() {
 		}
 		await window.tb.fs.promises.writeFile(`/home/${user}/settings.json`, JSON.stringify(userSettings));
 		await window.tb.fs.promises.mkdir(`/home/${user}/desktop`);
-		let r2 = [];
-		let sysapps: { name: string; config: string; user: string }[] = [];
+		const r2 = [];
+		const sysapps: { name: string; config: string; user: string }[] = [];
 		for (let i = 0; i < apps.length; i++) {
 			const app = apps[i];
 			const name = app.name.toLowerCase();
-			var topPos: number = 0;
-			var leftPos: number = 0;
+			var topPos = 0;
+			var leftPos = 0;
 			if (i % 12 === 0) {
 				topPos = 0;
 			} else {
@@ -271,13 +243,13 @@ export async function init() {
 		await window.tb.fs.promises.mkdir(`/apps/user/${user}/browser`);
 		await window.tb.fs.promises.writeFile(`/apps/user/${user}/browser/favorites.json`, JSON.stringify([]));
 		await window.tb.fs.promises.writeFile(`/apps/user/${user}/browser/userscripts.json`, JSON.stringify([]));
-		await window.tb.fs.promises.writeFile(`/apps/installed.json`, JSON.stringify(sysapps));
+		await window.tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify(sysapps));
 		const response = await fetch("/apps/files.tapp/icons.json");
 		const dat = await response.json();
 		const iconNames = Object.keys(dat["name-to-path"]);
 		var iconArrays: { [key: string]: string } = {};
 
-		await window.tb.fs.promises.mkdir(`/system/etc/terbium/file-icons`);
+		await window.tb.fs.promises.mkdir("/system/etc/terbium/file-icons");
 		for (const name of iconNames) {
 			const path = `/system/etc/terbium/file-icons/${name}.svg`;
 			iconArrays[name] = path;
@@ -285,7 +257,7 @@ export async function init() {
 			await window.tb.fs.promises.writeFile(path, icon as any);
 		}
 		await window.tb.fs.promises.writeFile(
-			`/system/etc/terbium/file-icons.json`,
+			"/system/etc/terbium/file-icons.json",
 			JSON.stringify({
 				"ext-to-name": dat["ext-to-name"],
 				"name-to-path": iconArrays,
@@ -300,7 +272,7 @@ export async function init() {
 					Images: `/home/${user}/images`,
 					Videos: `/home/${user}/videos`,
 					Music: `/home/${user}/music`,
-					Trash: `/system/trash`,
+					Trash: "/system/trash",
 				},
 			}),
 			"utf8",

@@ -1,39 +1,44 @@
-export class AnuraBareClient {
+import type { ProxyTransport, RawHeaders, TransferrableResponse, WebSocketDataType } from "@mercuryworkshop/proxy-transports";
+
+function normalizeHeaders(headers: HeadersInit | RawHeaders | undefined): RawHeaders {
+	if (!headers) return [];
+	if (headers instanceof Headers) return [...headers.entries()];
+	if (Array.isArray(headers)) return headers;
+
+	const rawHeaders: RawHeaders = [];
+	for (const [key, value] of Object.entries(headers)) {
+		if (Array.isArray(value)) {
+			for (const item of value) rawHeaders.push([key, item]);
+		} else {
+			rawHeaders.push([key, value]);
+		}
+	}
+
+	return rawHeaders;
+}
+
+export class AnuraBareClient implements ProxyTransport {
 	ready = true;
 
-	constructor() {}
+	constructor(_options?: unknown) {}
+
 	async init() {
 		this.ready = true;
 	}
-	async meta() {}
 
-	async request(remote: URL, method: string, body: BodyInit | null, headers: any, signal: AbortSignal | undefined): Promise<any> {
+	async request(remote: URL, method: string, body: BodyInit | null, headers: RawHeaders, signal: AbortSignal | undefined): Promise<TransferrableResponse> {
 		const payload = await window.anura.net.fetch(remote.href, {
 			method,
-			headers: headers,
+			headers,
 			body,
+			signal,
 			redirect: "manual",
 			duplex: "half",
 		});
 
-		const respheaders = {};
-
-		//@ts-ignore
-		if (payload.raw_headers)
-			for (const [key, value] of payload.raw_headers) {
-				//@ts-ignore
-				if (!respheaders[key]) {
-					//@ts-ignore
-					respheaders[key] = [value];
-				} else {
-					//@ts-ignore
-					respheaders[key].push(value);
-				}
-			}
-
 		return {
 			body: payload.body!,
-			headers: respheaders,
+			headers: normalizeHeaders(payload.raw_headers ?? payload.headers),
 			status: payload.status,
 			statusText: payload.statusText,
 		};
@@ -41,36 +46,34 @@ export class AnuraBareClient {
 
 	connect(
 		url: URL,
-		origin: string,
 		protocols: string[],
-		requestHeaders: any,
-		onopen: (protocol: string) => void,
-		onmessage: (data: Blob | ArrayBuffer | string) => void,
+		requestHeaders: RawHeaders,
+		onopen: (protocol: string, extensions: string) => void,
+		onmessage: (data: WebSocketDataType) => void,
 		onclose: (code: number, reason: string) => void,
 		onerror: (error: string) => void,
-	): [(data: Blob | ArrayBuffer | string) => void, (code: number, reason: string) => void] {
+	): [(data: WebSocketDataType) => void, (code: number, reason: string) => void] {
 		//@ts-ignore
 		const socket = new window.anura.net.WebSocket(url.toString(), protocols, {
 			headers: requestHeaders,
 		});
-		//bare client always expects an arraybuffer for some reason
 		socket.binaryType = "arraybuffer";
 
-		socket.onopen = (event: Event) => {
-			onopen("");
+		socket.onopen = () => {
+			onopen(socket.protocol ?? "", socket.extensions ?? "");
 		};
 		socket.onclose = (event: CloseEvent) => {
 			onclose(event.code, event.reason);
 		};
 		socket.onerror = (event: Event) => {
-			onerror("");
+			onerror(event instanceof ErrorEvent ? event.message : "");
 		};
 		socket.onmessage = (event: MessageEvent) => {
 			onmessage(event.data);
 		};
 
 		return [
-			data => {
+			(data: WebSocketDataType) => {
 				socket.send(data);
 			},
 			(code, reason) => {

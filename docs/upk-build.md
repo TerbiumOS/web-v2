@@ -1,16 +1,35 @@
 # <span style="color: #32ae62;">UPK Building</span>
 
-By default, if you fork the Terbium v2 repo on github included will be a workflow that will automatically upload the latest UPK release to either the latest github release (if applicable) or to a new github tag
+**Last Updated**: v2.4.0 - 07/16/2026
 
-However if you want to build it yourself on your local machine you can you just need the following dependencies:
+By default, if you fork the Terbium v2 repo on GitHub, included will be a workflow that will automatically upload the latest UPK release to either the latest GitHub release (if applicable) or to a new GitHub tag.
 
-- NodeJS 22 or later
-- Python 3.12 or later
+However, if you want to build it yourself on your local machine, you will need the following dependencies:
 
-First, download [UPK Tools](https://cdn.terbiumon.top/upk-tools.zip) from the terbium cdn:
+- **Node.js** 22 or later
+- **Python** 3.12 or later
 
-**⚠️ NOTE** Be sure to check the source you are downloading the UPK Tools from. If your downloading it form a source that is **NOT** hosted under `terbiumon.top` please make sure its not malicious content. TerbiumOS Developement is not responsible for any damage caused by fradulent downloads in non-official repositories
+## <span style="color: #32ae62;">Build Instructions</span>
 
-Next, extract the zip file in your terbium instance and run either upk-all.ps1 if your on windows or upk-all.sh if your on any other unix system
+### Step 1: Download UPK Tools
 
-This file will automatically install all the needed tools and nescessities for the UPK Build and compile it to a zip file named `terbium-upk.app.zip` which you can open in any anura instance and install Terbium on it
+Download [UPK Tools](https://cdn.terbiumon.top/upk-tools.zip) from the Terbium CDN.
+
+> **⚠️ SECURITY WARNING**: Be sure to check the source you are downloading the UPK Tools from. If you're downloading it from a source that is **NOT** hosted under `terbiumon.top`, please verify its not malicious content. TerbiumOS Development is not responsible for any damage caused by fraudulent downloads from non-official repositories.
+
+### Step 2: Extract and Run Build Script
+
+Extract the zip file in your Terbium directory and run the appropriate build script:
+
+- **Windows**: Run `upk-all.ps1`
+- **Linux/macOS/Unix**: Run `upk-all.sh`
+
+### Step 3: Install in Anura
+
+The build script will automatically install all needed tools and dependencies for the UPK build and compile it to a zip file named `terbium-upk.app.zip`.
+
+You can open this file in any Anura instance and install Terbium as a UPK application.
+
+## <span style="color: #32ae62;">What is UPK?</span>
+
+UPK (Universal Package) is a packaging format that allows Terbium to run inside Anura as an application, providing cross-compatibility between the two operating systems.

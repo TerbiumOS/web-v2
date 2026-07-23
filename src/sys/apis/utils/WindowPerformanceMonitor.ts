@@ -29,8 +29,14 @@ class WindowPerformanceMonitor {
 		renderCount: 0,
 	};
 	private observer: PerformanceObserver | null = null;
+	private mutationObserver: MutationObserver | null = null;
 	private rafId: number | null = null;
 	private lastFrameTime: number = 0;
+	private isDragging: boolean = false;
+	private isResizing: boolean = false;
+	private onMouseMove: ((e: MouseEvent) => void) | null = null;
+	private onMouseDown: ((e: MouseEvent) => void) | null = null;
+	private onMouseUp: (() => void) | null = null;
 
 	start() {
 		console.log("🚀 Window Performance Monitor started");
@@ -62,13 +68,13 @@ class WindowPerformanceMonitor {
 
 		this.rafId = requestAnimationFrame(measureFrameRate);
 
-		const mutationObserver = new MutationObserver(mutations => {
+		this.mutationObserver = new MutationObserver(mutations => {
 			this.metrics.renderCount += mutations.length;
 		});
 
 		const windowArea = document.querySelector("window-area");
 		if (windowArea) {
-			mutationObserver.observe(windowArea, {
+			this.mutationObserver.observe(windowArea, {
 				attributes: true,
 				childList: true,
 				subtree: true,
@@ -79,52 +85,60 @@ class WindowPerformanceMonitor {
 	}
 
 	private monitorWindowOperations() {
-		const originalAddEventListener = window.addEventListener;
-		let isDragging = false;
-		let isResizing = false;
-
-		window.addEventListener = function (type: string, listener: any, options?: any) {
-			if (type === "mousemove") {
-				const wrappedListener = (e: MouseEvent) => {
-					if (isDragging) {
-						// @ts-ignore
-						this.metrics.dragCount++;
-					}
-					if (isResizing) {
-						// @ts-ignore
-						this.metrics.resizeCount++;
-					}
-					listener(e);
-				};
-				// @ts-ignore
-				return originalAddEventListener.call(window, type, wrappedListener, options);
+		this.onMouseMove = (_e: MouseEvent) => {
+			if (this.isDragging) {
+				this.metrics.dragCount++;
 			}
-			return originalAddEventListener.call(window, type, listener, options);
-		}.bind(this);
+			if (this.isResizing) {
+				this.metrics.resizeCount++;
+			}
+		};
 
-		window.addEventListener("mousedown", (e: MouseEvent) => {
+		this.onMouseDown = (e: MouseEvent) => {
 			const target = e.target as HTMLElement;
 			if (target.closest(".region")) {
-				isDragging = true;
+				this.isDragging = true;
 			}
 			if (target.dataset.resizer) {
-				isResizing = true;
+				this.isResizing = true;
 			}
-		});
+		};
 
-		window.addEventListener("mouseup", () => {
-			isDragging = false;
-			isResizing = false;
-		});
+		this.onMouseUp = () => {
+			this.isDragging = false;
+			this.isResizing = false;
+		};
+
+		window.addEventListener("mousemove", this.onMouseMove);
+		window.addEventListener("mousedown", this.onMouseDown);
+		window.addEventListener("mouseup", this.onMouseUp);
 	}
 
 	stop() {
 		console.log("Window Performance Monitor stopped");
 		if (this.observer) {
 			this.observer.disconnect();
+			this.observer = null;
+		}
+		if (this.mutationObserver) {
+			this.mutationObserver.disconnect();
+			this.mutationObserver = null;
 		}
 		if (this.rafId) {
 			cancelAnimationFrame(this.rafId);
+			this.rafId = null;
+		}
+		if (this.onMouseMove) {
+			window.removeEventListener("mousemove", this.onMouseMove);
+			this.onMouseMove = null;
+		}
+		if (this.onMouseDown) {
+			window.removeEventListener("mousedown", this.onMouseDown);
+			this.onMouseDown = null;
+		}
+		if (this.onMouseUp) {
+			window.removeEventListener("mouseup", this.onMouseUp);
+			this.onMouseUp = null;
 		}
 	}
 

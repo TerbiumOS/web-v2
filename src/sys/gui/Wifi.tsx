@@ -14,26 +14,42 @@ function ping(id: string): Promise<{ status: string; latency: number | string }>
 	return new Promise(resolve => {
 		const websocket = new WebSocket(id);
 		const startTime = Date.now();
+		let settled = false;
+		let timeoutId: ReturnType<typeof setTimeout> | null = null;
+		const cleanup = () => {
+			if (timeoutId !== null) {
+				clearTimeout(timeoutId);
+				timeoutId = null;
+			}
+			websocket.removeEventListener("open", onOpen);
+			websocket.removeEventListener("message", onMessage);
+			websocket.removeEventListener("error", onError);
+			try {
+				websocket.close();
+			} catch {
+				/* ignore */
+			}
+		};
+		const settle = (result: { status: string; latency: number | string }) => {
+			if (settled) return;
+			settled = true;
+			cleanup();
+			resolve(result);
+		};
 		const onOpen = () => {
-			const latency = Date.now() - startTime;
-			websocket.close();
-			resolve({ status: "OK", latency });
+			settle({ status: "OK", latency: Date.now() - startTime });
 		};
 		const onMessage = () => {
-			const latency = Date.now() - startTime;
-			websocket.close();
-			resolve({ status: "OK", latency });
+			settle({ status: "OK", latency: Date.now() - startTime });
 		};
 		const onError = () => {
-			websocket.close();
-			resolve({ status: "Fail", latency: "N/A" });
+			settle({ status: "Fail", latency: "N/A" });
 		};
 		websocket.addEventListener("open", onOpen);
 		websocket.addEventListener("message", onMessage);
 		websocket.addEventListener("error", onError);
-		setTimeout(() => {
-			websocket.close();
-			resolve({ status: "Fail", latency: "N/A" });
+		timeoutId = setTimeout(() => {
+			settle({ status: "Fail", latency: "N/A" });
 		}, 5000);
 	});
 }
@@ -155,8 +171,8 @@ export function WispMenu({ isOpen }: WispMenuProps) {
 		return () => window.removeEventListener("update-wispsrvs", fetchServers);
 	}, [isUpdating, isOpen]);
 	useEffect(() => {
-		setUpdating(true);
-	});
+		if (isOpen) setUpdating(true);
+	}, [isOpen]);
 	useEffect(() => {
 		const leave = (e: MouseEvent) => {
 			const withinRadius = (e: MouseEvent) => {

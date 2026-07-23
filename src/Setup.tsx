@@ -35,11 +35,11 @@ export default function Setup() {
 			setCurrentStep(2.2);
 		} else if (currentStep === 3.1) {
 			setCurrentStep(2.5);
-		} else if (currentStep === 3) {
+		} else if (currentStep === 4) {
 			if (sessionStorage.getItem("tacc")) {
 				setCurrentStep(2.5);
 			} else {
-				setCurrentStep(2.1);
+				setCurrentStep(2);
 			}
 		} else {
 			setCurrentStep(prevStep => Math.max(prevStep - 1, 1));
@@ -233,13 +233,11 @@ export default function Setup() {
 			syssettings["setup"] = true;
 		}
 		syssettings["defaultUser"] = usr;
-		const transport = sessionStorage.getItem("selectedTransport") || "Default (Epoxy)";
-		if (transport === "Default (Epoxy)") {
-			settings["transport"] = "Default (Epoxy)";
-		} else if (transport === "Anura BCC") {
+		const transport = sessionStorage.getItem("selectedTransport") || "Default (Libcurl)";
+		if (transport === "Anura BCC") {
 			settings["transport"] = "Anura BCC";
 		} else {
-			settings["transport"] = "Libcurl";
+			settings["transport"] = "Default (Libcurl)";
 		}
 		const wsrv = sessionStorage.getItem("selectedBare") || `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`;
 		settings["wispServer"] = wsrv;
@@ -650,7 +648,7 @@ export default function Setup() {
 		}, [hasSettings]);
 		nextButtonClick = () => {
 			if (!hasSettings) {
-				Next(3);
+				Next(4);
 				sessionStorage.setItem("tacc", "true");
 			} else {
 				Next(3.1);
@@ -715,7 +713,7 @@ export default function Setup() {
 			currentViewRef.current?.classList.add("-translate-x-6");
 			currentViewRef.current?.classList.add("opacity-0");
 			setTimeout(() => {
-				Next(3);
+				Next(4);
 			}, 150);
 		};
 		return (
@@ -784,62 +782,6 @@ export default function Setup() {
 							</div>
 						) : null}
 					</div>
-				</div>
-			</div>
-		);
-	};
-	const Step3 = () => {
-		setTimeout(() => {
-			currentViewRef.current?.classList.remove("-translate-x-6");
-			currentViewRef.current?.classList.remove("opacity-0");
-		}, 150);
-
-		nextButtonClick = () => {
-			currentViewRef.current?.classList.add("-translate-x-6");
-			currentViewRef.current?.classList.add("opacity-0");
-			setTimeout(() => {
-				Next();
-			}, 150);
-		};
-
-		const [selectedProxy, setSelectedProxy] = useState(() => sessionStorage.getItem("selectedProxy") || "Scramjet");
-		const [proxyDropdownOpen, setProxyDropdownOpen] = useState(false);
-		const toggleProxyDropDown = () => {
-			setProxyDropdownOpen(prev => {
-				return !prev;
-			});
-		};
-		const proxyClick = (optionLabel: any) => {
-			setSelectedProxy(optionLabel);
-			sessionStorage.setItem("selectedProxy", optionLabel);
-			setProxyDropdownOpen(false);
-		};
-
-		return (
-			<div
-				ref={el => {
-					currentViewRef.current = el;
-				}}
-				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center"
-			>
-				<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text lg:mb-[20px] md:mb-[20px] sm:mb-[10px] lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">Choose your default proxy.</span>
-				<div className="dropdown def-proxy">
-					<div className="dropdown-title" onMouseDown={toggleProxyDropDown}>
-						<span className="pointer-events-none">{selectedProxy}</span>
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-[22px] h-[22px] pointer-events-none">
-							<path fillRule="evenodd" d="M11.47 4.72a.75.75 0 011.06 0l3.75 3.75a.75.75 0 01-1.06 1.06L12 6.31 8.78 9.53a.75.75 0 01-1.06-1.06l3.75-3.75zm-3.75 9.75a.75.75 0 011.06 0L12 17.69l3.22-3.22a.75.75 0 111.06 1.06l-3.75 3.75a.75.75 0 01-1.06 0l-3.75-3.75a.75.75 0 010-1.06z" clipRule="evenodd" />
-						</svg>
-					</div>
-					{proxyDropdownOpen && (
-						<div className="dropdown-options active">
-							<div className="dropdown-option" onMouseDown={() => proxyClick("Ultraviolet")}>
-								<span className="pointer-events-none">Ultraviolet</span>
-							</div>
-							<div className="dropdown-option" onMouseDown={() => proxyClick("Scramjet")}>
-								<span className="pointer-events-none">Scramjet</span>
-							</div>
-						</div>
-					)}
 				</div>
 			</div>
 		);
@@ -978,12 +920,12 @@ export default function Setup() {
 		};
 
 		const [selectedBare, setSelectedBare] = useState(() => sessionStorage.getItem("selectedBare") || "Backend (Default)");
-		const [selectedTransport, setSelectedTransport] = useState(() => sessionStorage.getItem("selectedTransport") || "Default (Epoxy)");
+		const [selectedTransport, setSelectedTransport] = useState(() => sessionStorage.getItem("selectedTransport") || "Default (Libcurl)");
 		const [bareDropdownOpen, setBareDropdownOpen] = useState(false);
 		const [transportDropdownOpen, setTransportDropdownOpen] = useState(false);
 		const [customServer, setCustomServer] = useState("");
 		const bareOptions = [{ label: "Backend (Default)" }, { label: "TB Wisp Instance" }, { label: "Custom Server" }];
-		const transportOptions = [{ label: "Default (Epoxy)" }, { label: "Libcurl" }, { label: "Anura BCC" }];
+		const transportOptions = [{ label: "Default (Libcurl)" }, { label: "Anura BCC" }];
 		const bClick = (label: any) => {
 			setSelectedBare(label);
 			if (label === "Custom Server") {
@@ -1183,8 +1125,6 @@ export default function Setup() {
 						<Step2CA />
 					) : currentStep === 2.5 ? (
 						<Step2CF />
-					) : currentStep === 3 ? (
-						<Step3 />
 					) : currentStep === 3.1 ? (
 						<Step3SR />
 					) : currentStep === 4 ? (

@@ -1,6 +1,9 @@
 {
 	"format_on_save": "on",
 	"disable_ai": true,
+	"file_types": {
+		"XML": ["*.tsl", "*.TSL"]
+	},
 	"languages": {
 		"HTML": {
 			"formatter": {

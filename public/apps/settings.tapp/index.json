@@ -2,7 +2,10 @@
 	"name": "Settings",
 	"version": "1.0.0",
 	"config": {
-		"title": "Settings",
+		"title": {
+			"text": "Settings",
+			"html": "<div id=\"settings-titlebar-nav\" style=\"display:flex;align-items:center;gap:8px;height:34px;width:100%;max-width:760px;padding:0 2px;\"><button id=\"settings-nav-back\" type=\"button\" aria-label=\"Back\" style=\"display:inline-flex;align-items:center;justify-content:center;width:36px;height:28px;border-radius:8px;border:none;background:#ffffff14;color:#ffffff70;font-size:16px;font-weight:700;line-height:1;transition:all 120ms ease;\">←</button><button id=\"settings-nav-forward\" type=\"button\" aria-label=\"Forward\" style=\"display:inline-flex;align-items:center;justify-content:center;width:36px;height:28px;border-radius:8px;border:none;background:#ffffff14;color:#ffffff70;font-size:16px;font-weight:700;line-height:1;transition:all 120ms ease;\">→</button><div style=\"flex:1;display:flex;align-items:center;gap:8px;padding:0 10px;height:28px;border-radius:8px;background:#ffffff1e;box-shadow:inset 0 0 0 1px #ffffff10;\"><input id=\"settings-nav-search\" type=\"search\" placeholder=\"Find a setting\" style=\"width:100%;background:transparent;border:none;outline:none;color:#ffffffd9;font-size:12px;font-weight:700;text-align:center;\" /><span id=\"settings-nav-search-icon\" style=\"display:inline-flex;align-items:center;justify-content:center;color:#ffffff72;font-size:14px;\">⌕</span></div></div>"
+		},
 		"src": "/fs/apps/system/settings.tapp/index.html",
 		"icon": "/fs/apps/system/settings.tapp/icon.svg",
 		"single": true

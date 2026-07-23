@@ -1,59 +1,74 @@
 name: Build UPK for Anura
 on:
   push:
-      branches:
-          - main
-      paths:
-          - 'package.json'
+    branches:
+      - main
+    paths:
+      - "package.json"
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v5
-            - name: Set up Node
-              uses: actions/setup-node@v6
-              with:
-                node-version: 'lts/*'
-            - name: Setup pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                version: 10
-            - name: Setup Python
-              uses: actions/setup-python@v6
-              with:
-                python-version: '3.13'
-            - name: Install dependencies
-              run: pnpm i
-            - name: Install BareMux v1
-              run: pnpm i @mercuryworkshop/bare-mux@^1.1.4
-            - name: Download upk-tools.zip
-              run: curl -L -o upk-tools.zip https://cdn.terbiumon.top/upk-tools.zip
-            - name: Extract upk-tools
-              run: unzip -o upk-tools.zip
-            - name: replace BCC Client v2 with v1
-              run: mv bx1bcc.ts src/sys/liquor/bcc.ts
-            - name: Replace BareMux in codebase
-              run: bash replace.sh
-            - name: Build TB React
-              run: pnpm run build-static
-            - name: "Run UPK Builder"
-              run: python3 upk.py
-            - name: Upload to latest release
-              uses: actions/github-script@v8
-              with:
-                github-token: ${{ secrets.GITHUB_TOKEN }}
-                script: |
-                  const fs = require('fs');
-                  const latestRelease = await github.rest.repos.getLatestRelease({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo
-                  });
-                  await github.rest.repos.uploadReleaseAsset({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    release_id: latestRelease.data.id,
-                    name: 'terbium-upk.app.zip',
-                    data: fs.readFileSync('terbium-upk.app.zip')
-                  });
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+      - name: Check if package version changed
+        id: version_check
+        shell: bash
+        run: |
+          OLD_VERSION=$(git show HEAD^:package.json | jq -r '.version')
+          NEW_VERSION=$(jq -r '.version' package.json)
+          echo "Old version: $OLD_VERSION"
+          echo "New version: $NEW_VERSION"
+          if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Stop if version did not change
+        if: steps.version_check.outputs.changed == 'false'
+        run: |
+          echo "package.json version was not changed."
+          echo "Skipping build."
+          exit 0
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "lts/*"
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Install dependencies
+        run: npm install --frozen-lockfile
+      - name: Download upk-tools.zip
+        run: curl -L -o upk-tools.zip https://cdn.terbiumon.top/upk-tools-v2.zip
+      - name: Extract upk-tools
+        run: unzip -o upk-tools.zip
+      - name: Apply UPK Builder patch
+        run: bash replace.sh
+      - name: Build TB React
+        run: npm run build-static
+      - name: Run UPK Builder
+        run: python3 upk.py
+      - name: Upload to latest release
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            import { readFileSync } from 'node:fs';
+            const latestRelease = await github.rest.repos.getLatestRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: latestRelease.data.id,
+              name: 'terbium-upk.app.zip',
+              data: readFileSync('terbium-upk.app.zip')
+            });

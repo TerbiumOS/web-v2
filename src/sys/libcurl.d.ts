@@ -13,6 +13,7 @@ declare module "libcurl.js/bundled" {
 		nghttp2: string;
 		protocols: string[];
 		wisp: string;
+		lib: string;
 	}
 	export interface HTTPSessionOptions {
 		enable_cookies?: boolean;
@@ -155,7 +156,7 @@ declare module "libcurl.js/bundled" {
 		websocket_url: WebsocketUrl | null;
 		transport: "wisp" | "wsproxy" | string | Function;
 		copyright: string;
-		version: LibcurlVersion | null;
+		version: LibcurlVersion;
 		HTTPSession: typeof HTTPSession;
 		WebSocket: typeof FakeWebSocket;
 		CurlWebSocket: typeof CurlWebSocket;

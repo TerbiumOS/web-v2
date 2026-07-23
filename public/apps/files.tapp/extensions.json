@@ -129,5 +129,6 @@
 	"extractables": ["zip", "gz", "deflate"],
 	"text": ["json", "ts", "js", "css", "cpp", "py3", "py", "java", "c", "env", "txt", "text"],
 	"animated": ["gif", "apng", "webp", "flif", "mng"],
-	"pdf": ["pdf", "pdfa", "pdfx"]
+	"pdf": ["pdf", "pdfa", "pdfx"],
+	"system": ["tml", "tsl"]
 }

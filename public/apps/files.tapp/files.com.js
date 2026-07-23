@@ -1,8 +1,5 @@
 const tb = parent.window.tb;
 const tb_island = tb.window.island;
-const tb_window = tb.window;
-const tb_context_menu = tb.context_menu;
-const tb_dialog = tb.dialog;
 
 const appIsland = window.parent.document.querySelector(".app_island");
 
@@ -11,7 +8,7 @@ tb_island.addControl({
 	appname: "Files",
 	id: "files_file",
 	click: () => {
-		let isTrash = document.querySelector(".exp").getAttribute("path") === "/home/trash" ? true : false;
+		const isTrash = document.querySelector(".exp").getAttribute("path") === "/system/trash";
 		tb.contextmenu.create({
 			x: 6,
 			y: appIsland.clientHeight + 12,
@@ -23,7 +20,7 @@ tb_island.addControl({
 							text: "New File",
 							click: async () => {
 								try {
-									const response = await tb.dialog.Message({
+									await tb.dialog.Message({
 										title: "Enter a name for the new file",
 										defaultValue: "",
 										onOk: async fileName => {
@@ -39,7 +36,7 @@ tb_island.addControl({
 															await createFile(path, ask);
 														}
 													} else {
-														let sh = tb.sh;
+														const sh = tb.sh;
 														await sh.touch(`${path}/${fileName}`, "");
 														openPath(path);
 													}
@@ -58,7 +55,7 @@ tb_island.addControl({
 					: {
 							text: "New Folder",
 							click: async () => {
-								const response = await tb.dialog.Message({
+								await tb.dialog.Message({
 									title: "Enter a name for the new folder",
 									defaultValue: "",
 									onOk: async response => {
@@ -68,9 +65,8 @@ tb_island.addControl({
 											const exists = await window.parent.tb.fs.promises.exists(folderPath);
 											if (exists) {
 												return createUniqueFolder(path, folderName, number !== null ? number + 1 : 2);
-											} else {
-												await window.parent.tb.fs.promises.mkdir(folderPath);
 											}
+											await window.parent.tb.fs.promises.mkdir(folderPath);
 										};
 										await createUniqueFolder(path, response);
 										openPath(path);
@@ -135,7 +131,7 @@ tb_island.addControl({
 			{
 				text: "Go To",
 				click: async () => {
-					const response = await tb.dialog.Message({
+					await tb.dialog.Message({
 						title: "Enter the directory to navigate to",
 						defaultValue: "",
 						onOk: async response => {

@@ -1,9 +1,8 @@
-import { BareMuxConnection } from "@mercuryworkshop/bare-mux";
-import type { ScramjetController } from "@mercuryworkshop/scramjet";
 import * as fflate from "fflate";
 import { libcurl } from "libcurl.js";
 import apps from "../apps.json";
 import { hash } from "../hash.json";
+import paths from "../installer.json";
 import pwd from "./apis/Crypto";
 import { setDialogFn } from "./apis/Dialogs";
 import { hideFn, isExistingFn, setMusicFn, setVideoFn } from "./apis/Mediaisland";
@@ -18,7 +17,6 @@ import { Lemonade } from "./lemonade";
 import { AliceWM } from "./liquor/AliceWM";
 import { Anura } from "./liquor/Anura";
 import { LocalFS } from "./liquor/api/LocalFS";
-import { AnuraBareClient } from "./liquor/bcc";
 import { ExternalApp } from "./liquor/coreapps/ExternalApp";
 import { ExternalLib } from "./liquor/libs/ExternalLib";
 import { initializeWebContainer } from "./Node/runtimes/Webcontainers/nodeProc";
@@ -28,6 +26,9 @@ import { type COM, type cmprops, type dialogProps, fileExists, type launcherProp
 import { vFS } from "./vFS";
 import { auth, getinfo, setinfo } from "./apis/utils/tauth";
 import { launchProcs, addStartupProc, removeStartupProc, enableProc, disableProc } from "./apis/utils/startupHandler";
+import { TSLParser } from "./apis/utils/TSLParser";
+import { ScramjetHandler } from "./scramjet-handler";
+const { Controller } = $scramjetController;
 
 const system = new System();
 const pw = new pwd();
@@ -36,13 +37,12 @@ declare global {
 	interface Window {
 		tb: COM;
 		Filer: FilerType;
-		ScramjetController: ScramjetController;
 	}
-	var scramjetTb: any;
-	var scramjet: ScramjetController;
+	var sjint: boolean;
 }
 
 export default async function Api() {
+	window.sjint = true;
 	window.tb = {
 		registry: registry,
 		sh: window.tb.sh,
@@ -386,51 +386,12 @@ export default async function Api() {
 						});
 					});
 				});
-				const request = indexedDB.open("$scramjet");
-				request.onsuccess = () => {
-					const db = request.result;
-					if (db.objectStoreNames.length === 0) {
-						db.close();
-						const deleteRequest = indexedDB.deleteDatabase("$scramjet");
-						deleteRequest.onsuccess = () => {
-							console.log("Cleared SJ DB");
-						};
-						deleteRequest.onerror = err => {
-							console.error(err);
-						};
-					} else {
-						console.log("Scramjet is fine");
-					}
-				};
-				request.onerror = err => {
-					console.error(err);
-				};
+				const sw = await navigator.serviceWorker.register("/anura-sw.js");
 				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`));
-				const updateTransport = async () => {
-					const wispserver = settings.wispServer || `${window.location.origin.replace(/^https?:\/\//, "ws://")}/wisp/`;
-					const connection = new BareMuxConnection("/baremux/worker.js");
-					if (settings.transport === "Default (Epoxy)") {
-						await connection.setTransport("/epoxy/index.mjs", [{ wisp: wispserver }]);
-					} else if (settings.transport === "Anura BCC") {
-						// @ts-expect-error
-						await connection.setRemoteTransport(new AnuraBareClient(), "AnuraBareClient");
-					} else {
-						await connection.setTransport("/libcurl/index.mjs", [{ wisp: wispserver }]);
-					}
-				};
-				const { ScramjetController } = $scramjetLoadController();
-				window.scramjet = new ScramjetController(window.scramjetTb);
-				scramjet.init();
-				navigator.serviceWorker
-					.register("anura-sw.js", {
-						scope: "/",
-					})
-					.then(() => {
-						updateTransport();
-					});
-				navigator.serviceWorker.ready.then(async () => {
-					await updateTransport();
-				});
+				const scramjetHandler = new ScramjetHandler(Controller, sw, window.__scramjet$config, window.__scramjet$flags);
+				scramjetHandler.setTransports();
+				// @ts-expect-error
+				window.scramjetTb = scramjetHandler;
 				if (settings.wispServer === null) {
 					// @ts-expect-error
 					window.tb.libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
@@ -457,13 +418,52 @@ export default async function Api() {
 			},
 		},
 		notification: {
-			Message(props: NotificationProps) {
+			async Message(props: NotificationProps) {
+				const settingsData = await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8");
+				const settings: UserSettings = JSON.parse(settingsData);
+				if (settings.notificationMode === "dnd") return;
+				if (settings.notificationMode === "snooze-10") {
+					if (settings.notificationSnoozeUntil && Date.now() < settings.notificationSnoozeUntil) {
+						return;
+					}
+				}
+				if (settings.notificationMode === "allow-apps") {
+					if (!settings.notificationAllowList?.includes(props.application)) {
+						return;
+					}
+				}
 				setNotifFn("message", props);
 			},
-			Toast(props: NotificationProps) {
+			async Toast(props: NotificationProps) {
+				const settingsData = await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8");
+				const settings: UserSettings = JSON.parse(settingsData);
+				if (settings.notificationMode === "dnd") return;
+				if (settings.notificationMode === "snooze-10") {
+					if (settings.notificationSnoozeUntil && Date.now() < settings.notificationSnoozeUntil) {
+						return;
+					}
+				}
+				if (settings.notificationMode === "allow-apps") {
+					if (!settings.notificationAllowList?.includes(props.application)) {
+						return;
+					}
+				}
 				setNotifFn("toast", props);
 			},
-			Installing<T>(props: NotificationProps, task?: Promise<T> | (() => Promise<T>), doneToast?: Partial<NotificationProps> | null, failToast?: Partial<NotificationProps> | null) {
+			async Installing<T>(props: NotificationProps, task?: Promise<T> | (() => Promise<T>), doneToast?: Partial<NotificationProps> | null, failToast?: Partial<NotificationProps> | null) {
+				const settingsData = await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8");
+				const settings: UserSettings = JSON.parse(settingsData);
+				if (settings.notificationMode === "dnd") return;
+				if (settings.notificationMode === "snooze-10") {
+					if (settings.notificationSnoozeUntil && Date.now() < settings.notificationSnoozeUntil) {
+						return;
+					}
+				}
+				if (settings.notificationMode === "allow-apps") {
+					if (!settings.notificationAllowList?.includes(props.application)) {
+						return;
+					}
+				}
 				if (!task) {
 					setNotifFn("installing", props);
 					return;
@@ -534,7 +534,7 @@ export default async function Api() {
 				return system.version("string");
 			},
 			instance: system.instance,
-			openApp: async (pkg: string) => {
+			openApp: async (pkg: string, options?: Partial<WindowConfig>) => {
 				const apps = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
 				const app = apps.find((a: any) => a.name.toLowerCase() === pkg.toLowerCase());
 				if (!app) throw new Error(`App "${pkg}" not found`);
@@ -577,7 +577,7 @@ export default async function Api() {
 					conf.icon = icon;
 					config = conf;
 				}
-				window.tb.window.create(config);
+				window.tb.window.create({ ...options, ...config });
 			},
 			download: async (url: string, location: string) => {
 				try {
@@ -645,6 +645,27 @@ export default async function Api() {
 					throw err;
 				}
 			},
+			scanintegrity: async () => {
+				let invalid = [];
+				for (const path of paths) {
+					if (path.toString().endsWith("/")) continue;
+					if (path.toString().includes("browser.tapp/") && !path.toString().endsWith("browser.tapp/index.json")) continue;
+					const content = await window.tb.fs.promises.readFile(`/apps/system/${path.toString()}`, "utf8");
+					const remoteContent = await fetch(`/apps/${path.toString()}`);
+					const remoteText = await remoteContent.text();
+					if (content !== remoteText) {
+						invalid.push(`/apps/system/${path.toString()}`);
+					}
+				}
+				const systemFiles = ["/system/etc/terbium/settings.json", "/system/var/terbium/dock.json", "/system/var/terbium/start.json", "/system/etc/terbium/file-icons.json"];
+				for (const file of systemFiles) {
+					if (!(await fileExists(file))) {
+						invalid.push(file);
+					}
+				}
+				return invalid;
+			},
+			TSLParser: new TSLParser(),
 			users: {
 				async list() {
 					const usersDir = await window.tb.fs.promises.readdir("/home/");
@@ -680,7 +701,7 @@ export default async function Api() {
 						wallpaperMode: "cover",
 						animations: true,
 						proxy: "Scramjet",
-						transport: "Default (Epoxy)",
+						transport: "Default (Libcurl)",
 						wispServer: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`,
 						"battery-percent": false,
 						accent: "#32ae62",
@@ -691,6 +712,7 @@ export default async function Api() {
 						},
 						showFPS: false,
 						windowOptimizations: false,
+						notificationMode: "all",
 						window: {
 							winAccent: "#ffffff",
 							blurlevel: 18,
@@ -940,7 +962,7 @@ export default async function Api() {
 					const data = JSON.parse(await window.tb.fs.promises.readFile("/bootentries.json", "utf8"));
 					data.push({
 						name: name,
-						action: `() => { sessionStorage.setItem("cusboot", "true"); sessionStorage.setItem("bootfile", "${file}"); window.location.reload(); }`,
+						file: file,
 					});
 					await window.tb.fs.promises.writeFile("/bootentries.json", JSON.stringify(data, null, 2));
 				},
@@ -1371,12 +1393,12 @@ export default async function Api() {
 			},
 			isExisting: () => {
 				return new Promise(resolve => {
-					isExistingFn();
 					const getContent = (e: CustomEvent) => {
 						window.removeEventListener("isExistingMP", getContent as EventListener);
 						resolve(e.detail);
 					};
 					window.addEventListener("isExistingMP", getContent as EventListener);
+					isExistingFn();
 				});
 			},
 		},
@@ -1676,6 +1698,7 @@ export default async function Api() {
 	document.addEventListener("keyup", up);
 	wsld();
 	await window.tb.proxy.updateSWs();
+	await window.tb.vfs.mountAll();
 	const getchangelog = async () => {
 		const reCache: Record<string, { hash: string; changeFile: string }> = await (await window.tb.libcurl.fetch("https://cdn.terbiumon.top/changelogs/versions.json")).json();
 		const vInf = reCache[system.version("string") as string];
