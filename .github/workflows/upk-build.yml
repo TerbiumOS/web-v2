@@ -49,8 +49,8 @@ jobs:
         run: curl -L -o upk-tools.zip https://cdn.terbiumon.top/upk-tools-v2.zip
       - name: Extract upk-tools
         run: unzip -o upk-tools.zip
-      - name: Apply UPK Builder patch
-        run: bash replace.sh
+      - name: Run UPK CI script
+        run: perl ./upk-ci.pl
       - name: Build TB React
         run: npm run build-static
       - name: Run UPK Builder
