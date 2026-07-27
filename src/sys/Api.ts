@@ -19,7 +19,9 @@ import { Anura } from "./liquor/Anura";
 import { LocalFS } from "./liquor/api/LocalFS";
 import { ExternalApp } from "./liquor/coreapps/ExternalApp";
 import { ExternalLib } from "./liquor/libs/ExternalLib";
-import { initializeWebContainer } from "./Node/runtimes/Webcontainers/nodeProc";
+import { WebContainerShim } from "./Node/compatibility/nodeShim";
+import { initializeDusk, stopDusk, getDuskInstance, getServerRegistry } from "./Node/runtimes/Dusk/duskRuntime";
+import type { SpawnOptions } from "@nightnetwork/dusk";
 import parse from "./Parser";
 import { useWindowStore } from "./Store";
 import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
@@ -1236,20 +1238,157 @@ export default async function Api() {
 			},
 		},
 		node: {
-			webContainer: {},
-			servers: new Map<number, string>(),
-			isReady: false,
-			start: () => {
-				initializeWebContainer();
-			},
-			stop: () => {
-				if (window.tb.node.isReady) {
-					// @ts-expect-error
-					window.tb.node.webContainer.teardown();
-					window.tb.node.isReady = false;
-					return true;
+			_shimInstance: null as WebContainerShim | null,
+
+			get webContainer() {
+				if (!window.tb.dusk.isReady) {
+					return {};
 				}
-				throw new Error("No WebContainer is running");
+				if (!this._shimInstance) {
+					this._shimInstance = new WebContainerShim();
+				}
+				return this._shimInstance;
+			},
+
+			get servers(): Map<number, string> {
+				return window.tb.dusk.servers;
+			},
+
+			get isReady(): boolean {
+				return window.tb.dusk.isReady;
+			},
+
+			start() {
+				console.warn("[tb.node] DEPRECATED: Use tb.dusk.start() instead. tb.node will be removed in v3.0.");
+				return window.tb.dusk.start();
+			},
+
+			stop() {
+				console.warn("[tb.node] DEPRECATED: Use tb.dusk.stop() instead. tb.node will be removed in v3.0.");
+				return window.tb.dusk.stop();
+			},
+		},
+		dusk: {
+			get runtime() {
+				return getDuskInstance();
+			},
+			get processManager() {
+				return getDuskInstance()?.processManager ?? null;
+			},
+			get isReady() {
+				return getDuskInstance() !== null;
+			},
+			get servers() {
+				return getServerRegistry()?.getAll() ?? new Map<number, string>();
+			},
+
+			async start() {
+				try {
+					await initializeDusk();
+				} catch (error) {
+					console.error("[Dusk] start failed:", error);
+					throw new Error(`Dusk start failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+
+			async stop() {
+				try {
+					return await stopDusk();
+				} catch (error) {
+					console.error("[Dusk] stop failed:", error);
+					throw new Error(`Dusk stop failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+
+			async spawn(cmd: string, args?: string[], options?: SpawnOptions) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				try {
+					return await instance.processManager.spawn(cmd, args, options);
+				} catch (error) {
+					console.error(`[Dusk] Failed to spawn ${cmd}:`, error);
+					throw new Error(`Process spawn failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+
+			async spawnSync(cmd: string, args?: string[], options?: SpawnOptions) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				try {
+					return await instance.processManager.spawnSync(cmd, args, options);
+				} catch (error) {
+					console.error(`[Dusk] Failed to spawnSync ${cmd}:`, error);
+					throw new Error(`Process spawnSync failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+
+			async feed(line: string) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				try {
+					return await instance.feed(line);
+				} catch (error) {
+					console.error("[Dusk] feed failed:", error);
+					throw new Error(`feed failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+
+			node: {
+				async spawn(args?: string[], options?: SpawnOptions) {
+					return await window.tb.dusk.spawn("/bin/node", args, options);
+				},
+			},
+
+			shell: {
+				async spawn(command?: string, options?: SpawnOptions) {
+					const shellArgs = command ? ["-c", command] : [];
+					return await window.tb.dusk.spawn("/bin/dsh", shellArgs, options);
+				},
+			},
+
+			python: {
+				async spawn(script?: string, options?: SpawnOptions) {
+					const pythonArgs = script ? ["-c", script] : [];
+					return await window.tb.dusk.spawn("/bin/python3", pythonArgs, options);
+				},
+			},
+
+			sqlite: {
+				async spawn(database?: string, options?: SpawnOptions) {
+					const sqliteArgs = database ? [database] : [];
+					return await window.tb.dusk.spawn("/bin/sqlite3", sqliteArgs, options);
+				},
+			},
+
+			resizePty(pid: number, cols: number, rows: number) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				instance.processManager.resizePty(pid, cols, rows);
+			},
+
+			killProcess(pid: number) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				const proc = instance.processManager.getProcess(pid);
+				if (proc) {
+					proc.kill();
+				}
+			},
+
+			listProcesses() {
+				const instance = getDuskInstance();
+				if (!instance) return [];
+				return instance.processManager.activePids();
 			},
 		},
 		crypto: async (pass: string, file?: string) => {
@@ -1739,5 +1878,5 @@ export default async function Api() {
 	}
 	launchProcs();
 	document.addEventListener("libcurl_load", wsld);
-	window.tb.node.webContainer = await initializeWebContainer();
+	window.tb.dusk.start();
 }

@@ -615,6 +615,63 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       });
       ```
 
+## tb.dusk
+
+The Dusk runtime API. Provides Node.js, shell, Python, and SQLite support in the browser via SpiderMonkey WASI.
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `isReady` | `boolean` | Whether the Dusk runtime is initialized |
+| `servers` | `Map<number, string>` | Map of active server ports to URLs |
+| `runtime` | `BootReplResult \| null` | Raw Dusk runtime instance |
+| `processManager` | `ProcessManager \| null` | Raw process manager |
+
+### Methods
+
+#### `tb.dusk.start(): Promise<void>`
+Initialize the Dusk runtime. Must be called before spawning processes.
+
+#### `tb.dusk.stop(): Promise<boolean>`
+Shut down the Dusk runtime and all child processes.
+
+#### `tb.dusk.spawn(cmd, args?, options?): Promise<DuskProcessHandle>`
+Spawn any Dusk binary. Returns a process handle with `stdin`, `stdout`, `stderr`, `exit`, `pid`, and `kill()`.
+
+#### `tb.dusk.spawnSync(cmd, args?, options?): Promise<SpawnSyncResult>`
+Synchronous spawn. Returns `{ stdout, stderr, status }`.
+
+#### `tb.dusk.feed(line): Promise<void>`
+Evaluate JavaScript in the pid-0 REPL engine.
+
+#### `tb.dusk.node.spawn(args?, options?): Promise<DuskProcessHandle>`
+Spawn `/bin/node` with optional arguments.
+
+#### `tb.dusk.shell.spawn(command?, options?): Promise<DuskProcessHandle>`
+Spawn `/bin/dsh`. Pass `command` to run a one-shot shell command.
+
+#### `tb.dusk.python.spawn(script?, options?): Promise<DuskProcessHandle>`
+Spawn `/bin/python3`. Pass a `-c <script>` string or omit for interactive.
+
+#### `tb.dusk.sqlite.spawn(database?, options?): Promise<DuskProcessHandle>`
+Spawn `/bin/sqlite3`. Pass a database path or omit for `:memory:`.
+
+#### `tb.dusk.resizePty(pid, cols, rows): void`
+Resize the PTY attached to a process.
+
+#### `tb.dusk.killProcess(pid): void`
+Kill a process by PID.
+
+#### `tb.dusk.listProcesses(): number[]`
+Return all active PIDs.
+
+### Events
+
+`window.addEventListener('dusk-server-ready', handler)` — fires when a Node.js HTTP server binds a port. `event.detail` contains `{ port: number, url: string }`.
+
+---
+
 ### Node
   - **webContainer**
     - Description: The current webContainer instance for the Node Subsystem. Refer to [WebContainers API](https://webcontainers.io/api) for documentation.

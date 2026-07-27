@@ -646,12 +646,13 @@ export interface COM {
 		};
 	};
 	node: {
-		webContainer: import("@webcontainer/api").WebContainer | {};
+		webContainer: object;
 		servers: Map<number, string>;
 		isReady: boolean;
 		start: () => void;
 		stop(): boolean;
 	};
+	dusk: import("./Node/runtimes/Dusk/types").TerbiumDuskAPI;
 }
 
 export interface AnuraWMWeakRef {

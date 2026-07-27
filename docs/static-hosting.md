@@ -30,15 +30,27 @@ Now that the site is deployed, you have probably noticed that the default Wisp s
 **Option 1: Configure during OOBE**  
 You can configure the Wisp server URL during the Out-of-Box Experience (OOBE) when you first load Terbium.
 
-**Option 2: Hardcode before deployment**  
+**Option 2: Use environment variable (Recommended)**  
+Set the Wisp server URL via environment variable before deployment:
+1. In your static hosting platform's dashboard, add an environment variable:
+   - **Name**: `VITE_WISP_SERVER`
+   - **Value**: `wss://your-wisp-server.example.com/wisp/`
+
+2. Redeploy your site for the changes to take effect.
+
+This configuration will be used by both the browser proxy and the Dusk runtime (Node.js/Python/Shell subsystem).
+
+**Option 3: Hardcode before deployment**  
 If you wish to set a default Wisp server before deployment:
 1. Navigate to `src/init/index.ts`
-2. Find the Wisp server configuration (around line 41)
+2. Find the Wisp server configuration (around line 112)
 3. Replace the default expression:  
    ```typescript
-   `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`
+   wispServer: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`,
    ```
    With your Wisp server URL as a string:
    ```typescript
-   "wss://your-wisp-server.example.com/wisp/"
+   wispServer: "wss://your-wisp-server.example.com/wisp/",
    ```
+
+**Note:** The environment variable method (Option 2) is recommended as it allows you to change the Wisp server without modifying code.
