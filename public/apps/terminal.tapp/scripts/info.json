@@ -270,7 +270,7 @@
 	},
 	{
 		"name": "ssh",
-		"description": "Connect to a remote server via SSH (uses WebContainer or libcurl.js)",
+		"description": "Connect to a remote server via SSH (uses Dusk runtime or libcurl.js)",
 		"usage": "ssh [user@]hostname [options]",
 		"options": {
 			"--host": "Remote host to connect to",

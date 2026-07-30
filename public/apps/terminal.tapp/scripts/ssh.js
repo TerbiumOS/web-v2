@@ -4,7 +4,7 @@ if (!tbSSH) {
 }
 if (tb.node.isReady === false) {
 	tb.setCommandProcessing(true);
-	throw new Error("\r\nWebContainer has not booted yet. Please wait a few seconds and try again.");
+	throw new Error("\r\nDusk runtime has not booted yet. Please wait a few seconds and try again.");
 }
 const connectionString = args._[0];
 const port = args.p || args.port;

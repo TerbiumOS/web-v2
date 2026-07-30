@@ -673,37 +673,47 @@ Return all active PIDs.
 ---
 
 ### Node
+  > ⚠️ **DEPRECATED**: The `tb.node` API is deprecated and will be removed in v3.0. Use `tb.dusk` for new code. See [Dusk](#dusk) section for the modern API.
+
   - **webContainer**
-    - Description: The current webContainer instance for the Node Subsystem. Refer to [WebContainers API](https://webcontainers.io/api) for documentation.
-    - Returns: `WebContainer` instance
+    - Description: ⚠️ **DEPRECATED** - Compatibility shim for legacy code. Returns a WebContainer-like API that delegates to `tb.dusk`. Use `tb.dusk.spawn()` directly for new code.
+    - Returns: `WebContainerShim` instance
   
   - **servers**
-    - Description: A Map of ports running on the Node Subsystem
+    - Description: A Map of ports running on the Dusk runtime
     - Returns: `Map<number, string>` - Map of port numbers to server URLs
 
   - **isReady**
-    - Description: Returns whether or not the WebContainer is booted.
+    - Description: Returns whether or not the Dusk runtime is booted.
     - Returns: `boolean` - `true` if ready, `false` otherwise
 
   - **start**
-    - Description: Boots the WebContainer
+    - Description: ⚠️ **DEPRECATED** - Use `tb.dusk.start()` instead. Boots the Dusk runtime.
     - Example:
       ```javascript
+      // Old (deprecated):
       tb.node.start();
-      console.log("WebContainer started");
+      
+      // New (recommended):
+      await tb.dusk.start();
+      console.log("Dusk runtime started");
       ```
  
   - **stop**
-    - Description: Stops the WebContainer
+    - Description: ⚠️ **DEPRECATED** - Use `tb.dusk.stop()` instead. Stops the Dusk runtime.
     - Returns: `boolean` - `true` if stopped successfully
     - Example:
       ```javascript
+      // Old (deprecated):
       try {
         const stopped = tb.node.stop();
-        console.log("WebContainer stopped");
+        console.log("Runtime stopped");
       } catch (err) {
-        console.error("No WebContainer is running");
+        console.error("No runtime is running");
       }
+      
+      // New (recommended):
+      await tb.dusk.stop();
       ```
 
 ### Platform

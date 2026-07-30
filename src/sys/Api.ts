@@ -1239,7 +1239,6 @@ export default async function Api() {
 		},
 		node: {
 			_shimInstance: null as WebContainerShim | null,
-
 			get webContainer() {
 				if (!window.tb.dusk.isReady) {
 					return {};
@@ -1249,20 +1248,16 @@ export default async function Api() {
 				}
 				return this._shimInstance;
 			},
-
 			get servers(): Map<number, string> {
 				return window.tb.dusk.servers;
 			},
-
 			get isReady(): boolean {
 				return window.tb.dusk.isReady;
 			},
-
 			start() {
 				console.warn("[tb.node] DEPRECATED: Use tb.dusk.start() instead. tb.node will be removed in v3.0.");
 				return window.tb.dusk.start();
 			},
-
 			stop() {
 				console.warn("[tb.node] DEPRECATED: Use tb.dusk.stop() instead. tb.node will be removed in v3.0.");
 				return window.tb.dusk.stop();
@@ -1281,7 +1276,6 @@ export default async function Api() {
 			get servers() {
 				return getServerRegistry()?.getAll() ?? new Map<number, string>();
 			},
-
 			async start() {
 				try {
 					await initializeDusk();
@@ -1290,7 +1284,6 @@ export default async function Api() {
 					throw new Error(`Dusk start failed: ${error instanceof Error ? error.message : "Unknown error"}`);
 				}
 			},
-
 			async stop() {
 				try {
 					return await stopDusk();
@@ -1299,7 +1292,6 @@ export default async function Api() {
 					throw new Error(`Dusk stop failed: ${error instanceof Error ? error.message : "Unknown error"}`);
 				}
 			},
-
 			async spawn(cmd: string, args?: string[], options?: SpawnOptions) {
 				const instance = getDuskInstance();
 				if (!instance) {
@@ -1312,7 +1304,6 @@ export default async function Api() {
 					throw new Error(`Process spawn failed: ${error instanceof Error ? error.message : "Unknown error"}`);
 				}
 			},
-
 			async spawnSync(cmd: string, args?: string[], options?: SpawnOptions) {
 				const instance = getDuskInstance();
 				if (!instance) {
@@ -1325,7 +1316,6 @@ export default async function Api() {
 					throw new Error(`Process spawnSync failed: ${error instanceof Error ? error.message : "Unknown error"}`);
 				}
 			},
-
 			async feed(line: string) {
 				const instance = getDuskInstance();
 				if (!instance) {
@@ -1338,34 +1328,29 @@ export default async function Api() {
 					throw new Error(`feed failed: ${error instanceof Error ? error.message : "Unknown error"}`);
 				}
 			},
-
 			node: {
 				async spawn(args?: string[], options?: SpawnOptions) {
 					return await window.tb.dusk.spawn("/bin/node", args, options);
 				},
 			},
-
 			shell: {
 				async spawn(command?: string, options?: SpawnOptions) {
 					const shellArgs = command ? ["-c", command] : [];
 					return await window.tb.dusk.spawn("/bin/dsh", shellArgs, options);
 				},
 			},
-
 			python: {
 				async spawn(script?: string, options?: SpawnOptions) {
 					const pythonArgs = script ? ["-c", script] : [];
 					return await window.tb.dusk.spawn("/bin/python3", pythonArgs, options);
 				},
 			},
-
 			sqlite: {
 				async spawn(database?: string, options?: SpawnOptions) {
 					const sqliteArgs = database ? [database] : [];
 					return await window.tb.dusk.spawn("/bin/sqlite3", sqliteArgs, options);
 				},
 			},
-
 			resizePty(pid: number, cols: number, rows: number) {
 				const instance = getDuskInstance();
 				if (!instance) {
@@ -1373,7 +1358,6 @@ export default async function Api() {
 				}
 				instance.processManager.resizePty(pid, cols, rows);
 			},
-
 			killProcess(pid: number) {
 				const instance = getDuskInstance();
 				if (!instance) {
@@ -1384,7 +1368,6 @@ export default async function Api() {
 					proc.kill();
 				}
 			},
-
 			listProcesses() {
 				const instance = getDuskInstance();
 				if (!instance) return [];
