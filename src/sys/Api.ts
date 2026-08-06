@@ -1586,13 +1586,16 @@ export default async function Api() {
 						case "audio":
 						case "pdf":
 							createWindow({
-								title: "Media Viewer",
+								title: {
+									text: "Media Viewer",
+									html: '<div id="mv-titlebar-search" style="display:flex;align-items:center;gap:8px;height:34px;width:100%;max-width:520px;padding:0 2px;margin-left:auto;"><div style="flex:1;display:flex;align-items:center;gap:8px;padding:0 10px;height:28px;border-radius:8px;background:#ffffff1e;box-shadow:inset 0 0 0 1px #ffffff10;"><input id="mv-search-input" type="search" placeholder="Search Gallery" style="width:100%;background:transparent;border:none;outline:none;color:#ffffffd9;font-size:12px;font-weight:700;text-align:center;" /><span id="mv-search-icon" style="display:inline-flex;align-items:center;justify-content:center;color:#ffffff72;font-size:14px;">&#8981;</span></div></div>',
+								},
 								src: "/fs/apps/system/media viewer.tapp/index.html",
 								size: {
-									width: 460,
-									height: 460,
-									minWidth: 160,
-									minHeight: 160,
+									width: 1000,
+									height: 650,
+									minWidth: 640,
+									minHeight: 420,
 								},
 								icon: "/fs/apps/system/media viewer.tapp/icon.svg",
 								message: JSON.stringify(message),
