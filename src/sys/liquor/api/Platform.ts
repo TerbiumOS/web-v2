@@ -27,22 +27,13 @@ export class Platform {
 				platform = "tablet";
 			}
 
-			if (
-				!mobileRE.test(ua) &&
-				navigator &&
-				navigator.maxTouchPoints > 1 &&
-				ua.indexOf("Macintosh") !== -1 &&
-				ua.indexOf("Safari") !== -1
-			) {
+			if (!mobileRE.test(ua) && navigator && navigator.maxTouchPoints > 1 && ua.indexOf("Macintosh") !== -1 && ua.indexOf("Safari") !== -1) {
 				platform = "tablet";
 			}
 		}
 
 		this.type = platform;
-		this.touchInput =
-			platform === "mobile" ||
-			platform === "tablet" ||
-			navigator.maxTouchPoints > 1;
+		this.touchInput = platform === "mobile" || platform === "tablet" || navigator.maxTouchPoints > 1;
 
 		// Settings integration with Terbium
 		if (window.anura?.settings) {
