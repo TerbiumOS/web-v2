@@ -633,6 +633,7 @@ body {
 	background: #000;
 	cursor: pointer;
 	object-fit: contain;
+	height: 100%;
 }
 
 .mv-title-overlay {
