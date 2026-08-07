@@ -1,7 +1,7 @@
 {
 	"name": "tb-v2",
 	"private": true,
-	"version": "2.4.0",
+	"version": "2.5.0",
 	"type": "module",
 	"scripts": {
 		"start": "npm run build && tsx bootstrap.ts",
@@ -43,7 +43,7 @@
 		"zustand": "5.0.14"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.5.5",
+		"@biomejs/biome": "2.5.7",
 		"@eslint/js": "^10.0.1",
 		"@tailwindcss/postcss": "^4.3.2",
 		"@terbiumos/tsl-linter": "1.0.1",
