@@ -1433,7 +1433,6 @@ export default async function Api() {
 					if (proc.type === "window") {
 						clearInfo();
 						useWindowStore.getState().killWindow(String(pd));
-						delete window.tb.process.procs[proc.pid];
 					} else if (proc.type === "runtime") {
 						delete window.tb.process.procs[proc.pid];
 						if (proc.onKill) proc.onKill();

@@ -107,8 +107,9 @@ let isMeasuringMem = false;
 
 async function getTasks() {
 	let mem = cachedMem;
-	const sysRegex = /^Terbium (Alexa Desktop Experience|Service Worker|Node\.js Runtime)$/;
-	if ("measureUserAgentSpecificMemory" in window.parent.performance && !isMeasuringMem && Date.now() - lastMemTime > 15000) {
+	const sysRegex = /^Terbium (Alexa Desktop Experience|Service Worker|Node\.js Runtime|Dusk Runtime)$/;
+	const shouldMeasure = "measureUserAgentSpecificMemory" in window.parent.performance && !isMeasuringMem && Date.now() - lastMemTime > 15000;
+	if (shouldMeasure) {
 		isMeasuringMem = true;
 		try {
 			mem = await window.parent.performance.measureUserAgentSpecificMemory();
@@ -132,13 +133,22 @@ async function getTasks() {
 		const winID = win.id;
 		let memEntry = null;
 		if (mem && Array.isArray(mem.breakdown)) {
-			memEntry = mem.breakdown.find(entry => entry.attribution.some(attr => attr.container && attr.container.src === win.src));
+			if (win.src) {
+				memEntry = mem.breakdown.find(entry => 
+					entry.attribution.some(attr => 
+						attr.container && attr.container.src === win.src
+					)
+				);
+			}
+			if (!memEntry && !win.src) {}
 		}
-		let memoryText = "N/A";
-		if (memEntry && typeof memEntry.bytes === "number") {
-			memoryText = `${(memEntry.bytes / (1024 * 1024)).toFixed(2)} MB`;
-		} else if (sysRegex.test(win.name)) {
+		let memoryText = "Measuring...";
+		if (sysRegex.test(win.name)) {
 			memoryText = "System Process";
+		} else if (memEntry && typeof memEntry.bytes === "number") {
+			memoryText = `${(memEntry.bytes / (1024 * 1024)).toFixed(2)} MB`;
+		} else if (lastMemTime > 0 && !isMeasuringMem) {
+			memoryText = "N/A";
 		}
 		if (currentIdsSet.has(winID)) {
 			currentIdsSet.delete(winID);

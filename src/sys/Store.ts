@@ -178,7 +178,9 @@ const useWindowStore = create<WindowState>()(set => ({
 				updateInfo({ appname: typeof win.title === "string" ? win.title : win.title?.text });
 				window.dispatchEvent(new CustomEvent("selwin-upd", { detail: typeof win.title === "string" ? win.title : win.title?.text }));
 			}
-
+			if (pid && window.tb?.process?.procs) {
+				delete window.tb.process.procs[Number(pid)];
+			}
 			return {
 				windows,
 				matchedWindows,
@@ -186,6 +188,7 @@ const useWindowStore = create<WindowState>()(set => ({
 		}),
 	removeWindow: (wid: string) => {
 		set((state: any) => {
+			const removedWindow = state.windows.find((w: any) => w.wid === wid);	
 			const windows = state.windows.filter((w: any) => w.wid !== wid);
 			const matchedWindows = state.matchedWindows
 				.map((group: any) => {
@@ -201,7 +204,9 @@ const useWindowStore = create<WindowState>()(set => ({
 				updateInfo({ appname: typeof win.title === "string" ? win.title : win.title?.text });
 				window.dispatchEvent(new CustomEvent("selwin-upd", { detail: typeof win.title === "string" ? win.title : win.title?.text }));
 			}
-
+			if (removedWindow?.pid && window.tb?.process?.procs) {
+				delete window.tb.process.procs[removedWindow.pid];
+			}
 			return {
 				windows,
 				matchedWindows,
