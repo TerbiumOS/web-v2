@@ -134,13 +134,10 @@ async function getTasks() {
 		let memEntry = null;
 		if (mem && Array.isArray(mem.breakdown)) {
 			if (win.src) {
-				memEntry = mem.breakdown.find(entry => 
-					entry.attribution.some(attr => 
-						attr.container && attr.container.src === win.src
-					)
-				);
+				memEntry = mem.breakdown.find(entry => entry.attribution.some(attr => attr.container && attr.container.src === win.src));
 			}
-			if (!memEntry && !win.src) {}
+			if (!memEntry && !win.src) {
+			}
 		}
 		let memoryText = "Measuring...";
 		if (sysRegex.test(win.name)) {

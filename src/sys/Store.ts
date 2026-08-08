@@ -188,7 +188,7 @@ const useWindowStore = create<WindowState>()(set => ({
 		}),
 	removeWindow: (wid: string) => {
 		set((state: any) => {
-			const removedWindow = state.windows.find((w: any) => w.wid === wid);	
+			const removedWindow = state.windows.find((w: any) => w.wid === wid);
 			const windows = state.windows.filter((w: any) => w.wid !== wid);
 			const matchedWindows = state.matchedWindows
 				.map((group: any) => {

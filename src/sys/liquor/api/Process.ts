@@ -16,7 +16,7 @@ export class Processes {
 				get alive() {
 					return window.tb.process.list()[Number(pid)] != null;
 				},
-				...proc
+				...proc,
 			};
 			arr.push(new WeakRef(procObj));
 		}
