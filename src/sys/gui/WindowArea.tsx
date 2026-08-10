@@ -546,7 +546,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	}, [isDragging, isResizing]);
 
 	useEffect(() => {
-		if (isFrameless) return;		
+		if (isFrameless) return;
 		const snap = () => {
 			setIsMouseDown(false);
 			setIsDragging(false);
