@@ -66,6 +66,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	const [controls, setControls] = useState(config.controls);
 	const [src, setSrc] = useState(config.src);
 	const originalSize = useRef<{ width: number; height: number } | null>(null);
+	const snapRegionRef = useRef<string | null>(null);
 	const [isSnapped, setIsSnapped] = useState(false);
 	const [accent, setAccent] = useState<string>("#ffffff18");
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -79,6 +80,9 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		}
 	};
 	mobileCheck();
+	useEffect(() => {
+		snapRegionRef.current = snapRegion;
+	}, [snapRegion]);
 
 	useEffect(() => {
 		const loadOptimizationSettings = async () => {
@@ -349,41 +353,42 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					cancelAnimationFrame(framelessDragState.current.animationFrameId);
 				}
 				framelessDragState.current = { isDragging: false, offsetX: 0, offsetY: 0, animationFrameId: null };
+				const currentSnapRegion = snapRegionRef.current;
 				if (windowRef.current) {
-					if (snapRegion === "left") {
+					if (currentSnapRegion === "left") {
 						windowRef.current.style.left = "0";
 						windowRef.current.style.width = "50%";
 						windowRef.current.style.height = "100%";
 						windowRef.current.style.top = "0";
 						setIsSnapped(true);
-					} else if (snapRegion === "right") {
+					} else if (currentSnapRegion === "right") {
 						windowRef.current.style.left = "50%";
 						windowRef.current.style.width = "50%";
 						windowRef.current.style.height = "100%";
 						windowRef.current.style.top = "0";
 						setIsSnapped(true);
-					} else if (snapRegion === "top") {
+					} else if (currentSnapRegion === "top") {
 						setMaximized(true);
 						setIsSnapped(true);
-					} else if (snapRegion === "top-left") {
+					} else if (currentSnapRegion === "top-left") {
 						windowRef.current.style.left = "0";
 						windowRef.current.style.top = "0";
 						windowRef.current.style.width = "50%";
 						windowRef.current.style.height = "50%";
 						setIsSnapped(true);
-					} else if (snapRegion === "top-right") {
+					} else if (currentSnapRegion === "top-right") {
 						windowRef.current.style.left = "50%";
 						windowRef.current.style.top = "0";
 						windowRef.current.style.width = "50%";
 						windowRef.current.style.height = "50%";
 						setIsSnapped(true);
-					} else if (snapRegion === "bottom-left") {
+					} else if (currentSnapRegion === "bottom-left") {
 						windowRef.current.style.left = "0";
 						windowRef.current.style.top = "50%";
 						windowRef.current.style.width = "50%";
 						windowRef.current.style.height = "50%";
 						setIsSnapped(true);
-					} else if (snapRegion === "bottom-right") {
+					} else if (currentSnapRegion === "bottom-right") {
 						windowRef.current.style.left = "50%";
 						windowRef.current.style.top = "50%";
 						windowRef.current.style.width = "50%";
@@ -541,6 +546,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	}, [isDragging, isResizing]);
 
 	useEffect(() => {
+		if (isFrameless) return;		
 		const snap = () => {
 			setIsMouseDown(false);
 			setIsDragging(false);
@@ -591,7 +597,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		};
 		window.addEventListener("mouseup", snap);
 		return () => window.removeEventListener("mouseup", snap);
-	}, [snapRegion, isDragging, maximized, isResizing]);
+	}, [snapRegion, isDragging, maximized, isResizing, isFrameless]);
 
 	const handleMouseDown = (direction: "top" | "left" | "right" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right") => {
 		let animationFrameId: number | null = null;
