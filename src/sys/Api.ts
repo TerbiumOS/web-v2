@@ -22,7 +22,6 @@ import { ExternalLib } from "./liquor/libs/ExternalLib";
 import { WebContainerShim } from "./Node/compatibility/nodeShim";
 import { initializeDusk, stopDusk, getDuskInstance, getServerRegistry } from "./Node/runtimes/Dusk/duskRuntime";
 import type { SpawnOptions } from "@nightnetwork/dusk";
-import parse from "./Parser";
 import { useWindowStore } from "./Store";
 import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
 import { vFS } from "./vFS";
@@ -1445,8 +1444,8 @@ export default async function Api() {
 				return window.tb.process.procs;
 			},
 			parse: {
-				build(src: string) {
-					parse.build(src);
+				build(_src: string) {
+					throw new Error("TML (Terbium Markup Language) has been deprecated and removed in Terbium v2.5. Please use the new WindowConfig.advanced system for custom window chrome. For more information, visit: https://corporate.terbiumon.top/support/kb/41827563");
 				},
 			},
 			create(type: "window" | "runtime", config: any) {

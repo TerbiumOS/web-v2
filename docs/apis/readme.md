@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">API Docs</span>
 
-**Last Updated**: v2.4.0 - 07/02/2026
+**Last Updated**: v2.5.0 - 08/10/2026
 
 So you're looking to use Terbium APIs. Well, you're in the right place! Terbium has a decent amount of components which I will break down below. The pages will include a description of the functions and code examples.
 
@@ -769,15 +769,12 @@ Return all active PIDs.
       ```
 
   - **parse**
-    - **build [🧪Experimental]**
-      - Description: Building Process of Custom TML Formatted Apps
+    - **build [❌Deprecated]**
+      - Description: **DEPRECATED in v2.5** - TML (Terbium Markup Language) has been removed. Use `WindowConfig.advanced` for custom window chrome instead.
       - Parameters:
-        - `src: string` - Source string to build
-      - Returns: `void`
-      - Example:
-        ```javascript
-        tb.process.parse.build("<tml>...</tml>");
-        ```
+        - `src: string` - Source string (will throw deprecation error)
+      - Returns: `void` (throws error)
+      - Migration: See https://corporate.terbiumon.top/support/kb/41827563
 
 ### Screen
   - **captureScreen**

@@ -18,7 +18,6 @@
 		"dotenv": "BSD-2-Clause",
 		"fflate": "MIT",
 		"hono": "MIT",
-		"htmlparser2": "MIT",
 		"libcurl.js": "LGPL-3.0-only",
 		"modern-screenshot": "MIT",
 		"path-browserify": "MIT",

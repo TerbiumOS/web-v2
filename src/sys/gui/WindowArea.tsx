@@ -43,8 +43,13 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 
 	const contentRef = useRef<HTMLDivElement>(null);
 	const titleRef = useRef<HTMLSpanElement>(null);
-	const thtmlref = useRef<HTMLDivElement>(null);
-
+	const thtmlref = useRef<HTMLDivElement>(null);	
+	const framelessDragState = useRef<{
+		isDragging: boolean;
+		offsetX: number;
+		offsetY: number;
+		animationFrameId: number | null;
+	}>({ isDragging: false, offsetX: 0, offsetY: 0, animationFrameId: null });
 	const [zIndex, setZIndex] = useState(config.zIndex);
 	const [isMouseDown, setIsMouseDown] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
@@ -63,7 +68,9 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	const originalSize = useRef<{ width: number; height: number } | null>(null);
 	const [isSnapped, setIsSnapped] = useState(false);
 	const [accent, setAccent] = useState<string>("#ffffff18");
-	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);	
+	const isFrameless = config.advanced?.enabled;
+	const titlebarHeight = config.advanced?.titlebar?.height || 40;
 	const mobileCheck = async () => {
 		const platform = await window.tb.platform.getPlatform();
 		const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
@@ -296,6 +303,131 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		};
 		updAccent();
 
+		const handleFramelessDragMessage = (e: MessageEvent) => {
+			if (e.data?.type === 'tb-frameless-drag-start' && e.data?.wid === config.wid) {
+				windowStore.arrange(config.wid);
+				// @ts-ignore
+				setZIndex(windowStore.getWindow(config.wid)?.zIndex);
+				setIsMouseDown(true);
+				setIsDragging(true);				
+				framelessDragState.current = {
+					isDragging: true,
+					offsetX: e.data.parentX - windowRef.current!.offsetLeft,
+					offsetY: e.data.parentY - windowRef.current!.offsetTop,
+					animationFrameId: null
+				};
+			}
+			if (e.data?.type === 'tb-frameless-drag-move' && e.data?.wid === config.wid && framelessDragState.current.isDragging) {
+				const { offsetX, offsetY } = framelessDragState.current;
+				const parentX = e.data.parentX;
+				const parentY = e.data.parentY;
+				if (!optimizationsEnabled) {
+					if (windowRef.current) windowRef.current.style.transform = "";
+					setMaximized(false);
+					const newX = parentX - offsetX;
+					const newY = parentY - offsetY;
+					handleSnap(newX, newY);
+					if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
+					if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
+					return;
+				}				
+				if (!framelessDragState.current.animationFrameId) {
+					framelessDragState.current.animationFrameId = requestAnimationFrame(() => {
+						if (windowRef.current) windowRef.current.style.transform = "";
+						setMaximized(false);
+						const newX = parentX - offsetX;
+						const newY = parentY - offsetY;
+						handleSnap(newX, newY);
+						if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
+						if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
+						framelessDragState.current.animationFrameId = null;
+					});
+				}
+			}
+			if (e.data?.type === 'tb-frameless-drag-end' && e.data?.wid === config.wid) {
+				if (framelessDragState.current.animationFrameId) {
+					cancelAnimationFrame(framelessDragState.current.animationFrameId);
+				}
+				framelessDragState.current = { isDragging: false, offsetX: 0, offsetY: 0, animationFrameId: null };
+				if (windowRef.current) {
+					if (snapRegion === "left") {
+						windowRef.current.style.left = "0";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "100%";
+						windowRef.current.style.top = "0";
+						setIsSnapped(true);
+					} else if (snapRegion === "right") {
+						windowRef.current.style.left = "50%";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "100%";
+						windowRef.current.style.top = "0";
+						setIsSnapped(true);
+					} else if (snapRegion === "top") {
+						setMaximized(true);
+						setIsSnapped(true);
+					} else if (snapRegion === "top-left") {
+						windowRef.current.style.left = "0";
+						windowRef.current.style.top = "0";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "50%";
+						setIsSnapped(true);
+					} else if (snapRegion === "top-right") {
+						windowRef.current.style.left = "50%";
+						windowRef.current.style.top = "0";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "50%";
+						setIsSnapped(true);
+					} else if (snapRegion === "bottom-left") {
+						windowRef.current.style.left = "0";
+						windowRef.current.style.top = "50%";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "50%";
+						setIsSnapped(true);
+					} else if (snapRegion === "bottom-right") {
+						windowRef.current.style.left = "50%";
+						windowRef.current.style.top = "50%";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "50%";
+						setIsSnapped(true);
+					}
+				}
+				setSnapRegion(null);
+				onSnapDone?.();
+				setIsMouseDown(false);
+				setIsDragging(false);
+			}
+		};
+		/**
+		 * Frameless window double-click handler
+		 * Receives 'tb-frameless-dblclick' messages from apps using TerbiumFrameless helper
+		 * Implements identical maximize behavior to standard windows including:
+		 * - Respects config.maximizable and config.advanced.titlebar.doubleClickMaximize
+		 * - Same 150ms transition animation as standard windows
+		 * - Toggle between maximized and normal states
+		 */
+		const handleFramelessDblClick = (e: MessageEvent) => {
+			if (e.data?.type === 'tb-frameless-dblclick' && e.data?.wid === config.wid) {
+				const doubleClickEnabled = config.advanced?.titlebar?.doubleClickMaximize !== false;
+				if (config.maximizable !== false && doubleClickEnabled) {
+					if (windowRef.current) {
+						windowRef.current.style.transitionProperty = "width, height, left, top";
+						windowRef.current.style.transitionDuration = "150ms";
+					}
+					setTimeout(() => {
+						if (windowRef.current) {
+							windowRef.current.style.transitionProperty = "";
+							windowRef.current.style.transitionDuration = "";
+						}
+					}, 150);
+					setMaximized(!maximized);
+				}
+			}
+		};
+		if (isFrameless) {
+			window.addEventListener("message", handleFramelessDragMessage);
+			window.addEventListener("message", handleFramelessDblClick);
+		}
+
 		window.addEventListener("reload-win", reload as EventListener);
 		window.addEventListener("max-win", max as EventListener);
 		window.addEventListener("min-win", min as EventListener);
@@ -322,6 +454,10 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			window.removeEventListener("sel-win", selWin as EventListener);
 			window.removeEventListener("min-wins", minall);
 			window.removeEventListener("upd-accent", updAccent);
+			if (isFrameless) {
+				window.removeEventListener("message", handleFramelessDragMessage);
+				window.removeEventListener("message", handleFramelessDblClick);
+			}
 			if (regionRef.current) regionRef.current.removeEventListener("contextmenu", debugCTX);
 		};
 	}, []);
@@ -632,7 +768,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			{isSnapped ? (
 				<div
 					ref={focuserRef}
-					className={`absolute rounded-lg ${config.focused ? "inset-x-2 top-[calc(40px+0.5rem)] bottom-2 pointer-events-none opacity-0" : "inset-x-[1px] top-[40px] bottom-[1px] opacity-100"} duration-150`}
+					className={`absolute rounded-lg ${config.focused ? `inset-x-2 top-[calc(${isFrameless ? '0px' : titlebarHeight + 'px'}+0.5rem)] bottom-2 pointer-events-none opacity-0` : `inset-x-[1px] top-[${isFrameless ? '0px' : titlebarHeight + 'px'}] bottom-[1px] opacity-100`} duration-150`}
 					onMouseDown={() => {
 						windowStore.arrange(config.wid);
 						// @ts-ignore
@@ -642,7 +778,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			) : (
 				<div
 					ref={focuserRef}
-					className={`absolute rounded-lg ${config.focused ? "inset-x-2 top-[calc(40px+0.5rem)] bottom-2 pointer-events-none opacity-0" : "inset-x-[1px] top-[40px] bottom-[1px] backdrop-blur-[4px] opacity-100"} duration-150`}
+					className={`absolute rounded-lg ${config.focused ? `inset-x-2 top-[calc(${isFrameless ? '0px' : titlebarHeight + 'px'}+0.5rem)] bottom-2 pointer-events-none opacity-0` : `inset-x-[1px] top-[${isFrameless ? '0px' : titlebarHeight + 'px'}] bottom-[1px] backdrop-blur-[4px] opacity-100`} duration-150`}
 					onMouseDown={() => {
 						windowStore.arrange(config.wid);
 						// @ts-ignore
@@ -658,9 +794,10 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			<div className="absolute top-0 right-0 size-4 cursor-ne-resize z-20" data-resizer="top-right" onMouseDown={() => handleMouseDown("top-right")} />
 			<div className="absolute bottom-0 left-0 size-4 cursor-sw-resize z-20" data-resizer="bottom-left" onMouseDown={() => handleMouseDown("bottom-left")} />
 			<div className="absolute bottom-0 right-0 size-4 cursor-se-resize z-20" data-resizer="bottom-right" onMouseDown={() => handleMouseDown("bottom-right")} />
-			<div
-				ref={regionRef}
-				className="region flex justify-between items-center bg-[#ffffff10] p-2 min-w-[224px] select-none"
+			{!isFrameless && (
+				<div
+					ref={regionRef}
+					className="region flex justify-between items-center bg-[#ffffff10] p-2 min-w-[224px] select-none"
 				onMouseDown={(e: React.MouseEvent) => {
 					windowStore.arrange(config.wid);
 					// @ts-ignore
@@ -1012,6 +1149,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 					</div>
 				)}
 			</div>
+			)}
 			<div ref={contentRef} className="w-full h-full" style={optimizationsEnabled ? { contain: "strict" } : {}}>
 				{config.proxy ? (
 					<ScramjetFrame url={config.src} />
@@ -1038,7 +1176,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 							border: "none",
 							all: "initial",
 							width: "100%",
-							height: "calc(100% - 40px)",
+							height: isFrameless ? "100%" : `calc(100% - ${titlebarHeight}px)`,
 							pointerEvents: isMouseDown ? "none" : "auto",
 							userSelect: "none",
 							...(optimizationsEnabled && { contain: "strict" }),

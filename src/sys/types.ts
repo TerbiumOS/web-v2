@@ -21,7 +21,6 @@ declare global {
 			"window-area": React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
 			window: React.HTMLAttributes<HTMLDivElement>;
 			region: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
-			"window-body": React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
 			"dock-item": React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
 		}
 	}
@@ -257,6 +256,43 @@ export interface WindowConfig {
 	wid?: string;
 	zIndex?: number;
 	focused?: boolean;
+
+	/**
+	 * Advanced window customization (experimental, opt-in)
+	 * Enables custom window chrome and behaviors
+	 */
+	advanced?: {
+		enabled: boolean;
+		/**
+		 * Window mode determines chrome behavior
+		 * - frameless: App provides full titlebar in iframe
+		 * - hybrid: App provides titlebar, OS provides controls
+		 * - themed: OS chrome with custom styling
+		 * - standard: Default Alexa chrome (fallback)
+		 */
+		titlebar?: {
+			/**
+			 * Height of custom titlebar area (px)
+			 * Default: 40 (matches current chrome)
+			 */
+			height?: number;
+			/**
+			 * Whether OS should provide drag handler
+			 * Default: true (makes titlebar draggable)
+			 */
+			draggable?: boolean;
+			/**
+			 * Whether double-click should maximize the window
+			 * Default: true (enables double-click to maximize)
+			 * Only applies to frameless windows
+			 */
+			doubleClickMaximize?: boolean;
+			/**
+			 * CSS classes to apply to titlebar region
+			 */
+			className?: string;
+		};
+	};
 }
 
 declare let props: any;
