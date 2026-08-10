@@ -526,7 +526,6 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		}
 	}, [isDragging, isSnapped]);
 
-	// Disable pointer events on all iframes when dragging
 	useEffect(() => {
 		if (isDragging || isResizing) {
 			const iframes = document.querySelectorAll("iframe");
@@ -597,14 +596,11 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	const handleMouseDown = (direction: "top" | "left" | "right" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right") => {
 		let animationFrameId: number | null = null;
 		let lastMouseEvent: MouseEvent | null = null;
-
 		const onMove = (e: MouseEvent) => {
 			if (!optimizationsEnabled) {
-				// Without optimizations: update immediately
 				setIsResizing(true);
 				setMaximized(false);
 				windowRef.current!.style.transform = "";
-
 				if (direction.includes("top")) {
 					const offsetY = e.clientY - 65;
 					const newY = Math.max(offsetY, 0);
@@ -643,19 +639,14 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				}
 				return;
 			}
-
-			// With optimizations: use requestAnimationFrame
 			lastMouseEvent = e;
-
 			if (!animationFrameId) {
 				animationFrameId = requestAnimationFrame(() => {
 					if (!lastMouseEvent) return;
 					const e = lastMouseEvent;
-
 					setIsResizing(true);
 					setMaximized(false);
 					windowRef.current!.style.transform = "";
-
 					if (direction.includes("top")) {
 						const offsetY = e.clientY - 65;
 						const newY = Math.max(offsetY, 0);
@@ -692,7 +683,6 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 							setY(newY);
 						}
 					}
-
 					animationFrameId = null;
 				});
 			}
@@ -811,7 +801,6 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 
 						const onMove = (e: MouseEvent) => {
 							if (!optimizationsEnabled) {
-								// Without optimizations: update immediately
 								if (windowRef.current) windowRef.current.style.transform = "";
 								setIsDragging(true);
 								setMaximized(false);
@@ -822,15 +811,11 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 								if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
 								return;
 							}
-
-							// With optimizations: use requestAnimationFrame
 							lastMouseEvent = e;
-
 							if (!animationFrameId) {
 								animationFrameId = requestAnimationFrame(() => {
 									if (!lastMouseEvent) return;
 									const e = lastMouseEvent;
-
 									if (windowRef.current) windowRef.current.style.transform = "";
 									setIsDragging(true);
 									setMaximized(false);
@@ -839,7 +824,6 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 									handleSnap(newX, newY);
 									if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
 									if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
-
 									animationFrameId = null;
 								});
 							}
@@ -1188,9 +1172,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	);
 };
 
-// Memoize WindowElement to prevent unnecessary re-renders
 const MemoizedWindowElement = memo(WindowElement, (prevProps, nextProps) => {
-	// Only re-render if config changes in meaningful ways
 	return prevProps.config.wid === nextProps.config.wid && prevProps.config.zIndex === nextProps.config.zIndex && prevProps.config.focused === nextProps.config.focused && prevProps.className === nextProps.className;
 });
 
