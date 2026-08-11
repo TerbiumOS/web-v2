@@ -393,6 +393,8 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 										title: item.title,
 										proxy: item.proxy,
 										snapable: item.snapable,
+										// @ts-expect-error - Pass through advanced config if present
+										advanced: item.advanced,
 									});
 									setStartOpen(false);
 								}}
@@ -430,6 +432,8 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 														title: item.title,
 														proxy: item.proxy,
 														snapable: item.snapable,
+														// @ts-expect-error - Pass through advanced config if present
+														advanced: item.advanced,
 													});
 													setStartOpen(false);
 												}}

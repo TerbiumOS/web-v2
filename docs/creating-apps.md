@@ -366,493 +366,115 @@ Use `wmArgs` to describe window behaviour and initial state. Example shape:
 ["minimize", "maximize", "close"]
 ```
 
-## <span style="color: #32ae62;">Advanced Window Customization (v2.5+)</span>
+## <span style="color: #32ae62;">Custom Window Chrome (v2.5+)</span>
 
-Terbium v2.5 introduces the Advanced Window System, allowing apps to create custom window chrome with frameless, hybrid, and themed modes. This replaces the deprecated TML (Terbium Markup Language) system with a safer, more flexible approach.
+Terbium v2.5 allows apps to create custom titlebars for browser-style or IDE-style interfaces. Custom windows behave identically to standard windows (drag, snap, maximize, etc.) but give you full control over the titlebar appearance.
 
-### Why Advanced Windows?
+### Configuration
 
-The Advanced Window System enables:
-- **Custom titlebars** - Design your own window chrome that matches your app's UI
-- **Native-looking windows** - Create windows that feel like native OS applications
-- **100% backward compatibility** - Existing apps work without changes
-
-### Window Modes
-
-Configure window mode using the `advanced` property in `wmArgs`:
-
-#### 1. **Frameless Mode** (Recommended)
-Your app provides the entire titlebar, including drag area and window controls.
-
-**Frameless windows work identically to standard Terbium windows** - they support all the same behaviors including drag, double-click to maximize, edge snapping, transitions, and animations.
+Add the `advanced` property to `wmArgs` in your `.tbconfig`:
 
 ```json
 {
-    "title": "My Browser",
-    "src": "index.html",
-    "size": { "width": 800, "height": 600 },
-    "advanced": {
-        "mode": "frameless",
-        "titlebar": {
-            "height": 46,
-            "draggable": true,
-            "doubleClickMaximize": true
-        }
-    }
-}
-```
-
-**Configuration Options:**
-- `height`: Height of custom titlebar in pixels (default: 40)
-- `draggable`: Whether the titlebar is draggable (default: true)
-- `doubleClickMaximize`: Enable double-click to maximize (default: true)
-
-**Use frameless mode when:**
-- Building custom browsers or IDE-style apps
-- You need complete control over titlebar appearance
-- Your app has tabs or complex navigation in the titlebar
-- You want your app to look native to a specific OS
-
-#### 4. **Standard Mode** (Default)
-Uses Terbium's default Alexa window chrome. This is the fallback if `advanced` is not specified.
-
-### Building Frameless Windows
-
-Frameless windows require handling drag behavior in your app. Terbium provides a helper library to make this easy and ensure your frameless windows behave exactly like normal windows.
-
-#### Behavior Parity with Standard Windows
-
-Frameless windows now support **all the same interactions** as standard Terbium windows:
-- **Drag to move**: Click, hold, and drag any part of the titlebar (drag only starts when mouse moves)
-- **Double-click to maximize**: Double-click the titlebar to toggle maximize/restore
-- **Edge snapping**: Drag to screen edges for automatic snap layouts with preview
-- **Smooth transitions**: All animations match standard window behavior
-- **Window controls**: Minimize, maximize, and close buttons work identically
-- **Proper click handling**: Clicking the titlebar doesn't interfere with interactions until you actually drag
-
-The TerbiumFrameless helper ensures your app behaves identically to native windows with zero effort. Just like normal windows, dragging only activates when you actually move the mouse while holding down the button - simple clicks work normally.
-
-#### Using the TerbiumFrameless Helper (Recommended)
-
-Include the helper script in your HTML:
-
-```html
-<script src="/terbium-frameless.js"></script>
-```
-
-Then initialize it with your titlebar element:
-
-```javascript
-// Simple initialization
-TerbiumFrameless.init({
-    dragSelector: '.my-titlebar',
-    noDragSelectors: ['.window-controls', 'button', 'input', 'a'],
-    enableDoubleClick: true  // Enable double-click to maximize (default: true)
-});
-```
-
-**Complete Example - Browser-Style Window:**
-
-`.tbconfig`:
-```json
-{
-    "title": "My Browser",
+    "title": "My App",
     "wmArgs": {
-        "title": { "text": "My Browser" },
-        "icon": "icon.svg",
+        "title": { "text": "My App" },
         "src": "index.html",
         "size": { "width": 900, "height": 650 },
         "advanced": {
-            "mode": "frameless",
+            "enabled": true,
             "titlebar": {
-                "height": 46,
-                "draggable": true,
-                "doubleClickMaximize": true
+                "height": 46
             }
         }
     }
 }
 ```
 
-`index.html`:
+**Options:**
+- `enabled`: Set to `true` to enable custom chrome (default: `false`)
+- `titlebar.height`: Height of your custom titlebar in pixels (default: `40`)
+
+### Implementation
+
+**1. Include the helper script:**
+
 ```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>My Browser</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="/terbium-frameless.js"></script>
-</head>
-<body>
-    <!-- Custom titlebar -->
-    <div class="titlebar">
-        <div class="window-controls">
-            <button onclick="TerbiumFrameless.minimize()">−</button>
-            <button onclick="TerbiumFrameless.maximize()">□</button>
-            <button onclick="TerbiumFrameless.close()">×</button>
-        </div>
-        
-        <div class="tabs">
-            <div class="tab active">New Tab</div>
-            <button class="new-tab">+</button>
-        </div>
-        
-        <div class="address-bar">
-            <input type="text" placeholder="Search or enter URL">
-        </div>
+<script src="/terbium-frameless.js"></script>
+```
+
+**2. Create your titlebar HTML:**
+
+```html
+<div class="my-titlebar">
+    <div class="window-controls">
+        <button onclick="TerbiumFrameless.minimize()">−</button>
+        <button onclick="TerbiumFrameless.maximize()">□</button>
+        <button onclick="TerbiumFrameless.close()">×</button>
     </div>
-    
-    <!-- Main content -->
-    <div class="content">
-        <!-- Your app content here -->
-    </div>
-    
-    <script>
-        // Initialize frameless drag behavior
-        TerbiumFrameless.init({
-            dragSelector: '.titlebar',
-            noDragSelectors: [
-                '.window-controls',
-                '.tabs .tab',
-                '.new-tab',
-                '.address-bar',
-                'input',
-                'button'
-            ],
-            enableDoubleClick: true
-        });
-    </script>
-</body>
-</html>
+    <span>My App Title</span>
+</div>
 ```
 
-`style.css`:
-```css
-body {
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    font-family: system-ui, -apple-system, sans-serif;
-}
+**3. Initialize drag handling:**
 
-.titlebar {
-    height: 46px;
-    background: linear-gradient(to bottom, #e8e8e8, #d0d0d0);
-    border-bottom: 1px solid #aaa;
-    display: flex;
-    align-items: center;
-    padding: 0 8px;
-    user-select: none;
-}
-
-.window-controls {
-    display: flex;
-    gap: 4px;
-    margin-right: 8px;
-}
-
-.window-controls button {
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    border-radius: 3px;
-    font-size: 16px;
-}
-
-.window-controls button:hover {
-    background: rgba(0, 0, 0, 0.1);
-}
-
-.tabs {
-    display: flex;
-    gap: 4px;
-    flex: 1;
-}
-
-.tab {
-    background: rgba(255, 255, 255, 0.7);
-    padding: 8px 16px;
-    border-radius: 8px 8px 0 0;
-    cursor: pointer;
-}
-
-.tab.active {
-    background: white;
-}
-
-.address-bar {
-    flex: 2;
-    margin-left: 8px;
-}
-
-.address-bar input {
-    width: 100%;
-    padding: 6px 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.content {
-    flex: 1;
-    overflow: auto;
-}
-```
-
-#### Understanding Frameless Window Behavior
-
-Frameless windows in Terbium v2.5+ are **functionally identical** to standard windows. The TerbiumFrameless helper automatically handles all the complex messaging and coordination required to make your custom window chrome work seamlessly.
-
-**What Happens Behind the Scenes:**
-
-1. **Drag Events**: When you click and drag the titlebar, the helper calculates the correct coordinates and sends messages to the parent window, which handles the actual dragging with the same smooth animations as normal windows.
-
-2. **Double-Click Maximize**: When you double-click the titlebar, a message is sent to the parent window to trigger the maximize/restore animation with the same 150ms transition as standard windows.
-
-3. **Edge Snapping**: As you drag near screen edges, the same snap preview system activates, showing you where the window will snap before you release.
-
-4. **Respect for Settings**: The `doubleClickMaximize` option in your window config controls whether double-clicking maximizes. Set it to `false` if your app needs to handle double-clicks differently (e.g., for tab management).
-
-**Disabling Double-Click Maximize:**
-
-If your app needs to handle double-clicks on the titlebar for other purposes (like creating new tabs), you can disable the maximize behavior:
-
-```json
-{
-    "advanced": {
-        "mode": "frameless",
-        "titlebar": {
-            "height": 46,
-            "draggable": true,
-            "doubleClickMaximize": false
-        }
-    }
-}
-```
-
-Then handle it yourself:
 ```javascript
 TerbiumFrameless.init({
-    dragSelector: '.titlebar',
-    noDragSelectors: ['.window-controls', 'button', 'input', 'a'],
-    enableDoubleClick: false  // Disable the helper's double-click handling
-});
-
-// Handle double-click yourself
-document.querySelector('.titlebar').addEventListener('dblclick', (e) => {
-    if (!e.target.matches('.no-dblclick')) {
-        // Your custom logic here
-        createNewTab();
-    }
+    dragSelector: '.my-titlebar',
+    noDragSelectors: ['.window-controls', 'button', 'input'],
+    enableDoubleClick: true
 });
 ```
 
-#### Helper API Reference
+**That's it!** Your window now has custom chrome with full drag, snap, and maximize support.
+
+### Helper API Reference
 
 **TerbiumFrameless.init(options)**
-Initialize frameless window behavior.
-- `dragSelector` (string) - CSS selector for draggable area
-- `noDragSelectors` (string[]) - Elements that should NOT trigger drag
-- `enableDoubleClick` (boolean) - Enable double-click to maximize (default: true)
-- `onDragStart` (function) - Callback when drag starts
-- `onDragEnd` (function) - Callback when drag ends
-
-**TerbiumFrameless.startDrag(event)**
-Manually trigger drag from a mousedown event.
-
-**TerbiumFrameless.startDragInBounds(event, bounds)**
-Trigger drag only if click is within specified bounds. Useful for canvas-based UIs.
-- `bounds.top` (number) - Top boundary in pixels
-- `bounds.bottom` (number) - Bottom boundary in pixels
-- `bounds.left` (number) - Left boundary (optional)
-- `bounds.right` (number) - Right boundary (optional)
-
-Example for canvas-based apps:
-```javascript
-canvas.addEventListener('mousedown', (e) => {
-    // Only drag in top 40px of canvas
-    const dragged = TerbiumFrameless.startDragInBounds(e, {
-        top: 0,
-        bottom: 40
-    });
-    
-    if (dragged) {
-        e.stopPropagation(); // Prevent canvas from handling this event
-    }
-});
-```
-
-**TerbiumFrameless.createControls(container, options)**
-Create standard window control buttons with themes.
-- `container` (HTMLElement) - Element to append controls to
-- `options.minimize` (boolean) - Show minimize button (default: true)
-- `options.maximize` (boolean) - Show maximize button (default: true)
-- `options.close` (boolean) - Show close button (default: true)
-- `options.theme` (string) - Theme: 'chrome', 'windows', 'macos' (default: 'chrome')
-
-Example:
-```javascript
-const titlebar = document.querySelector('.titlebar');
-TerbiumFrameless.createControls(titlebar, {
-    minimize: true,
-    maximize: true,
-    close: true,
-    theme: 'chrome'
-});
-```
+- `dragSelector` - CSS selector for draggable area
+- `noDragSelectors` - Array of selectors that should NOT trigger drag
+- `enableDoubleClick` - Enable double-click to maximize (default: `true`)
 
 **Window Control Methods:**
-- `TerbiumFrameless.minimize()` - Minimize current window
-- `TerbiumFrameless.maximize()` - Maximize/restore current window
-- `TerbiumFrameless.close()` - Close current window
+- `TerbiumFrameless.minimize()` - Minimize window
+- `TerbiumFrameless.maximize()` - Toggle maximize/restore
+- `TerbiumFrameless.close()` - Close window
 
-### Manual Implementation (Advanced)
+**Advanced - Canvas-based UIs:**
 
-If you prefer not to use the helper library, you can implement frameless drag and double-click manually:
+For apps that render to canvas (like emulators), use `startDragInBounds()`:
 
 ```javascript
-const titlebar = document.querySelector('.titlebar');
-
-// Handle drag
-titlebar.addEventListener('mousedown', function(e) {
-    // Skip if clicking interactive elements
-    if (e.target.matches('button, input, a, .no-drag')) {
-        return;
-    }
-    
-    e.preventDefault();
-    
-    // Get iframe position for coordinate conversion
-    const iframeRect = window.frameElement?.getBoundingClientRect();
-    if (!iframeRect) return;
-    
-    // Convert to parent window coordinates
-    const parentX = e.clientX + iframeRect.left;
-    const parentY = e.clientY + iframeRect.top;
-    
-    // Send drag message to Terbium
-    window.parent.postMessage({
-        type: 'tb-frameless-drag-start',
-        wid: window.frameElement?.closest('.window-element')?.id,
-        parentX: parentX,
-        parentY: parentY
-    }, '*');
-});
-
-// Handle double-click to maximize
-titlebar.addEventListener('dblclick', function(e) {
-    // Skip if clicking interactive elements
-    if (e.target.matches('button, input, a, .no-drag')) {
-        return;
-    }
-    
-    // Send double-click message to Terbium
-    const iframeRect = window.frameElement?.getBoundingClientRect();
-    if (iframeRect) {
-        window.parent.postMessage({
-            type: 'tb-frameless-dblclick',
-            wid: window.frameElement?.closest('.window-element')?.id
-        }, '*');
-    }
+canvas.addEventListener('mousedown', (e) => {
+    // Only drag if clicking in top 40px
+    TerbiumFrameless.startDragInBounds(e, { top: 0, bottom: 40 });
 });
 ```
 
-**Important:** The coordinate conversion is critical for drag operations. Clicks in your iframe are relative to the iframe's viewport, but Terbium needs coordinates relative to the parent window. The double-click handler automatically respects the `doubleClickMaximize` setting in your window config.
+### Example Apps
 
-### Best Practices
-
-1. **Always exclude interactive elements from drag**
-   ```javascript
-   noDragSelectors: ['.window-controls', 'button', 'input', 'a', 'select', 'textarea']
-   ```
-
-2. **Set appropriate titlebar height**
-   - Standard windows: 40px
-   - Browser-style: 46px
-   - Compact: 32px
-
-3. **Use system fonts for native feel**
-   ```css
-   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-   ```
-
-4. **Add hover states to window controls**
-   ```css
-   .control:hover {
-       background: rgba(0, 0, 0, 0.1);
-   }
-   .control-close:hover {
-       background: rgba(200, 0, 0, 0.8);
-       color: white;
-   }
-   ```
-
-5. **Handle double-click to maximize**
-   The helper library does this automatically with `enableDoubleClick: true`. It respects the `doubleClickMaximize` setting in your window config and applies the same 150ms transition animation as standard windows.
-
-6. **Test all window behaviors**
-   Frameless windows should work identically to standard windows:
-   - Drag from different parts of titlebar
-   - Click interactive elements without triggering drag
-   - Double-click to maximize/restore with smooth animation
-   - Window snapping to screen edges with preview
-   - Minimize, maximize, and close controls
-   - All transitions and animations match standard windows
-
-7. **Consider accessibility**
-   Ensure your custom titlebar has proper keyboard navigation and screen reader support.
+See the built-in Browser app (`/apps/browser.tapp/`) for a complete Chrome-style implementation.
 
 ### Migration from TML
 
-If you were using TML (deprecated in v2.5), migrate to frameless windows:
+TML (Terbium Markup Language) was deprecated in v2.5 due to security concerns. To migrate:
 
-**Before (TML - Deprecated):**
+**Old (TML):**
 ```javascript
-const markup = `
-<window>
-    <titlebar>My App</titlebar>
-    <content src="index.html" />
-</window>
-`;
-tb.process.parse.build(markup);
+tb.process.parse.build(`<window><titlebar>My App</titlebar>...</window>`);
 ```
 
-**After (Advanced Windows):**
+**New (Advanced Windows):**
 ```json
 // .tbconfig
 {
     "wmArgs": {
-        "title": "My App",
-        "src": "index.html",
-        "advanced": {
-            "mode": "frameless",
-            "titlebar": { "height": 40 }
-        }
+        "advanced": { "enabled": true, "titlebar": { "height": 40 } }
     }
 }
 ```
 
-### Troubleshooting
-
-**Drag not working:**
-- Check that message type is `'tb-frameless-drag-start'` (exact match)
-- Verify coordinate conversion includes `iframeRect.left` and `iframeRect.top`
-- Ensure you're getting `wid` from `.closest('.window-element')?.id`
-
-**Drag feels "jumpy" or window teleports:**
-- Make sure you're converting iframe coordinates to parent coordinates
-- Check that `parentX` and `parentY` are calculated correctly
-
-**Interactive elements trigger drag:**
-- Add selectors to `noDragSelectors` array
-- Use `.closest()` check instead of direct target match
-
-**Double-click not maximizing:**
-- Set `enableDoubleClick: true` in init options
-- Or manually call `TerbiumFrameless.maximize()` on dblclick
+Then use the TerbiumFrameless helper as shown above.
 
 ### Accessing the Terbium API
 

@@ -114,6 +114,7 @@ const useWindowStore = create<WindowState>()(set => ({
 					src: config.src,
 					size: config.size,
 					proxy: config.proxy,
+					advanced: config.advanced,
 					weight: 1,
 				};
 			}
