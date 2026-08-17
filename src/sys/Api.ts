@@ -1181,12 +1181,119 @@ export default async function Api() {
 					await window.tb.fs.promises.writeFile(`/home/${info.username}/settings.json`, JSON.stringify(data.settings[0].settings, null, 2), "utf8");
 					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/files/davs.json`, JSON.stringify(data.settings[0].davs, null, 2), "utf8");
 					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/app store/repos.json`, JSON.stringify(data.settings[0].apps.repos || [], null, 2), "utf8");
+					if (data.settings[0].apps.installed && Array.isArray(data.settings[0].apps.installed)) {
+						const cloudAppUrls = data.settings[0].apps.installed;
+						console.log("[TAUTH] Cloud app URLs:", cloudAppUrls);
+						const installedApps = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
+						const installedUrls: string[] = [];
+						for (const app of installedApps) {
+							try {
+								const config = JSON.parse(await window.tb.fs.promises.readFile(app.config, "utf8"));
+								if (config["pkg-download"]) {
+									installedUrls.push(config["pkg-download"]);
+								} else if (config["anura-pkg"]) {
+									installedUrls.push(config["anura-pkg"]);
+								}
+							} catch (err) {
+								console.error(err);
+							}
+						}
+						const appsToInstall = cloudAppUrls.filter((url: string) => !installedUrls.includes(url));
+						if (appsToInstall.length > 0) {
+							console.log("[TAUTH] Installing missing apps from cloud:", appsToInstall);
+							await window.tb.notification.Installing(
+								{
+									message: `Syncing ${appsToInstall.length} app${appsToInstall.length > 1 ? "s" : ""} from Terbium Cloud`,
+									application: "System",
+									iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+								},
+								async () => {
+									for (const appUrl of appsToInstall) {
+										try {
+											const fileName = appUrl.split("/").pop() || "app.zip";
+											const appName = fileName.replace(/\.(zip|tapp)$/, "");
+											await window.tb.system.download(appUrl, `/apps/system/${appName}.zip`);
+											const response = await fetch(`/fs/apps/system/${appName}.zip`);
+											const zipFileContent = await response.arrayBuffer();
+											const targetDir = `/apps/system/${appName}.tapp/`;
+											// @ts-expect-error
+											await window.tb.fs.promises.mkdir(targetDir, { recursive: true });
+											const compressedFiles = window.tb.fflate.unzipSync(new Uint8Array(zipFileContent));
+											for (const [relativePath, content] of Object.entries(compressedFiles)) {
+												const fullPath = `${targetDir}${relativePath}`;
+												if (!relativePath.endsWith("/")) {
+													const pathParts = fullPath.split("/");
+													let currentPath = "";
+													for (let i = 0; i < pathParts.length - 1; i++) {
+														currentPath += pathParts[i] + "/";
+														try {
+															await window.tb.fs.promises.mkdir(currentPath);
+														} catch {}
+													}
+													await window.tb.fs.promises.writeFile(fullPath, window.tb.buffer.from(content));
+												}
+											}
+											await window.tb.fs.promises.unlink(`/apps/system/${appName}.zip`);
+											const appData = JSON.parse(await window.tb.fs.promises.readFile(`${targetDir}.tbconfig`, "utf8"));
+											await window.tb.launcher.addApp({
+												// @ts-expect-error
+												title:
+													typeof appData.wmArgs.title === "object"
+														? {
+																text: appData.wmArgs.title.text,
+																weight: appData.wmArgs.title.weight,
+																html: appData.wmArgs.title.html,
+															}
+														: appData.wmArgs.title,
+												name: appData.title,
+												icon: `/fs/apps/system/${appName}.tapp/${appData.icon}`,
+												src: `/fs/apps/system/${appName}.tapp/${appData.wmArgs.src}`,
+												size: {
+													width: appData.wmArgs.size.width,
+													height: appData.wmArgs.size.height,
+												},
+												single: appData.wmArgs.single,
+												resizable: appData.wmArgs.resizable,
+												controls: appData.wmArgs.controls,
+												message: appData.wmArgs.message,
+												snapable: appData.wmArgs.snapable,
+												advanced: appData.wmArgs.advanced,
+											});
+											installedApps.push({
+												name: appData.title,
+												user: await window.tb.user.username(),
+												config: `${targetDir}.tbconfig`,
+											});
+											console.log(`[TAUTH] Installed ${appData.title} from cloud`);
+										} catch (err) {
+											console.error(`[TAUTH] Failed to install app from ${appUrl}:`, err);
+										}
+									}
+									await window.tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify(installedApps, null, 2));
+								},
+								{
+									message: "Synced apps from Terbium Cloud",
+									application: "System",
+									iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+									time: 3000,
+								},
+								{
+									message: "Failed to sync apps from cloud",
+									application: "System",
+									iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+									time: 3000,
+								},
+							);
+						} else {
+							console.log("[TAUTH] All cloud apps are already installed");
+						}
+					}
 					window.dispatchEvent(new Event("updWallpaper"));
 					window.dispatchEvent(new CustomEvent("proxy-change"));
 					window.dispatchEvent(new Event("upd-accent"));
 					window.tb.tauth.sync.isSyncing = false;
 				},
-				upload: async () => {
+				upload: async (force = false) => {
 					const info = await window.tb.tauth.getInfo();
 					if (!info) throw new Error("No TACC info found");
 					window.tb.tauth.sync.isSyncing = true;
@@ -1211,12 +1318,42 @@ export default async function Api() {
 						reader.readAsDataURL(blob);
 						settings.wallpaper = await dataURL;
 					}
+					const installedApps = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
+					const appUrls: string[] = [];
+					for (const app of installedApps) {
+						try {
+							const configContent = await window.tb.fs.promises.readFile(app.config, "utf8");
+							const config = JSON.parse(configContent);
+							if (config["pkg-download"]) {
+								appUrls.push(config["pkg-download"]);
+							} else if (config["anura-pkg"]) {
+								appUrls.push(config["anura-pkg"]);
+							}
+						} catch (err) {
+							console.warn(`[TAUTH] Could not read config for ${app.name}:`, err);
+						}
+					}
+					if (!force) {
+						try {
+							const cloudData = await getinfo(null, null, "tbs");
+							const cloudAppUrls = cloudData.settings[0]?.apps?.installed || [];
+							const localSorted = [...appUrls].sort();
+							const cloudSorted = [...cloudAppUrls].sort();
+							if (JSON.stringify(localSorted) === JSON.stringify(cloudSorted)) {
+								console.log("[TAUTH] App list unchanged, skipping upload");
+								window.tb.tauth.sync.isSyncing = false;
+								return;
+							}
+						} catch (err) {
+							console.warn("[TAUTH] Could not check cloud state, uploading anyway:", err);
+						}
+					}
 					const toupload = [
 						{
 							settings: settings,
 							apps: {
 								repos: JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/app store/repos.json`, "utf8")),
-								installed: [],
+								installed: appUrls,
 							},
 							davs: davs,
 						},
@@ -1237,14 +1374,18 @@ export default async function Api() {
 			},
 		},
 		node: {
+			// @ts-expect-error
 			_shimInstance: null as WebContainerShim | null,
 			get webContainer() {
 				if (!window.tb.dusk.isReady) {
 					return {};
 				}
+				// @ts-expect-error
 				if (!this._shimInstance) {
+					// @ts-expect-error
 					this._shimInstance = new WebContainerShim();
 				}
+				// @ts-expect-error
 				return this._shimInstance;
 			},
 			get servers(): Map<number, string> {

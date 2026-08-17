@@ -686,7 +686,7 @@ export interface COM {
 		servers: Map<number, string>;
 		isReady: boolean;
 		start: () => void;
-		stop(): boolean;
+		stop(): Promise<boolean>;
 	};
 	dusk: import("./Node/runtimes/Dusk/types").TerbiumDuskAPI;
 }
