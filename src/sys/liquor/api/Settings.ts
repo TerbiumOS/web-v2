@@ -46,15 +46,8 @@ export class Settings {
 		const initial = defaultsettings;
 
 		if (!initial["wisp-url"]) {
-			let url = "";
-			if (location.protocol == "https:") {
-				url += "wss://";
-			} else {
-				url += "ws://";
-			}
-			url += window.location.origin.split("://")[1];
-			url += "/";
-			initial["wisp-url"] = url;
+			const tbs = JSON.parse(await fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
+			initial["wisp-url"] = tbs.wispServer;
 		}
 
 		try {
