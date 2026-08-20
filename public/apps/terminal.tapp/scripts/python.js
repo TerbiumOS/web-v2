@@ -97,11 +97,11 @@ function resolvePath(filePath, cwd) {
 }
 
 /**
- * CLI for the Node.js subsystem via Dusk runtime.
+ * CLI for the Python subsystem via Dusk runtime.
  * @param {argv} args
  * @param {Terminal} term
  */
-async function node(args, term) {
+async function python(args, term) {
 	if (!window.parent.tb.dusk.isReady) {
 		displayOutput("\r\nDusk runtime has not booted yet. Please wait and try again.");
 		exitPassthrough();
@@ -110,94 +110,41 @@ async function node(args, term) {
 
 	const username = await window.parent.tb.user.username();
 
-	const isJshMode = args.j === true || args.jsh === true;
-
 	window.parent.tb.setCommandProcessing(false);
 	term.focus();
 
-	const { _: positionalArguments, $0: _commandName, j: _shortJshFlag, jsh: _longJshFlag, _raw: _rawArgumentString, ...remainingFlags } = args;
+	displayOutput("Starting Python...");
+	setTabTitle("Python");
+
+	// args._ does NOT include the command name — it starts at the first real argument.
+	// e.g. "python ./script.py arg1" → args._ = ["./script.py", "arg1"]
+	const { _: positionalArguments, $0: _commandName, c: cFlag, _raw: _rawArgumentString, ...remainingFlags } = args;
 	const positionalArgs = positionalArguments || [];
-
-	// Build node argument list for non-interactive modes (file execution, -e, flags)
-	const nodeArgs = [];
-	if (!isJshMode) {
-		// Resolve the first positional argument (script path) if it exists
-		if (positionalArgs.length > 0) {
-			nodeArgs.push(resolvePath(String(positionalArgs[0]), path));
-			nodeArgs.push(...positionalArgs.slice(1)); // remaining args unchanged
-		}
-		for (const [key, value] of Object.entries(remainingFlags)) {
-			if (value === false) continue;
-			if (key.length === 1) {
-				nodeArgs.push(`-${key}`);
-				if (value !== true) nodeArgs.push(String(value));
-			} else {
-				if (value === true) {
-					nodeArgs.push(`--${key}`);
-				} else {
-					nodeArgs.push(`--${key}`, String(value));
-				}
-			}
-		}
-	}
-
-	const isInteractiveRepl = !isJshMode && nodeArgs.length === 0;
-
-	if (isJshMode) {
-		displayOutput("Starting Dusk JavaScript shell...");
-		setTabTitle("JSH: Terminal");
-	} else if (isInteractiveRepl) {
-		displayOutput("Starting Node.js REPL...");
-		setTabTitle("NodeJS");
-	} else {
-		displayOutput("Starting Node.js...");
-		setTabTitle("NodeJS");
-	}
+	const scriptPath = positionalArgs.length > 0 ? String(positionalArgs[0]) : null;
+	const cCommand = cFlag ? String(cFlag) : null;
 
 	try {
 		let process;
-
-		if (isJshMode) {
-			// jsh mode: use Dusk shell directly
-			process = await window.parent.tb.dusk.shell.spawn(undefined, {
+		if (cCommand) {
+			// -c mode: execute a string via python.spawn (internally calls python3 -c <cmd>)
+			process = await window.parent.tb.dusk.python.spawn(cCommand, {
 				pty: { cols: term.cols, rows: term.rows },
 				cwd: path,
 				env: await getDuskEnv(),
 			});
-		} else if (isInteractiveRepl) {
-			// Interactive REPL mode:
-			// /bin/node's REPL pump immediately sees EOF on stdin because it uses
-			// a non-blocking IPC read and treats null as EOF. dsh has a built-in
-			// hijack: when you type "node" at the dsh prompt, it runs its own
-			// runNodeRepl() which uses dsh's blocking readline — that works correctly.
-			// So we spawn dsh and programmatically send "node\n" as the first command.
-			process = await window.parent.tb.dusk.spawn("/bin/dsh", [], {
+		} else if (scriptPath) {
+			// Script file mode: resolve script path and pass all args to python3
+			// Example: "python ./script.py arg1 arg2" → args._ = ["./script.py", "arg1", "arg2"]
+			const resolvedScriptPath = resolvePath(scriptPath, path);
+			const pythonArgs = [resolvedScriptPath, ...positionalArgs.slice(1)];
+			process = await window.parent.tb.dusk.spawn("/bin/python3", pythonArgs, {
 				pty: { cols: term.cols, rows: term.rows },
 				cwd: path,
 				env: await getDuskEnv(),
 			});
-
-			const { cleanup } = setupDuskPty(process, term);
-
-			// Wait briefly for dsh to print its prompt, then send "node\n" to
-			// trigger the dsh-side interactive Node REPL hijack.
-			await new Promise(resolve => setTimeout(resolve, 100));
-			if (process.master) {
-				process.master.masterWrite(new TextEncoder().encode("node\n"));
-			} else {
-				await process.stdin.write(new TextEncoder().encode("node\n"));
-			}
-
-			const exitCode = await process.exit;
-
-			cleanup();
-			window.parent.tb.setCommandProcessing(true);
-			setTabTitle("Terbium TSH");
-			displayOutput(`\r\nNode.js exited with code ${exitCode}`); // auto-triggers exitPassthrough
-			return;
 		} else {
-			// Non-interactive: file execution, -e, --version, flags, etc.
-			process = await window.parent.tb.dusk.node.spawn(nodeArgs, {
+			// Interactive REPL mode
+			process = await window.parent.tb.dusk.python.spawn(undefined, {
 				pty: { cols: term.cols, rows: term.rows },
 				cwd: path,
 				env: await getDuskEnv(),
@@ -211,12 +158,12 @@ async function node(args, term) {
 		cleanup();
 		window.parent.tb.setCommandProcessing(true);
 		setTabTitle("Terbium TSH");
-		displayOutput(`\r\nNode.js exited with code ${exitCode}`); // auto-triggers exitPassthrough
+		displayOutput(`\r\nPython exited with code ${exitCode}`); // auto-triggers exitPassthrough
 	} catch (error) {
-		console.error("[Terminal] Node.js spawn error:", error);
+		console.error("[Terminal] Python spawn error:", error);
 		displayOutput(`\r\nError: ${error.message}`);
 		exitPassthrough();
 	}
 }
 
-node(args, term);
+python(args, term);

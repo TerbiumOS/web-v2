@@ -5,10 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terbium Browser</title>
     <link rel="stylesheet" href="./index.css">
+    <script src="/terbium-frameless.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 </head>
     <body class="start">
         <div class="topbar">
+            <div class="window-controls">
+                <button class="win-control win-minimize" onclick="tb.window.minimize()">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <rect x="2" y="5" width="8" height="2" rx="1" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button class="win-control win-maximize" onclick="tb.window.maximize()">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <rect x="2.5" y="2.5" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                    </svg>
+                </button>
+                <button class="win-control win-close" onclick="tb.window.close()">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 2.5L9.5 9.5M2.5 9.5L9.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
             <div class="tab-container">
                 <div class="tabs"></div>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="new-tab">
@@ -38,6 +56,25 @@
             </div>
         </div>
         <main></main>
+        <script>
+            TerbiumFrameless.init({
+                dragSelector: '.topbar',
+                noDragSelectors: [
+                    '.window-controls',
+                    '.win-control',
+                    '.tab-container .tabs',
+                    '.tabs .tab',
+                    '.new-tab',
+                    '.controls',
+                    '.navigation-button',
+                    '.searchbars',
+                    'input',
+                    'button',
+                    'a'
+                ],
+                enableDoubleClick: true
+            });
+        </script>
         <script src="./index.js"></script>
     </body>
 </html>

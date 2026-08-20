@@ -353,14 +353,11 @@ const SearchMenu: FC<SearchProps> = ({ className }) => {
 													size={app.size}
 													proxy={app.proxy}
 													snapable={app.snapable}
+													advanced={app.advanced}
 													onClick={() => {
 														createWindow({
-															src: app.src,
-															size: app.size,
+															...app,
 															icon: typeof app.icon === "string" ? app.icon : undefined,
-															title: app.title,
-															proxy: app.proxy,
-															snapable: app.snapable,
 														});
 														searchMenuStore.open = false;
 													}}

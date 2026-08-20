@@ -19,8 +19,9 @@ import { Anura } from "./liquor/Anura";
 import { LocalFS } from "./liquor/api/LocalFS";
 import { ExternalApp } from "./liquor/coreapps/ExternalApp";
 import { ExternalLib } from "./liquor/libs/ExternalLib";
-import { initializeWebContainer } from "./Node/runtimes/Webcontainers/nodeProc";
-import parse from "./Parser";
+import { WebContainerShim } from "./Node/compatibility/nodeShim";
+import { initializeDusk, stopDusk, getDuskInstance, getServerRegistry } from "./Node/runtimes/Dusk/duskRuntime";
+import type { SpawnOptions } from "@nightnetwork/dusk";
 import { useWindowStore } from "./Store";
 import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
 import { vFS } from "./vFS";
@@ -1180,12 +1181,119 @@ export default async function Api() {
 					await window.tb.fs.promises.writeFile(`/home/${info.username}/settings.json`, JSON.stringify(data.settings[0].settings, null, 2), "utf8");
 					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/files/davs.json`, JSON.stringify(data.settings[0].davs, null, 2), "utf8");
 					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/app store/repos.json`, JSON.stringify(data.settings[0].apps.repos || [], null, 2), "utf8");
+					if (data.settings[0].apps.installed && Array.isArray(data.settings[0].apps.installed)) {
+						const cloudAppUrls = data.settings[0].apps.installed;
+						console.log("[TAUTH] Cloud app URLs:", cloudAppUrls);
+						const installedApps = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
+						const installedUrls: string[] = [];
+						for (const app of installedApps) {
+							try {
+								const config = JSON.parse(await window.tb.fs.promises.readFile(app.config, "utf8"));
+								if (config["pkg-download"]) {
+									installedUrls.push(config["pkg-download"]);
+								} else if (config["anura-pkg"]) {
+									installedUrls.push(config["anura-pkg"]);
+								}
+							} catch (err) {
+								console.error(err);
+							}
+						}
+						const appsToInstall = cloudAppUrls.filter((url: string) => !installedUrls.includes(url));
+						if (appsToInstall.length > 0) {
+							console.log("[TAUTH] Installing missing apps from cloud:", appsToInstall);
+							await window.tb.notification.Installing(
+								{
+									message: `Syncing ${appsToInstall.length} app${appsToInstall.length > 1 ? "s" : ""} from Terbium Cloud`,
+									application: "System",
+									iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+								},
+								async () => {
+									for (const appUrl of appsToInstall) {
+										try {
+											const fileName = appUrl.split("/").pop() || "app.zip";
+											const appName = fileName.replace(/\.(zip|tapp)$/, "");
+											await window.tb.system.download(appUrl, `/apps/system/${appName}.zip`);
+											const response = await fetch(`/fs/apps/system/${appName}.zip`);
+											const zipFileContent = await response.arrayBuffer();
+											const targetDir = `/apps/system/${appName}.tapp/`;
+											// @ts-expect-error
+											await window.tb.fs.promises.mkdir(targetDir, { recursive: true });
+											const compressedFiles = window.tb.fflate.unzipSync(new Uint8Array(zipFileContent));
+											for (const [relativePath, content] of Object.entries(compressedFiles)) {
+												const fullPath = `${targetDir}${relativePath}`;
+												if (!relativePath.endsWith("/")) {
+													const pathParts = fullPath.split("/");
+													let currentPath = "";
+													for (let i = 0; i < pathParts.length - 1; i++) {
+														currentPath += pathParts[i] + "/";
+														try {
+															await window.tb.fs.promises.mkdir(currentPath);
+														} catch {}
+													}
+													await window.tb.fs.promises.writeFile(fullPath, window.tb.buffer.from(content));
+												}
+											}
+											await window.tb.fs.promises.unlink(`/apps/system/${appName}.zip`);
+											const appData = JSON.parse(await window.tb.fs.promises.readFile(`${targetDir}.tbconfig`, "utf8"));
+											await window.tb.launcher.addApp({
+												// @ts-expect-error
+												title:
+													typeof appData.wmArgs.title === "object"
+														? {
+																text: appData.wmArgs.title.text,
+																weight: appData.wmArgs.title.weight,
+																html: appData.wmArgs.title.html,
+															}
+														: appData.wmArgs.title,
+												name: appData.title,
+												icon: `/fs/apps/system/${appName}.tapp/${appData.icon}`,
+												src: `/fs/apps/system/${appName}.tapp/${appData.wmArgs.src}`,
+												size: {
+													width: appData.wmArgs.size.width,
+													height: appData.wmArgs.size.height,
+												},
+												single: appData.wmArgs.single,
+												resizable: appData.wmArgs.resizable,
+												controls: appData.wmArgs.controls,
+												message: appData.wmArgs.message,
+												snapable: appData.wmArgs.snapable,
+												advanced: appData.wmArgs.advanced,
+											});
+											installedApps.push({
+												name: appData.title,
+												user: await window.tb.user.username(),
+												config: `${targetDir}.tbconfig`,
+											});
+											console.log(`[TAUTH] Installed ${appData.title} from cloud`);
+										} catch (err) {
+											console.error(`[TAUTH] Failed to install app from ${appUrl}:`, err);
+										}
+									}
+									await window.tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify(installedApps, null, 2));
+								},
+								{
+									message: "Synced apps from Terbium Cloud",
+									application: "System",
+									iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+									time: 3000,
+								},
+								{
+									message: "Failed to sync apps from cloud",
+									application: "System",
+									iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+									time: 3000,
+								},
+							);
+						} else {
+							console.log("[TAUTH] All cloud apps are already installed");
+						}
+					}
 					window.dispatchEvent(new Event("updWallpaper"));
 					window.dispatchEvent(new CustomEvent("proxy-change"));
 					window.dispatchEvent(new Event("upd-accent"));
 					window.tb.tauth.sync.isSyncing = false;
 				},
-				upload: async () => {
+				upload: async (force = false) => {
 					const info = await window.tb.tauth.getInfo();
 					if (!info) throw new Error("No TACC info found");
 					window.tb.tauth.sync.isSyncing = true;
@@ -1210,12 +1318,42 @@ export default async function Api() {
 						reader.readAsDataURL(blob);
 						settings.wallpaper = await dataURL;
 					}
+					const installedApps = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
+					const appUrls: string[] = [];
+					for (const app of installedApps) {
+						try {
+							const configContent = await window.tb.fs.promises.readFile(app.config, "utf8");
+							const config = JSON.parse(configContent);
+							if (config["pkg-download"]) {
+								appUrls.push(config["pkg-download"]);
+							} else if (config["anura-pkg"]) {
+								appUrls.push(config["anura-pkg"]);
+							}
+						} catch (err) {
+							console.warn(`[TAUTH] Could not read config for ${app.name}:`, err);
+						}
+					}
+					if (!force) {
+						try {
+							const cloudData = await getinfo(null, null, "tbs");
+							const cloudAppUrls = cloudData.settings[0]?.apps?.installed || [];
+							const localSorted = [...appUrls].sort();
+							const cloudSorted = [...cloudAppUrls].sort();
+							if (JSON.stringify(localSorted) === JSON.stringify(cloudSorted)) {
+								console.log("[TAUTH] App list unchanged, skipping upload");
+								window.tb.tauth.sync.isSyncing = false;
+								return;
+							}
+						} catch (err) {
+							console.warn("[TAUTH] Could not check cloud state, uploading anyway:", err);
+						}
+					}
 					const toupload = [
 						{
 							settings: settings,
 							apps: {
 								repos: JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/app store/repos.json`, "utf8")),
-								installed: [],
+								installed: appUrls,
 							},
 							davs: davs,
 						},
@@ -1236,20 +1374,144 @@ export default async function Api() {
 			},
 		},
 		node: {
-			webContainer: {},
-			servers: new Map<number, string>(),
-			isReady: false,
-			start: () => {
-				initializeWebContainer();
-			},
-			stop: () => {
-				if (window.tb.node.isReady) {
-					// @ts-expect-error
-					window.tb.node.webContainer.teardown();
-					window.tb.node.isReady = false;
-					return true;
+			// @ts-expect-error
+			_shimInstance: null as WebContainerShim | null,
+			get webContainer() {
+				if (!window.tb.dusk.isReady) {
+					return {};
 				}
-				throw new Error("No WebContainer is running");
+				// @ts-expect-error
+				if (!this._shimInstance) {
+					// @ts-expect-error
+					this._shimInstance = new WebContainerShim();
+				}
+				// @ts-expect-error
+				return this._shimInstance;
+			},
+			get servers(): Map<number, string> {
+				return window.tb.dusk.servers;
+			},
+			get isReady(): boolean {
+				return window.tb.dusk.isReady;
+			},
+			start() {
+				console.warn("[tb.node] DEPRECATED: Use tb.dusk.start() instead. tb.node will be removed in v3.0.");
+				return window.tb.dusk.start();
+			},
+			stop() {
+				console.warn("[tb.node] DEPRECATED: Use tb.dusk.stop() instead. tb.node will be removed in v3.0.");
+				return window.tb.dusk.stop();
+			},
+		},
+		dusk: {
+			get runtime() {
+				return getDuskInstance();
+			},
+			get processManager() {
+				return getDuskInstance()?.processManager ?? null;
+			},
+			get isReady() {
+				return getDuskInstance() !== null;
+			},
+			get servers() {
+				return getServerRegistry()?.getAll() ?? new Map<number, string>();
+			},
+			async start() {
+				try {
+					await initializeDusk();
+				} catch (error) {
+					console.error("[Dusk] start failed:", error);
+					throw new Error(`Dusk start failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+			async stop() {
+				try {
+					return await stopDusk();
+				} catch (error) {
+					console.error("[Dusk] stop failed:", error);
+					throw new Error(`Dusk stop failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+			async spawn(cmd: string, args?: string[], options?: SpawnOptions) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				try {
+					return await instance.processManager.spawn(cmd, args, options);
+				} catch (error) {
+					console.error(`[Dusk] Failed to spawn ${cmd}:`, error);
+					throw new Error(`Process spawn failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+			async spawnSync(cmd: string, args?: string[], options?: SpawnOptions) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				try {
+					return await instance.processManager.spawnSync(cmd, args, options);
+				} catch (error) {
+					console.error(`[Dusk] Failed to spawnSync ${cmd}:`, error);
+					throw new Error(`Process spawnSync failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+			async feed(line: string) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				try {
+					return await instance.feed(line);
+				} catch (error) {
+					console.error("[Dusk] feed failed:", error);
+					throw new Error(`feed failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+			node: {
+				async spawn(args?: string[], options?: SpawnOptions) {
+					return await window.tb.dusk.spawn("/bin/node", args, options);
+				},
+			},
+			shell: {
+				async spawn(command?: string, options?: SpawnOptions) {
+					const shellArgs = command ? ["-c", command] : [];
+					return await window.tb.dusk.spawn("/bin/dsh", shellArgs, options);
+				},
+			},
+			python: {
+				async spawn(script?: string, options?: SpawnOptions) {
+					const pythonArgs = script ? ["-c", script] : [];
+					return await window.tb.dusk.spawn("/bin/python3", pythonArgs, options);
+				},
+			},
+			sqlite: {
+				async spawn(database?: string, options?: SpawnOptions) {
+					const sqliteArgs = database ? [database] : [];
+					return await window.tb.dusk.spawn("/bin/sqlite3", sqliteArgs, options);
+				},
+			},
+			resizePty(pid: number, cols: number, rows: number) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				instance.processManager.resizePty(pid, cols, rows);
+			},
+			killProcess(pid: number) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				const proc = instance.processManager.getProcess(pid);
+				if (proc) {
+					proc.kill();
+				}
+			},
+			listProcesses() {
+				const instance = getDuskInstance();
+				if (!instance) return [];
+				return instance.processManager.activePids();
 			},
 		},
 		crypto: async (pass: string, file?: string) => {
@@ -1311,7 +1573,6 @@ export default async function Api() {
 					if (proc.type === "window") {
 						clearInfo();
 						useWindowStore.getState().killWindow(String(pd));
-						delete window.tb.process.procs[proc.pid];
 					} else if (proc.type === "runtime") {
 						delete window.tb.process.procs[proc.pid];
 						if (proc.onKill) proc.onKill();
@@ -1324,8 +1585,8 @@ export default async function Api() {
 				return window.tb.process.procs;
 			},
 			parse: {
-				build(src: string) {
-					parse.build(src);
+				build(_src: string) {
+					throw new Error("TML (Terbium Markup Language) has been deprecated and removed in Terbium v2.5. Please use the new WindowConfig.advanced system for custom window chrome. For more information, visit: https://corporate.terbiumon.top/support/kb/41827563");
 				},
 			},
 			create(type: "window" | "runtime", config: any) {
@@ -1464,13 +1725,16 @@ export default async function Api() {
 						case "audio":
 						case "pdf":
 							createWindow({
-								title: "Media Viewer",
+								title: {
+									text: "Media Viewer",
+									html: '<div id="mv-titlebar-search" style="display:flex;align-items:center;gap:8px;height:34px;width:100%;max-width:520px;padding:0 2px;margin-left:auto;"><div style="flex:1;display:flex;align-items:center;gap:8px;padding:0 10px;height:28px;border-radius:8px;background:#ffffff1e;box-shadow:inset 0 0 0 1px #ffffff10;"><input id="mv-search-input" type="search" placeholder="Search Gallery" style="width:100%;background:transparent;border:none;outline:none;color:#ffffffd9;font-size:12px;font-weight:700;text-align:center;" /><span id="mv-search-icon" style="display:inline-flex;align-items:center;justify-content:center;color:#ffffff72;font-size:14px;">&#8981;</span></div></div>',
+								},
 								src: "/fs/apps/system/media viewer.tapp/index.html",
 								size: {
-									width: 460,
-									height: 460,
-									minWidth: 160,
-									minHeight: 160,
+									width: 1000,
+									height: 650,
+									minWidth: 640,
+									minHeight: 420,
 								},
 								icon: "/fs/apps/system/media viewer.tapp/icon.svg",
 								message: JSON.stringify(message),
@@ -1739,5 +2003,5 @@ export default async function Api() {
 	}
 	launchProcs();
 	document.addEventListener("libcurl_load", wsld);
-	window.tb.node.webContainer = await initializeWebContainer();
+	window.tb.dusk.start();
 }

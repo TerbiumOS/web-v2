@@ -1,8 +1,5 @@
 const tb = parent.window.tb;
 const tb_island = tb.window.island;
-const tb_window = tb.window;
-const tb_context_menu = tb.context_menu;
-const tb_dialog = tb.dialog;
 
 tb_island.addControl({
 	text: "File",
@@ -17,9 +14,9 @@ tb_island.addControl({
 					await tb.dialog.FileBrowser({
 						title: "Select a file to view",
 						onOk: async file => {
-							const url = `${parent.window.location.origin}/fs/${file}`;
-							const ext = file.split(".").pop();
-							openFile(url, ext);
+							if (window.__mvOpenExternal) {
+								await window.__mvOpenExternal(file);
+							}
 						},
 					});
 				},
@@ -45,11 +42,15 @@ tb_island.addControl({
 				click: async () => {
 					const file = document.createElement("input");
 					file.type = "file";
-					file.accept = "image/*,video/*";
+					file.accept = "image/*,video/*,audio/*,application/pdf";
 					file.onchange = async () => {
-						const url = URL.createObjectURL(file.files[0]);
-						const ext = file.files[0].name.split(".").pop();
-						openFile(url, ext);
+						const picked = file.files[0];
+						if (!picked) return;
+						const url = URL.createObjectURL(picked);
+						const ext = picked.name.split(".").pop();
+						if (window.__mvOpenBlobFile) {
+							await window.__mvOpenBlobFile(url, ext, picked.name);
+						}
 					};
 					file.click();
 				},

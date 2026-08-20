@@ -102,6 +102,7 @@ export async function init() {
 
 	if (!(await dirExists(`/home/${user}`))) {
 		await window.tb.fs.promises.mkdir(`/home/${user}`);
+		const defaultWispServer = (import.meta.env.VITE_WISP_SERVER as string | undefined) || `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`;
 		let userSettings: UserSettings = {
 			wallpaper: "/assets/wallpapers/1.png",
 			wallpaperMode: "cover",
@@ -109,7 +110,7 @@ export async function init() {
 			// @ts-expect-error
 			proxy: sessionStorage.getItem("selectedProxy") || "Scramjet",
 			transport: sessionStorage.getItem("selectedTransport") || "Default (Libcurl)",
-			wispServer: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`,
+			wispServer: defaultWispServer,
 			"battery-percent": false,
 			accent: "#32ae62",
 			times: {

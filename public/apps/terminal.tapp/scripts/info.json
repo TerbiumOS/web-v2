@@ -88,10 +88,10 @@
 	},
 	{
 		"name": "node",
-		"description": "Run JavaScript with Node.js runtime",
+		"description": "Run JavaScript with Node.js via Dusk runtime",
 		"usage": "node [options] [script.js] [arguments]",
 		"options": {
-			"-j, --jsh": "Launch the WebContainer JavaScript shell (jsh) instead of Node.js. When this flag is used, no other arguments are passed to the shell.",
+			"-j, --jsh": "Launch the Dusk JavaScript shell (jsh) instead of Node.js. When this flag is used, no other arguments are passed to the shell.",
 			"-c, --check": "Check the script's syntax without executing it. Exits with an error code if script is invalid.",
 			"-e, --eval string": "Evaluate string as JavaScript.",
 			"-h, --help": "Print command-line options. The output of this option is less detailed than this document.",
@@ -193,6 +193,31 @@
 		}
 	},
 	{
+		"name": "dsh",
+		"description": "Dusk Shell — POSIX-compatible shell with built-in commands",
+		"usage": "dsh [command]",
+		"options": {
+			"[command]": "Run a shell command and exit. Without arguments, starts an interactive shell."
+		}
+	},
+	{
+		"name": "python",
+		"description": "Python 3 interpreter via Dusk runtime",
+		"usage": "python [options] [script.py]",
+		"options": {
+			"-c cmd": "Execute Python code passed as string",
+			"-i": "Start interactive REPL"
+		}
+	},
+	{
+		"name": "sqlite",
+		"description": "SQLite 3 database CLI via Dusk runtime",
+		"usage": "sqlite [database]",
+		"options": {
+			":memory:": "Open an in-memory database (default)"
+		}
+	},
+	{
 		"name": "ping",
 		"description": "Allows you to ping a site",
 		"usage": "ping [url], -t [pingtime]"
@@ -245,7 +270,7 @@
 	},
 	{
 		"name": "ssh",
-		"description": "Connect to a remote server via SSH (uses WebContainer or libcurl.js)",
+		"description": "Connect to a remote server via SSH (uses Dusk runtime or libcurl.js)",
 		"usage": "ssh [user@]hostname [options]",
 		"options": {
 			"--host": "Remote host to connect to",

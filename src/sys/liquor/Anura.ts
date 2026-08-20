@@ -29,7 +29,7 @@ export class Anura {
 	version = {
 		semantic: {
 			major: "2",
-			minor: "1",
+			minor: "2",
 			patch: "0",
 		},
 		buildstate: "Stable",

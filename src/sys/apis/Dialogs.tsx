@@ -1,9 +1,10 @@
 import { dialogProps } from "../types";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import "../gui/styles/dialog.css";
-import "../gui/styles/cropper.css";
-import Cropper from "cropperjs";
+import Cropper from "react-easy-crop";
+import type { Area } from "react-easy-crop";
 import Compressor from "compressorjs";
+import { getCroppedImg } from "../../utils/cropImage";
 
 export type dialogType = "alert" | "message" | "select" | "auth" | "permissions" | "filebrowser" | "directorybrowser" | "savefile" | "cropper" | "webauth";
 
@@ -1145,32 +1146,18 @@ export function SaveFile({ title, defualtDir, filename, local, onOk, onCancel }:
 }
 
 export function Crop({ title, img, onOk, onCancel }: dialogProps) {
-	const imgRef = useRef<HTMLImageElement>(null);
-	const cropperRef = useRef<Cropper | null>(null);
-	useEffect(() => {
-		if (imgRef.current && img) {
-			imgRef.current.src = img;
-			cropperRef.current = new Cropper(imgRef.current, {
-				aspectRatio: 1,
-				viewMode: 1,
-				cropBoxResizable: false,
-				movable: true,
-				rotatable: true,
-				scalable: true,
-				responsive: true,
-			});
-		}
-		return () => {
-			if (cropperRef.current) {
-				cropperRef.current.destroy();
-			}
-		};
-	}, [img]);
-	const onSave = () => {
-		if (!cropperRef.current) return;
-		const canvas = cropperRef.current.getCroppedCanvas();
-		canvas.toBlob((blob: any) => {
-			new Compressor(blob as Blob, {
+	const [crop, setCrop] = useState({ x: 0, y: 0 });
+	const [zoom, setZoom] = useState(1);
+	const [rotation, setRotation] = useState(0);
+	const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+	const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
+		setCroppedAreaPixels(croppedAreaPixels);
+	}, []);
+	const onSave = async () => {
+		if (!croppedAreaPixels || !img) return;
+		try {
+			const croppedBlob = await getCroppedImg(img, croppedAreaPixels, rotation);
+			new Compressor(croppedBlob, {
 				quality: 0.5,
 				success(result) {
 					const reader = new FileReader();
@@ -1185,7 +1172,9 @@ export function Crop({ title, img, onOk, onCancel }: dialogProps) {
 					};
 				},
 			});
-		});
+		} catch (error) {
+			console.error("Error cropping image:", error);
+		}
 	};
 	const Cancel = () => {
 		removeFn();
@@ -1197,7 +1186,20 @@ export function Crop({ title, img, onOk, onCancel }: dialogProps) {
 		<div className="fixed inset-0 z-999999999 flex flex-col items-center justify-center bg-[#00000078] backdrop-blur-xs duration-150">
 			<div className="flex flex-col p-2.5 gap-2.5 backdrop-blur-md rounded-lg sm:min-w-[340px] md:min-w-[400px] lg:min-w-[600px] bg-[#ffffff18] text-white shadow-tb-border-shadow duration-150">
 				<div className="font-extrabold text-xl leading-none select-none">{title}</div>
-				<img ref={imgRef} className="w-full h-24"></img>
+				<div className="relative w-full h-[400px] bg-black rounded-md overflow-hidden">
+					<Cropper image={img} crop={crop} zoom={zoom} rotation={rotation} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onRotationChange={setRotation} onCropComplete={onCropComplete} cropShape="round" showGrid={false} />
+				</div>
+				<div className="flex flex-col gap-2">
+					<div className="flex items-center gap-2">
+						<label className="text-sm text-[#ffffffcc] min-w-[60px]">Zoom:</label>
+						<input type="range" min={1} max={3} step={0.1} value={zoom} onChange={e => setZoom(Number(e.target.value))} className="flex-1" />
+					</div>
+					<div className="flex items-center gap-2">
+						<label className="text-sm text-[#ffffffcc] min-w-[60px]">Rotation:</label>
+						<input type="range" min={0} max={360} step={1} value={rotation} onChange={e => setRotation(Number(e.target.value))} className="flex-1" />
+						<span className="text-sm text-[#ffffffcc] min-w-[40px]">{rotation}°</span>
+					</div>
+				</div>
 				<div className="flex justify-between">
 					<button className="p-2 text-[#ffffff78] cursor-pointer hover:text-white duration-150" onMouseDown={Cancel}>
 						Cancel
