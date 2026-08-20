@@ -1,7 +1,7 @@
 {
 	"name": "tb-v2",
 	"private": true,
-	"version": "2.5.0",
+	"version": "2.5.0-dev",
 	"type": "module",
 	"scripts": {
 		"start": "npm run build && tsx bootstrap.ts",
@@ -39,10 +39,10 @@
 		"path-browserify": "^1.0.1",
 		"react": "^19.2.7",
 		"react-dom": "^19.2.7",
-		"zustand": "5.0.14"
+		"zustand": "5.0.15"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.5.7",
+		"@biomejs/biome": "2.5.8",
 		"@eslint/js": "^10.0.1",
 		"@tailwindcss/postcss": "^4.3.2",
 		"@terbiumos/tsl-linter": "1.0.1",
@@ -62,8 +62,8 @@
 		"open": "^11.0.0",
 		"postcss": "^8.5.16",
 		"tailwindcss": "^4.3.2",
-		"tsx": "^4.22.5",
-		"typescript": "^6.0.3",
+		"tsx": "^4.23.12",
+		"typescript": "^7.0.2",
 		"typescript-eslint": "^8.62.1",
 		"vite": "^8.1.3",
 		"vite-plugin-static-copy": "^3.4.0"

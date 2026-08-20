@@ -20,6 +20,7 @@ export type TDockItem = {
 	user?: string;
 	onClick?: (e: MouseEvent) => void;
 	onContextMenu?: (e: MouseEvent) => void;
+	advanced: WindowConfig["advanced"];
 };
 
 export type TStartItem = {
@@ -33,6 +34,7 @@ export type TStartItem = {
 	proxy?: boolean;
 	size?: { width: number; height: number };
 	snapable?: boolean;
+	advanced: WindowConfig["advanced"];
 };
 
 interface IDockProps {
@@ -384,17 +386,12 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 								size={item.size}
 								proxy={item.proxy}
 								snapable={item.snapable}
+								advanced={item.advanced}
 								onClick={() => {
 									item.onClick?.(new MouseEvent("click"));
 									windowStore.addWindow({
-										src: item.src,
-										size: item.size,
+										...item,
 										icon: typeof item.icon === "string" ? item.icon : undefined,
-										title: item.title,
-										proxy: item.proxy,
-										snapable: item.snapable,
-										// @ts-expect-error - Pass through advanced config if present
-										advanced: item.advanced,
 									});
 									setStartOpen(false);
 								}}
@@ -423,17 +420,12 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 												size={item.size}
 												proxy={item.proxy}
 												snapable={item.snapable}
+												advanced={item.advanced}
 												onClick={(e: MouseEvent) => {
 													if (e.button === 0) item.onClick?.(new MouseEvent("click"));
 													windowStore.addWindow({
-														src: item.src,
+														...item,
 														icon: typeof item.icon === "string" ? item.icon : undefined,
-														size: item.size,
-														title: item.title,
-														proxy: item.proxy,
-														snapable: item.snapable,
-														// @ts-expect-error - Pass through advanced config if present
-														advanced: item.advanced,
 													});
 													setStartOpen(false);
 												}}
@@ -555,6 +547,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 									size={item.size}
 									proxy={item.proxy}
 									snapable={item.snapable}
+									advanced={item.advanced}
 									onContextMenu={(e: MouseEvent) => {
 										e.preventDefault();
 									}}
@@ -573,7 +566,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 						{windowStore.windows
 							.filter((item, index, self) => index === self.findIndex(t => (typeof t.title === "string" ? t.title : t.title?.text) === (typeof item.title === "string" ? item.title : item.title?.text)))
 							.map((item, index) => (
-								<DockItem src={item.src} key={index} title={typeof item.title === "string" ? item.title : item.title.text} icon={item.icon ?? "/assets/img/null.svg"} size={item.size} proxy={item.proxy} wid={item.wid} pid={item.pid} />
+								<DockItem src={item.src} key={index} title={typeof item.title === "string" ? item.title : item.title.text} icon={item.icon ?? "/assets/img/null.svg"} size={item.size} proxy={item.proxy} wid={item.wid} pid={item.pid} advanced={item.advanced} />
 							))}
 					</div>
 				</div>
@@ -582,7 +575,7 @@ const Dock: FC<IDockProps> = ({ pinned }) => {
 	);
 };
 
-const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onContextMenu, size, snapable, pid, wid, proxy }) => {
+const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onContextMenu, size, snapable, pid, wid, proxy, advanced }) => {
 	const windows = useWindowStore(s => s.windows);
 	const matchedWindows = useWindowStore(s => s.matchedWindows);
 	const addWindow = useWindowStore(s => s.addWindow);
@@ -704,6 +697,7 @@ const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onConte
 									title: title,
 									proxy: proxy,
 									snapable: snapable,
+									advanced: advanced,
 								});
 							},
 						},
@@ -746,7 +740,7 @@ const DockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onConte
 	);
 };
 
-const PinnedDockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onContextMenu, size, snapable, proxy }) => {
+const PinnedDockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, onContextMenu, size, snapable, proxy, advanced }) => {
 	const addWindow = useWindowStore(s => s.addWindow);
 	const windowStore = { addWindow };
 	return (
@@ -767,6 +761,7 @@ const PinnedDockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, o
 					title: title,
 					proxy: proxy,
 					snapable: snapable,
+					advanced: advanced,
 				});
 			}}
 			onContextMenuCapture={(e: React.MouseEvent) => {
@@ -787,6 +782,7 @@ const PinnedDockItem: FC<TDockItem> = ({ className, icon, title, src, onClick, o
 									title: title,
 									proxy: proxy,
 									snapable: snapable,
+									advanced: advanced,
 								});
 							},
 						},
