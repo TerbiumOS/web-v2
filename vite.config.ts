@@ -11,6 +11,10 @@ config.config();
 
 // https://vitejs.dev/config/
 export default defineConfig({
+	json: {
+		namedExports: true,
+		stringify: false,
+	},
 	plugins: [
 		react(),
 		viteStaticCopy({
