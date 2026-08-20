@@ -1,5 +1,5 @@
 {
-	"name": "tb-v2",
+	"name": "@terbiumos/web-v2",
 	"private": true,
 	"version": "2.5.0-dev",
 	"type": "module",
@@ -28,7 +28,6 @@
 		"@terbiumos/tfs": "1.1.0-dev.1",
 		"better-auth": "^1.6.23",
 		"compressorjs": "^1.3.0",
-		"cropperjs": "1.6.2",
 		"crypto-js": "^4.2.0",
 		"dotenv": "^17.4.2",
 		"fflate": "^0.8.3",
@@ -39,6 +38,7 @@
 		"path-browserify": "^1.0.1",
 		"react": "^19.2.7",
 		"react-dom": "^19.2.7",
+		"react-easy-crop": "^6.2.3",
 		"zustand": "5.0.15"
 	},
 	"devDependencies": {

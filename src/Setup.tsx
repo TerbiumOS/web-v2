@@ -1,13 +1,12 @@
-import Cropper from "cropperjs";
-import Compressor from "compressorjs";
 import { useState, useRef, useEffect } from "react";
+import { createRoot } from "react-dom/client";
 import "./sys/gui/styles/login.css";
-import "./sys/gui/styles/cropper.css";
 import "./sys/gui/styles/oobe.css";
 import "./sys/gui/styles/dropdown.css";
 import pwd from "./sys/apis/Crypto";
 import { init } from "./init";
 import { fileExists, User } from "./sys/types";
+import { CropperModal } from "./components/CropperModal";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { libcurl } from "libcurl.js";
 import { auth, getinfo, setinfo } from "./sys/apis/utils/tauth";
@@ -56,118 +55,33 @@ export default function Setup() {
 	const makePFP = () => {
 		const uploader = document.createElement("input");
 		uploader.type = "file";
-		uploader.accept = "img/*";
+		uploader.accept = "image/*";
 		uploader.onchange = () => {
 			const files = uploader!.files;
 			const file = files![0];
 			const reader = new FileReader();
 			reader.onload = () => {
-				const img = document.createElement("img");
-				img.classList.add("opacity-0", "pointer-events-none");
-				img.src = reader.result as string;
-				img.onload = () => {
-					const cropper_container = document.createElement("div");
-					const cropper_container_styles = ["w-screen", "h-screen", "fixed", "top-0", "left-0", "right-0", "bottom-0", "z-999999", "bg-[#000000a6]", "flex", "flex-col", "justify-center", "items-center", "gap-[10px]"];
-					cropper_container_styles.forEach(style => cropper_container.classList.add(style));
-					const cropper_img_container = document.createElement("div");
-					cropper_img_container.className = "cropper-img-container";
-					let cropper_img_container_sizes = ["bg-[#ffffff0a]", "lg:w-[500px]", "lg:h-[500px]", "md:w-[400px]", "md:h-[400px]", "sm:w-[300px]", "sm:h-[300px]", "flex", "justify-center", "items-center", "rounded-[8px]", "overflow-hidden"];
-					cropper_img_container_sizes.forEach(size => cropper_img_container.classList.add(size));
-					const cropper_img = document.createElement("img");
-					cropper_img.src = img.src;
-					cropper_img.classList.add("cropper-img");
-					cropper_img_container.classList.add("w-[500px]");
-					cropper_img_container.classList.add("h-[500px]");
-					cropper_img.style.objectFit = "cover";
-					cropper_img.style.objectPosition = "center";
-					cropper_img_container.appendChild(cropper_img);
-					cropper_container.appendChild(cropper_img_container);
-					document.body.appendChild(cropper_container);
-					const cropper = new Cropper(cropper_img, { aspectRatio: 1, viewMode: 1, cropBoxResizable: false, movable: true, rotatable: true, scalable: true, responsive: true });
-					const buttons = document.createElement("div");
-					buttons.className = "flex w-[500px] justify-between items-center";
-					cropper_container.appendChild(buttons);
-					const save = document.createElement("button");
-					save.className = "save broken_button cursor-pointer";
-					save.innerText = "Save";
-					const save_styles = [
-						"bg-[#1d1d1d]",
-						"text-[#ffffff38]",
-						"border-[#ffffff22]",
-						"hover:bg-[#414141]",
-						"hover:text-[#ffffff8d]",
-						"focus:bg-[#ffffff1f]",
-						"focus:text-[#ffffff8d]",
-						"focus:border-[#73a9ffd6]",
-						"focus:ring-[#73a9ff74]",
-						"focus:outline-hidden",
-						"focus:ring-2",
-						"ring-[transparent]",
-						"ring-0",
-						"border-[1px]",
-						"font-[600]",
-						"px-[20px]",
-						"py-[8px]",
-						"h-[18px]",
-						"rounded-[6px]",
-						"transition",
-						"duration-150",
-					];
-					save_styles.forEach(style => save.classList.add(style));
-					save.onclick = () => {
-						const canvas = cropper.getCroppedCanvas();
-						const pfp = document.querySelector(".pfp");
-						canvas.toBlob(blob => {
-							new Compressor(blob as Blob, {
-								quality: 0.5,
-								success(result) {
-									const reader = new FileReader();
-									reader.readAsDataURL(result);
-									reader.onload = () => {
-										(pfp! as HTMLImageElement).style.background = `url(${reader.result})`;
-										(pfp! as HTMLImageElement).style.backgroundSize = "cover";
-										(pfp! as HTMLImageElement).style.backgroundPosition = "center";
-										(pfp! as HTMLImageElement).style.backgroundRepeat = "no-repeat";
-										(pfp! as HTMLImageElement).setAttribute("data-src", reader.result as string);
-										document.body.removeChild(cropper_container);
-									};
-								},
-							});
-						});
-					};
-					const cancel = document.createElement("button");
-					cancel.className = "cancel broken_button cursor-pointer";
-					cancel.innerText = "Cancel";
-					const cancel_styles = [
-						"bg-[#1d1d1d]",
-						"text-[#ffffff38]",
-						"border-[#ffffff22]",
-						"hover:bg-[#414141]",
-						"hover:text-[#ffffff8d]",
-						"focus:bg-[#ffffff1f]",
-						"focus:text-[#ffffff8d]",
-						"focus:border-[#73a9ffd6]",
-						"focus:ring-[#73a9ff74]",
-						"focus:outline-hidden",
-						"focus:ring-2",
-						"ring-[transparent]",
-						"ring-0",
-						"border-[1px]",
-						"font-[600]",
-						"px-[20px]",
-						"py-[8px]",
-						"h-[18px]",
-						"rounded-[6px]",
-						"transition",
-						"duration-150",
-					];
-					cancel_styles.forEach(style => cancel.classList.add(style));
-					cancel.onclick = () => {
-						document.body.removeChild(cropper_container);
-					};
-					buttons.appendChild(cancel);
-					buttons.appendChild(save);
+				const imageSrc = reader.result as string;
+				const modalContainer = document.createElement("div");
+				document.body.appendChild(modalContainer);
+				const root = createRoot(modalContainer);
+				const handleSave = (croppedImageDataUrl: string) => {
+					const pfp = document.querySelector(".pfp");
+					if (pfp) {
+						(pfp as HTMLImageElement).style.background = `url(${croppedImageDataUrl})`;
+						(pfp as HTMLImageElement).style.backgroundSize = "cover";
+						(pfp as HTMLImageElement).style.backgroundPosition = "center";
+						(pfp as HTMLImageElement).style.backgroundRepeat = "no-repeat";
+						(pfp as HTMLImageElement).setAttribute("data-src", croppedImageDataUrl);
+					}
+					root.unmount();
+					document.body.removeChild(modalContainer);
 				};
+				const handleCancel = () => {
+					root.unmount();
+					document.body.removeChild(modalContainer);
+				};
+				root.render(<CropperModal imageSrc={imageSrc} onSave={handleSave} onCancel={handleCancel} />);
 			};
 			reader.readAsDataURL(file);
 		};

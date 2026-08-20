@@ -51,6 +51,15 @@ async function pkg(args) {
 								await tb.launcher.removeApp(exactMatch.name);
 								await installApp(exactMatch, type, installed);
 								displayOutput(`${exactMatch.name} reinstalled successfully!`);
+								try {
+									const isTACC = await window.parent.tb.tauth.isTACC();
+									if (isTACC && !window.parent.tb.tauth.sync.isSyncing) {
+										await window.parent.tb.tauth.sync.upload();
+										console.log("[PKG] Synced installed apps to Terbium Cloud");
+									}
+								} catch (err) {
+									console.warn("[PKG] Failed to sync with cloud:", err);
+								}
 								createNewCommandInput();
 							} else {
 								createNewCommandInput();
@@ -62,6 +71,15 @@ async function pkg(args) {
 					} else {
 						await installApp(exactMatch, type, installed);
 						displayOutput(`${exactMatch.name} installed successfully!`);
+						try {
+							const isTACC = await window.parent.tb.tauth.isTACC();
+							if (isTACC && !window.parent.tb.tauth.sync.isSyncing) {
+								await window.parent.tb.tauth.sync.upload();
+								console.log("[PKG] Synced installed apps to Terbium Cloud");
+							}
+						} catch (err) {
+							console.warn("[PKG] Failed to sync with cloud:", err);
+						}
 						createNewCommandInput();
 						return;
 					}
@@ -115,6 +133,15 @@ async function pkg(args) {
 				} else {
 					displayOutput(`No installed app found with the name "${packageName}".`);
 				}
+				try {
+					const isTACC = await window.parent.tb.tauth.isTACC();
+					if (isTACC && !window.parent.tb.tauth.sync.isSyncing) {
+						await window.parent.tb.tauth.sync.upload();
+						console.log("[PKG] Synced installed apps to Terbium Cloud");
+					}
+				} catch (err) {
+					console.warn("[PKG] Failed to sync with cloud:", err);
+				}
 				createNewCommandInput();
 			} else {
 				displayOutput("Usage: pkg remove <package-name>");
@@ -145,6 +172,15 @@ async function pkg(args) {
 					await tb.sh.promises.rm(`/apps/system/${args._[1].toLowerCase()}.tapp/`, { recursive: true });
 					await installApp(exactMatch, "TAPP");
 					displayOutput(`${exactMatch.name} updated successfully!`);
+					try {
+						const isTACC = await window.parent.tb.tauth.isTACC();
+						if (isTACC && !window.parent.tb.tauth.sync.isSyncing) {
+							await window.parent.tb.tauth.sync.upload();
+							console.log("[PKG] Synced installed apps to Terbium Cloud");
+						}
+					} catch (err) {
+						console.warn("[PKG] Failed to sync with cloud:", err);
+					}
 					createNewCommandInput();
 				}
 			} else {

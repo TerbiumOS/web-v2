@@ -615,7 +615,7 @@ async function install(app, type) {
 							{
 								name: app.name,
 								user: await window.parent.tb.user.username(),
-								config: `/apps/system/${app.name}.tapp/.tbconfig`,
+								config: `/apps/user/${await window.parent.tb.user.username()}/${app.name}/index.json`,
 							},
 						]),
 					);
@@ -629,6 +629,15 @@ async function install(app, type) {
 						window.parent.tb.system.openApp(app.name);
 					},
 				});
+				try {
+					const isTACC = await window.parent.tb.tauth.isTACC();
+					if (isTACC && !window.parent.tb.tauth.sync.isSyncing) {
+						await window.parent.tb.tauth.sync.upload();
+						console.log("[App Store] Synced installed apps to Terbium Cloud");
+					}
+				} catch (err) {
+					console.warn("[App Store] Failed to sync with cloud:", err);
+				}
 				return true;
 			} catch (e) {
 				console.error("Error installing the app:", e);
@@ -692,6 +701,15 @@ async function install(app, type) {
 					window.parent.tb.system.openApp(app.name);
 				},
 			});
+			try {
+				const isTACC = await window.parent.tb.tauth.isTACC();
+				if (isTACC && !window.parent.tb.tauth.sync.isSyncing) {
+					await window.parent.tb.tauth.sync.upload();
+					console.log("[App Store] Synced installed apps to Terbium Cloud");
+				}
+			} catch (err) {
+				console.warn("[App Store] Failed to sync with cloud:", err);
+			}
 			return true;
 		case "tb-liq":
 		case "Anura":
@@ -751,6 +769,15 @@ async function install(app, type) {
 						window.parent.tb.system.openApp(app.name);
 					},
 				});
+				try {
+					const isTACC = await window.parent.tb.tauth.isTACC();
+					if (isTACC && !window.parent.tb.tauth.sync.isSyncing) {
+						await window.parent.tb.tauth.sync.upload();
+						console.log("[App Store] Synced installed apps to Terbium Cloud");
+					}
+				} catch (err) {
+					console.warn("[App Store] Failed to sync with cloud:", err);
+				}
 				return true;
 			} catch (e) {
 				console.error("Error installing the app:", e);
@@ -795,6 +822,15 @@ async function uninstall(app, type) {
 				iconSrc: "/fs/apps/system/app store.tapp/icon.svg",
 				time: 5000,
 			});
+			try {
+				const isTACC = await window.parent.tb.tauth.isTACC();
+				if (isTACC && !window.parent.tb.tauth.sync.isSyncing) {
+					await window.parent.tb.tauth.sync.upload();
+					console.log("[App Store] Synced installed apps to Terbium Cloud");
+				}
+			} catch (err) {
+				console.warn("[App Store] Failed to sync with cloud:", err);
+			}
 			break;
 		case "tb-PWA":
 			const web_apps = JSON.parse(await window.parent.tb.fs.promises.readFile("/apps/web_apps.json", "utf8"));
@@ -819,6 +855,15 @@ async function uninstall(app, type) {
 				iconSrc: "/fs/apps/system/app store.tapp/icon.svg",
 				time: 5000,
 			});
+			try {
+				const isTACC = await window.parent.tb.tauth.isTACC();
+				if (isTACC && !window.parent.tb.tauth.sync.isSyncing) {
+					await window.parent.tb.tauth.sync.upload();
+					console.log("[App Store] Synced installed apps to Terbium Cloud");
+				}
+			} catch (err) {
+				console.warn("[App Store] Failed to sync with cloud:", err);
+			}
 			break;
 		case "Anura":
 		case "tb-liq":
@@ -838,6 +883,15 @@ async function uninstall(app, type) {
 				iconSrc: "/fs/apps/system/app store.tapp/icon.svg",
 				time: 5000,
 			});
+			try {
+				const isTACC = await window.parent.tb.tauth.isTACC();
+				if (isTACC && !window.parent.tb.tauth.sync.isSyncing) {
+					await window.parent.tb.tauth.sync.upload();
+					console.log("[App Store] Synced installed apps to Terbium Cloud");
+				}
+			} catch (err) {
+				console.warn("[App Store] Failed to sync with cloud:", err);
+			}
 			break;
 	}
 }
