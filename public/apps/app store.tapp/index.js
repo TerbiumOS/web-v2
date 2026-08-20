@@ -599,6 +599,7 @@ async function install(app, type) {
 					controls: appData.wmArgs.controls,
 					message: appData.wmArgs.message,
 					snapable: appData.wmArgs.snapable,
+					advanced: appData.wmArgs.advanced,
 				});
 				try {
 					let apps = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/installed.json`, "utf8"));
@@ -669,6 +670,7 @@ async function install(app, type) {
 				message: app["wmArgs"]["message"],
 				proxy: app["wmArgs"]["proxy"],
 				snapable: app["wmArgs"]["snapable"],
+				advanced: app["wmArgs"]["advanced"],
 			});
 			await window.parent.tb.fs.promises.mkdir(`/apps/user/${await window.parent.tb.user.username()}/${app.name}`);
 			await window.parent.tb.fs.promises.writeFile(`/apps/user/${await window.parent.tb.user.username()}/${app.name}/index.json`, JSON.stringify(app));

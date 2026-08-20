@@ -332,6 +332,7 @@ async function installApp(app, type) {
 				message: app["wmArgs"]["message"],
 				proxy: app["wmArgs"]["proxy"],
 				snapable: app["wmArgs"]["snapable"],
+				advanced: app["wmArgs"]["advanced"],
 			});
 			try {
 				let apps = JSON.parse(await window.parent.tb.fs.promises.readFile(`/apps/installed.json`, "utf8"));
@@ -385,6 +386,7 @@ async function installApp(app, type) {
 					controls: appData.wmArgs.controls,
 					message: appData.wmArgs.message,
 					snapable: appData.wmArgs.snapable,
+					advanced: appData.wmArgs.advanced,
 				});
 				await window.parent.tb.fs.promises.unlink(`${DLPath}.zip`);
 				try {
