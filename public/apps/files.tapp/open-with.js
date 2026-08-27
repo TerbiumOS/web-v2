@@ -180,6 +180,7 @@ async function installTappZip(path) {
 							controls: appData.wmArgs.controls,
 							message: appData.wmArgs.message,
 							snapable: appData.wmArgs.snapable,
+							advanced: appData.wmArgs.advanced,
 							user,
 						});
 						try {
