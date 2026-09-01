@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import type { Area } from "react-easy-crop";
 import Compressor from "compressorjs";
-import { getCroppedImg } from "../utils/cropImage";
+import { getCroppedImg } from "../../utils/cropImage";
 
 interface CropperModalProps {
 	imageSrc: string;

@@ -172,7 +172,7 @@ export async function CreateEnv() {
 		placeholder: "./data/reputation.json",
 		cancel: "default",
 	});
-	const masqr = await consola.prompt("Enable Masqr? (no): ", {
+	const activation = await consola.prompt("Enable MASQR-v2 Activation System? (no): ", {
 		type: "text",
 		default: "false",
 		placeholder: "no",
@@ -191,12 +191,11 @@ export async function CreateEnv() {
 		envContent += `VITE_WISP_SERVER=${externalWispServer}\n`;
 	}
 
-	if (masqr === "no" || masqr === "false" || masqr === "n") {
-		envContent += `MASQR=${false}\nPORT=${port}\nWISP_PORT=${wispPort}`;
+	if (activation === "no" || activation === "false" || activation === "n") {
+		envContent += `VITE_ACTIVATION_ENABLED=false\nPORT=${port}\nWISP_PORT=${wispPort}`;
 	} else {
-		const licenseServer = (await consola.prompt("Enter the masqr license server URL: ")) || "";
-		const whitelist = (await consola.prompt("Enter a comma separated array of domains to whitelist (Ex: ['https://balls.com', 'https://tomp.app']): ")) || [];
-		envContent += `MASQR=${true}\nPORT=${port}\nWISP_PORT=${wispPort}\nLICENSE_SERVER_URL=${licenseServer}\nWHITELISTED_DOMAINS=${whitelist}\n`;
+		const licenseServer = (await consola.prompt("Enter the MASQR-v2 license server URL (e.g., http://localhost:4000): ")) || "";
+		envContent += `VITE_ACTIVATION_ENABLED=true\nPORT=${port}\nWISP_PORT=${wispPort}\nLICENSE_SERVER_URL=${licenseServer}\n`;
 	}
 
 	fs.writeFileSync(".env", envContent);

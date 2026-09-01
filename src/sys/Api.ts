@@ -23,7 +23,7 @@ import { WebContainerShim } from "./Node/compatibility/nodeShim";
 import { initializeDusk, stopDusk, getDuskInstance, getServerRegistry } from "./Node/runtimes/Dusk/duskRuntime";
 import type { SpawnOptions } from "@nightnetwork/dusk";
 import { useWindowStore } from "./Store";
-import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
+import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig, wispServerUrl } from "./types";
 import { vFS } from "./vFS";
 import { auth, getinfo, setinfo } from "./apis/utils/tauth";
 import { launchProcs, addStartupProc, removeStartupProc, enableProc, disableProc } from "./apis/utils/startupHandler";
@@ -395,7 +395,7 @@ export default async function Api() {
 				window.scramjetTb = scramjetHandler;
 				if (settings.wispServer === null) {
 					// @ts-expect-error
-					window.tb.libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
+					window.tb.libcurl.set_websocket(wispServerUrl);
 				} else {
 					window.tb.libcurl.set_websocket(settings.wispServer);
 				}
@@ -703,7 +703,7 @@ export default async function Api() {
 						animations: true,
 						proxy: "Scramjet",
 						transport: "Default (Libcurl)",
-						wispServer: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`,
+						wispServer: wispServerUrl,
 						"battery-percent": false,
 						accent: "#32ae62",
 						times: {
@@ -1939,7 +1939,7 @@ export default async function Api() {
 	const wsld = async () => {
 		const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
 		if (settings.wispServer === null) {
-			libcurlload(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
+			libcurlload(wispServerUrl);
 		} else {
 			libcurlload(settings.wispServer);
 		}

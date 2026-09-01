@@ -42,15 +42,15 @@ This configuration will be used by both the browser proxy and the Dusk runtime (
 
 **Option 3: Hardcode before deployment**  
 If you wish to set a default Wisp server before deployment:
-1. Navigate to `src/init/index.ts`
+1. Navigate to `src/types.ts`
 2. Find the Wisp server configuration (around line 112)
 3. Replace the default expression:  
    ```typescript
-   wispServer: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`,
+   export const wispServerUrl = (import.meta.env.VITE_WISP_SERVER_URL as string) || `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`;
    ```
    With your Wisp server URL as a string:
    ```typescript
-   wispServer: "wss://your-wisp-server.example.com/wisp/",
+   export const wispServerUrl = "wss://your-wisp-server.example.com/wisp/",
    ```
 
 **Note:** The environment variable method (Option 2) is recommended as it allows you to change the Wisp server without modifying code.

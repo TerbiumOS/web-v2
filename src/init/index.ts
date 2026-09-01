@@ -1,6 +1,6 @@
 import apps from "../apps.json";
 import { hash } from "../hash.json";
-import { dirExists, type TAuthSSData, type UserSettings } from "../sys/types";
+import { dirExists, wispServerUrl, type TAuthSSData, type UserSettings } from "../sys/types";
 import { copyfs } from "./fs.init";
 
 export async function init() {
@@ -102,7 +102,6 @@ export async function init() {
 
 	if (!(await dirExists(`/home/${user}`))) {
 		await window.tb.fs.promises.mkdir(`/home/${user}`);
-		const defaultWispServer = (import.meta.env.VITE_WISP_SERVER as string | undefined) || `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`;
 		let userSettings: UserSettings = {
 			wallpaper: "/assets/wallpapers/1.png",
 			wallpaperMode: "cover",
@@ -110,7 +109,7 @@ export async function init() {
 			// @ts-expect-error
 			proxy: sessionStorage.getItem("selectedProxy") || "Scramjet",
 			transport: sessionStorage.getItem("selectedTransport") || "Default (Libcurl)",
-			wispServer: defaultWispServer,
+			wispServer: wispServerUrl,
 			"battery-percent": false,
 			accent: "#32ae62",
 			times: {

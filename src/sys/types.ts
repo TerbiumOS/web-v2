@@ -41,6 +41,7 @@ declare global {
 }
 
 export const isURL = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+export const wispServerUrl = (import.meta.env.VITE_WISP_SERVER_URL as string) || `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`;
 
 export const dirExists = async (path: string): Promise<boolean> => {
 	return new Promise(resolve => {

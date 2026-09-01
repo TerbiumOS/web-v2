@@ -9,9 +9,11 @@ import Loader from "./Loading.tsx";
 import Login from "./Login.tsx";
 import Recovery from "./Recovery.tsx";
 import Setup from "./Setup.tsx";
+import ActivationScreen from "./ActivationScreen.tsx";
 import { fileExists } from "./sys/types.ts";
 import Updater from "./Updater.tsx";
 import { ScramjetHandler } from "./sys/scramjet-handler.ts";
+import { isActivationEnabled, hasValidSession } from "./sys/apis/utils/masqr-auth.ts";
 const { Controller } = $scramjetController;
 
 const Root = () => {
@@ -92,7 +94,12 @@ const Root = () => {
 		} else if (sessionStorage.getItem("cusboot")) {
 			setPag(<CustomOS />);
 		} else {
-			setPag(<Boot />);
+			if (isActivationEnabled() && !hasValidSession()) {
+				setPag(<ActivationScreen />);
+				return;
+			} else {
+				setPag(<Boot />);
+			}
 		}
 	}, []);
 	return currPag;

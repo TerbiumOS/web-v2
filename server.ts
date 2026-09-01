@@ -2,9 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { Hono } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { cors } from "hono/cors";
-import { getCookie, setCookie } from "hono/cookie";
 import config from "dotenv";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { version } from "./package.json";
@@ -31,80 +29,12 @@ export function TServer() {
 		}),
 	);
 
-	const masqrCheck = process.env.MASQR && process.env.MASQR.toLowerCase() === "true";
-	if (masqrCheck) {
-		console.log("Masqr is Enabled");
+	const activationEnabled = process.env.VITE_ACTIVATION_ENABLED && process.env.VITE_ACTIVATION_ENABLED.toLowerCase() === "true";
+	if (activationEnabled) {
+		console.log("MASQR-v2 Activation is Enabled");
+		console.log(`License Server: ${process.env.LICENSE_SERVER_URL || "Not configured"}`);
 	} else {
-		console.log("Masqr is Disabled");
-	}
-
-	async function MasqFail(c: any) {
-		const host = c.req.header("host");
-		if (!host) {
-			return c.html(fs.readFileSync("fail.html", "utf8"));
-		}
-		const safeHost = host.split(":")[0].replace(/[^a-zA-Z0-9-_\.]/g, "");
-		const safeFilename = path.basename(`${safeHost}.html`);
-		const safeJoin = path.join(process.cwd(), "Masqrd", safeFilename);
-		try {
-			await fs.promises.access(safeJoin);
-			const failureFileLocal = await fs.promises.readFile(safeJoin, "utf8");
-			return c.html(failureFileLocal);
-		} catch {
-			return c.html(fs.readFileSync("fail.html", "utf8"));
-		}
-	}
-
-	if (masqrCheck) {
-		const whitelisted = (process.env.WHITELISTED_DOMAINS || "")
-			.split(",")
-			.map(s => s.trim())
-			.filter(Boolean);
-
-		app.use("*", async (c, next) => {
-			const host = c.req.header("host") ?? "";
-			if (host && whitelisted.includes(host)) {
-				await next();
-				return;
-			}
-			if (c.req.url.includes("/bare")) {
-				await next();
-				return;
-			}
-			if (getCookie(c, "authcheck")) {
-				await next();
-				return;
-			}
-			if (getCookie(c, "refreshcheck") !== "true") {
-				setCookie(c, "refreshcheck", "true", { maxAge: 10000 });
-				return await MasqFail(c);
-			}
-			const authheader = c.req.header("authorization");
-			if (!authheader) {
-				c.header("WWW-Authenticate", "Basic");
-				c.status(401);
-				return await MasqFail(c);
-			}
-			const token = authheader.split(" ")[1] ?? "";
-			let user = "";
-			let pass = "";
-			try {
-				const decoded = Buffer.from(token, "base64").toString();
-				[user, pass] = decoded.split(":");
-			} catch {
-				return await MasqFail(c);
-			}
-			const licenseResp = await fetch(`${process.env.LICENSE_SERVER_URL}${encodeURIComponent(pass)}&host=${encodeURIComponent(host)}`);
-			const licenseCheck = (await licenseResp.json())?.status;
-			console.log(`\x1b[0m${process.env.LICENSE_SERVER_URL}${pass}&host=${host} returned: ${licenseCheck}`);
-			if (licenseCheck === "License valid") {
-				setCookie(c, "authcheck", "true", {
-					expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-				});
-				return c.redirect("/");
-			}
-			return await MasqFail(c);
-		});
+		console.log("MASQR-v2 Activation is Disabled");
 	}
 
 	app.use(

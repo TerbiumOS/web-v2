@@ -1,6 +1,6 @@
 import novaInit, { LibCurl } from "@nightnetwork/nova";
 import type { BootReplNetOptions } from "@nightnetwork/dusk";
-import type { UserSettings } from "../../../types";
+import { wispServerUrl, type UserSettings } from "../../../types";
 
 let novaInitialized = false;
 
@@ -53,5 +53,5 @@ export async function getDefaultWispProxyUrl(): Promise<string> {
 	} catch {
 		console.warn("[Dusk Net] Could not read Wisp server from settings, using built-in");
 	}
-	return `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`;
+	return wispServerUrl;
 }

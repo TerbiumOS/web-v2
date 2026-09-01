@@ -5,8 +5,8 @@ import "./sys/gui/styles/oobe.css";
 import "./sys/gui/styles/dropdown.css";
 import pwd from "./sys/apis/Crypto";
 import { init } from "./init";
-import { fileExists, User } from "./sys/types";
-import { CropperModal } from "./components/CropperModal";
+import { fileExists, User, wispServerUrl } from "./sys/types";
+import { CropperModal } from "./sys/gui/CropperModal";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { libcurl } from "libcurl.js";
 import { auth, getinfo, setinfo } from "./sys/apis/utils/tauth";
@@ -49,7 +49,7 @@ export default function Setup() {
 		libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm");
 	}
 	// @ts-expect-error no types
-	libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
+	libcurl.set_websocket(wispServerUrl);
 	const authClient = auth;
 	const randomColors = ["orange", "red", "green", "blue", "purple", "pink", "yellow"];
 	const makePFP = () => {
@@ -153,7 +153,7 @@ export default function Setup() {
 		} else {
 			settings["transport"] = "Default (Libcurl)";
 		}
-		const wsrv = sessionStorage.getItem("selectedBare") || `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`;
+		const wsrv = sessionStorage.getItem("selectedBare") || wispServerUrl;
 		settings["wispServer"] = wsrv;
 		await window.tb.fs.promises.writeFile(`/home/${usr}/settings.json`, JSON.stringify(settings), "utf8");
 		await window.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(syssettings), "utf8");
@@ -161,7 +161,7 @@ export default function Setup() {
 		const wispExist = await fileExists("//apps/system/settings.tapp/wisp-servers.json");
 		if (!wispExist) {
 			const stockDat = [
-				{ id: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`, name: "Backend" },
+				{ id: wispServerUrl, name: "Backend" },
 				{ id: "wss://wisp.terbiumon.top/wisp/", name: "TB Wisp Instance" },
 			];
 			await window.tb.fs.promises.writeFile("//apps/system/settings.tapp/wisp-servers.json", JSON.stringify(stockDat));
@@ -845,7 +845,7 @@ export default function Setup() {
 			if (label === "Custom Server") {
 				setCustomServer("");
 			} else if (label === "Backend (Default)") {
-				sessionStorage.setItem("selectedBare", `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
+				sessionStorage.setItem("selectedBare", wispServerUrl);
 			} else if (label === "TB Wisp Instance") {
 				sessionStorage.setItem("selectedBare", `wss://wisp.terbiumon.top/wisp/`);
 			}
@@ -861,7 +861,7 @@ export default function Setup() {
 			setCustomServer(value);
 			sessionStorage.setItem("selectedBare", value);
 			const stockDat = [
-				{ id: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`, name: "Backend" },
+				{ id: wispServerUrl, name: "Backend" },
 				{ id: "wss://wisp.terbiumon.top/wisp/", name: "TB Wisp Instance" },
 				{ id: value, name: "Custom Wisp" },
 			];
