@@ -33,8 +33,8 @@ const { Controller } = $scramjetController;
 
 const system = new System();
 const pw = new pwd();
-declare const tb: COM;
 declare global {
+	const tb: COM;
 	interface Window {
 		tb: COM;
 		Filer: FilerType;
