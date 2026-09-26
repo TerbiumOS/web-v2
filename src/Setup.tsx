@@ -15,14 +15,16 @@ const pw = new pwd();
 export default function Setup() {
 	const [beforeSetup, setBeforeSetup] = useState(1);
 	const [currentStep, setCurrentStep] = useState(1);
+	const [eulaAccepted, setEulaAccepted] = useState(false);
 	const currentViewRef = useRef<HTMLDivElement | null>(null);
+	const eulaAcceptedRef = useRef(false);
 	var nextButtonClick = () => void 0;
 	const Next = (step?: number) => {
 		setBeforeSetup(currentStep);
 		if (step) {
 			setCurrentStep(step);
 		} else {
-			setCurrentStep(prevStep => Math.min(prevStep + 1, 5));
+			setCurrentStep(prevStep => Math.min(prevStep + 1, 6));
 		}
 	};
 	const Back = () => {
@@ -34,6 +36,10 @@ export default function Setup() {
 			setCurrentStep(2.2);
 		} else if (currentStep === 3.1) {
 			setCurrentStep(2.5);
+		} else if (currentStep === 5) {
+			eulaAcceptedRef.current = false;
+			setEulaAccepted(false);
+			setCurrentStep(4);
 		} else if (currentStep === 4) {
 			if (sessionStorage.getItem("tacc")) {
 				setCurrentStep(2.5);
@@ -829,6 +835,8 @@ export default function Setup() {
 			currentViewRef.current?.classList.add("-translate-x-6");
 			currentViewRef.current?.classList.add("opacity-0");
 			setTimeout(() => {
+				eulaAcceptedRef.current = false;
+				setEulaAccepted(false);
 				Next();
 			}, 150);
 		};
@@ -922,7 +930,136 @@ export default function Setup() {
 			</div>
 		);
 	};
-	const Step5 = () => {
+	const step5ImplRef = useRef<() => React.JSX.Element>(() => <></>);
+	step5ImplRef.current = () => {
+		const eulaRef = useRef<HTMLDivElement | null>(null);
+		const [eulaMarkdown, setEulaMarkdown] = useState("");
+		const [eulaError, setEulaError] = useState("");
+		const [eulaScrolled, setEulaScrolled] = useState(false);
+		setTimeout(() => {
+			currentViewRef.current?.classList.remove("-translate-x-6");
+			currentViewRef.current?.classList.remove("opacity-0");
+		}, 150);
+		useEffect(() => {
+			eulaAcceptedRef.current = false;
+		}, []);
+		useEffect(() => {
+			let cancelled = false;
+			libcurl.fetch("https://next.tb-corporate.pages.dev/eula.md")
+				.then(response => {
+					if (!response.ok) throw new Error("Failed to fetch EULA");
+					return response.text();
+				})
+				.then(text => {
+					if (!cancelled) setEulaMarkdown(text);
+				})
+				.catch(() => {
+					if (!cancelled) setEulaError("The EULA could not be loaded. Check your connection and try again.");
+				});
+			return () => {
+				cancelled = true;
+			};
+		}, []);
+		const checkScrolled = () => {
+			const el = eulaRef.current;
+			if (!el) return;
+			if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) {
+				eulaAcceptedRef.current = true;
+				setEulaScrolled(true);
+				setEulaAccepted(true);
+			}
+		};
+		nextButtonClick = () => {
+			if (!eulaAcceptedRef.current) return;
+			currentViewRef.current?.classList.add("-translate-x-6");
+			currentViewRef.current?.classList.add("opacity-0");
+			setTimeout(() => {
+				Next();
+			}, 150);
+		};
+		const renderInline = (text: string) => {
+			const nodes: (string | React.JSX.Element)[] = [];
+			const pattern = /(\*\*([^*]+)\*\*)|\[([^\]]+)\]\(<([^>]+)>\)|\[([^\]]+)\]\(([^)]+)\)/g;
+			let lastIndex = 0;
+			let match: RegExpExecArray | null;
+			while ((match = pattern.exec(text)) !== null) {
+				if (match.index > lastIndex) nodes.push(text.slice(lastIndex, match.index).replace(/\\\./g, "."));
+				if (match[2]) {
+					nodes.push(
+						<strong key={match.index} className="font-semibold text-white">
+							{match[2]}
+						</strong>,
+					);
+				} else {
+					const label = match[3] || match[5];
+					const href = match[4] || match[6];
+					nodes.push(
+						<a key={match.index} href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline hover:text-blue-300">
+							{label}
+						</a>,
+					);
+				}
+				lastIndex = pattern.lastIndex;
+			}
+			if (lastIndex < text.length) nodes.push(text.slice(lastIndex).replace(/\\\./g, "."));
+			return nodes;
+		};
+		const renderMarkdown = (markdown: string) =>
+			markdown.split(/\n{2,}/).map((block, index) => {
+				const trimmed = block.trim();
+				if (!trimmed) return null;
+				const heading = trimmed.match(/^(#{1,3})\s+(.+)$/);
+				if (heading) {
+					const title = heading[2].replace(/\\\./g, ".");
+					if (heading[1].length === 1) {
+						return (
+							<div key={index} className="mb-10">
+								<h1 className="text-4xl sm:text-5xl font-bold mb-4 text-white leading-tight">{title}</h1>
+							</div>
+						);
+					}
+					const Tag = `h${heading[1].length}` as keyof React.JSX.IntrinsicElements;
+					const className = heading[1].length === 2 ? "text-2xl font-bold text-white mb-4 mt-8" : "text-xl font-semibold text-white mb-3 mt-6";
+					return (
+						<Tag key={index} className={className}>
+							{title}
+						</Tag>
+					);
+				}
+				const listItems = trimmed.split("\n").filter(line => /^[-*]\s+/.test(line));
+				if (listItems.length > 0 && listItems.length === trimmed.split("\n").length) {
+					return (
+						<ul key={index} className="list-disc list-inside space-y-2 ml-4 mb-4 text-gray-300 leading-relaxed">
+							{listItems.map((line, itemIndex) => (
+								<li key={itemIndex}>{renderInline(line.replace(/^[-*]\s+/, ""))}</li>
+							))}
+						</ul>
+					);
+				}
+				return (
+					<p key={index} className="mb-4 text-gray-300 leading-relaxed">
+						{renderInline(trimmed)}
+					</p>
+				);
+			});
+		return (
+			<div
+				ref={el => {
+					currentViewRef.current = el;
+				}}
+				className="duration-150 -translate-x-6 opacity-0 flex flex-col justify-center items-center w-full max-w-2xl px-4"
+			>
+				<span className="font-[800] text-[34px] bg-linear-to-b from-[#ffffff] to-[#ffffff77] text-transparent bg-clip-text mb-3 lg:text-[34px] md:text-[28px] sm:text-[22px] duration-150">End User License Agreement</span>
+				<p className="text-[#ffffff8d] text-sm mb-3">Scroll to the bottom of the EULA to enable Finish.</p>
+				<div ref={eulaRef} onScroll={checkScrolled} className="oobe-eula w-full h-[360px] max-h-[44vh] overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-6 text-left text-sm shadow-[inset_0_1px_0_#ffffff0d] backdrop-blur-sm">
+					{eulaError ? <p className="text-red-300">{eulaError}</p> : eulaMarkdown ? renderMarkdown(eulaMarkdown) : <p>Loading EULA...</p>}
+				</div>
+				<p className="mt-3 text-xs text-[#ffffff66]">{eulaScrolled ? "You can now finish setup." : "Finish is disabled until you reach the end."}</p>
+			</div>
+		);
+	};
+	const Step5 = useRef(() => step5ImplRef.current()).current;
+	const Step6 = () => {
 		const ranRef = useRef(false);
 		const actionRef = useRef<HTMLParagraphElement | null>(null);
 		setTimeout(() => {
@@ -964,6 +1101,7 @@ export default function Setup() {
 		setTimeout(() => {
 			currentMotionEl.current?.classList.remove("translate-y-8", "opacity-0");
 		}, 150);
+		const finishDisabled = currentStep === 5 && !eulaAccepted;
 
 		return (
 			<div className={`absolute bottom-2.5 left-2.5 right-2.5 h-max flex justify-center items-center max-w-full overflow-x-auto overflow-y-hidden`}>
@@ -991,25 +1129,26 @@ export default function Setup() {
 						}}
 						className={`${currentStep === 2 && beforeSetup !== 3 && "translate-y-8 opacity-0"} duration-150 w-full flex flex-wrap justify-between gap-2 max-w-full`}
 					>
-						{currentStep < 5 && (
+						{currentStep < 6 && (
 							<button
-								className={`cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150 ${currentStep === 5 ? "translate-y-8 opacity-0 pointer-events-none" : ""}`}
+								className={`cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150 ${currentStep === 6 ? "translate-y-8 opacity-0 pointer-events-none" : ""}`}
 								onMouseDown={() => Back()}
 							>
 								Previous
 							</button>
 						)}
-						{currentStep > 2 && currentStep < 5 && (
+						{currentStep > 2 && currentStep < 6 && (
 							<button
 								ref={el => {
 									currentStep === 4 && (currentMotionEl.current = el);
 								}}
-								className={`${currentStep === 5 && "translate-y-8 opacity-0"} cursor-pointer bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150`}
+								disabled={finishDisabled}
+								className={`${currentStep === 6 && "translate-y-8 opacity-0"} ${finishDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"} bg-[#ffffff0a] text-[#ffffff38] border-[#ffffff22] hover:bg-[#ffffff10] hover:text-[#ffffff8d] focus:bg-[#ffffff1f] focus:text-[#ffffff8d] focus:border-[#73a9ffd6] focus:ring-[#73a9ff74] focus:outline-hidden focus:ring-2 ring-[transparent] ring-0 border-[1px] font-[600] px-[20px] py-[8px] rounded-[6px] duration-150`}
 								onMouseDown={() => {
-									currentStep < 5 ? nextButtonClick() : null;
+									currentStep < 6 && !finishDisabled ? nextButtonClick() : null;
 								}}
 							>
-								{currentStep < 4 ? "Next" : "Finish"}
+								{currentStep < 5 ? "Next" : "Finish"}
 							</button>
 						)}
 					</div>
@@ -1045,6 +1184,8 @@ export default function Setup() {
 						<Step4 />
 					) : currentStep === 5 ? (
 						<Step5 />
+					) : currentStep === 6 ? (
+						<Step6 />
 					) : null}
 				</div>
 			</div>
