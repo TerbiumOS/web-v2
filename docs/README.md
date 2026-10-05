@@ -11,6 +11,7 @@ Welcome to Terbium v2's Documentation. Here is a simple table of contents to hel
 ## Application Development
 - [Creating Apps](./creating-apps.md)
 - [Creating Terminal Commands](./creating-terminal-commands.md)
+> <span style="font-family: url('https://fonts.googleapis.com/css2?family=Roboto&display=swap'); color: #ffd900;">⚠</span> <span style="color: #ffd900;">NOTE:</span> Terminal Command documentation is subject to change drastically on the upcoming version. Please hold off on making Terminal programs for a few weeks
 - [Creating Custom Settings Interfaces](./creating-custom-settings-interfaces.md)
 - [Terbium API Documentation](./apis/readme.md)
 - [Advanced Features](./advanced-features.md) - Node.js, Cloud Sync, VFS, Media Island

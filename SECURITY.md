@@ -8,10 +8,11 @@
 | 2.0.0-beta2 | ❌ |
 | 2.0.0-beta3 | ❌ |
 | 2.1.x | ❌ |
-| 2.2.x | ✅ |
+| 2.2.x | ❌ |
 | 2.3.x | ✅ |
+| 2.4.x | ✅ |
 
-If your version of terbium is unsupported, please do not make a GitHub Issue about it. Please update to a newer version if your running a unsupported version.
+If your current version of terbium is unsupported, please do not make GitHub Issues regarding that specific version. Please update to a newer version.
 
 ### Supported Liquor Versions
 
