@@ -945,7 +945,8 @@ export default function Setup() {
 		}, []);
 		useEffect(() => {
 			let cancelled = false;
-			libcurl.fetch("https://next.tb-corporate.pages.dev/eula.md")
+			libcurl
+				.fetch("https://next.tb-corporate.pages.dev/eula.md")
 				.then(response => {
 					if (!response.ok) throw new Error("Failed to fetch EULA");
 					return response.text();
