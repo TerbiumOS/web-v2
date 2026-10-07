@@ -79,7 +79,7 @@
 	{
 		"name": "sysfetch",
 		"description": "Display system information",
-		"usage": "sysfetch"
+		"usage": "sysfetch [-v]"
 	},
 	{
 		"name": "curl",

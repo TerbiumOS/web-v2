@@ -1456,6 +1456,9 @@ export default async function Api() {
 					throw new Error(`Process spawnSync failed: ${error instanceof Error ? error.message : "Unknown error"}`);
 				}
 			},
+			async command(cmd: string, args: string[] = [], options?: SpawnOptions) {
+				return await window.tb.dusk.spawnSync(cmd, args, options);
+			},
 			async feed(line: string) {
 				const instance = getDuskInstance();
 				if (!instance) {

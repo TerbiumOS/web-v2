@@ -1,6 +1,8 @@
 import { bootRepl, type BootReplResult } from "@nightnetwork/dusk";
 import { setupNetworking } from "./networkConfig";
 import { ServerRegistry } from "./util/serverRegistry";
+import { sysfetch } from "./libs/sysfetch";
+import { pkg } from "./libs/pkg";
 
 let duskInstance: BootReplResult | null = null;
 let serverRegistry: ServerRegistry | null = null;
@@ -28,6 +30,8 @@ export async function initializeDusk(): Promise<BootReplResult> {
 		}
 		console.info("[Dusk Runtime] Initializing...");
 		const username = await window.tb.user.username();
+		const hostname = await getTerbiumHostname();
+		const version = window.tb.system.version();
 		const netConfig = await setupNetworking();
 		duskInstance = await bootRepl(
 			(text: string) => {
@@ -38,12 +42,15 @@ export async function initializeDusk(): Promise<BootReplResult> {
 				fs: "tfs",
 				layout: true,
 				user: username,
-				hostname: "terbium",
+				hostname,
+				seed: { "/etc/terbium/version": version },
 				skipPidZero: false,
-				via: "startRepl",
+			via: "startRepl",
 			},
 		);
 		serverRegistry = new ServerRegistry(duskInstance.processManager);
+		duskInstance.processManager.registerHostBinary("/bin/sysfetch", sysfetch);
+		duskInstance.processManager.registerHostBinary("/bin/pkg", pkg);
 		duskProcessPid = window.tb.process.create("runtime", {
 			name: "Terbium Dusk Runtime",
 			wid: null,
@@ -70,6 +77,15 @@ export async function initializeDusk(): Promise<BootReplResult> {
 		}
 
 		throw error;
+	}
+}
+
+async function getTerbiumHostname(): Promise<string> {
+	try {
+		const settings = await window.tb.fs.promises.readFile("//system/etc/terbium/settings.json", "utf8");
+		return JSON.parse(settings)["host-name"] || "terbium";
+	} catch {
+		return "terbium";
 	}
 }
 
