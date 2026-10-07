@@ -1,21 +1,22 @@
 import type { HostBinary, HostBinaryContext, HostBinaryResult } from "@nightnetwork/dusk";
 
-const HELP = [
-	"TPKG 2.0.0",
-	"Usage: pkg <command>",
-	"",
-	"  install <name>  Download and install a package",
-	"  remove <name>   Remove an installed package record",
-	"  update <name>   Update an installed TAPP package",
-	"  list            List installed packages",
-	"  search <term>   Search the configured repository",
-	"  repo list       List configured repositories",
-	"  repo set <url>  Select a repository",
-	"  repo add <url>  Add a repository",
-	"  repo remove <url> Remove a repository",
-	"",
-	"Package installation is limited to filesystem-backed packages in Dusk.",
-].join("\n") + "\n";
+const HELP =
+	[
+		"TPKG 2.0.0",
+		"Usage: pkg <command>",
+		"",
+		"  install <name>  Download and install a package",
+		"  remove <name>   Remove an installed package record",
+		"  update <name>   Update an installed TAPP package",
+		"  list            List installed packages",
+		"  search <term>   Search the configured repository",
+		"  repo list       List configured repositories",
+		"  repo set <url>  Select a repository",
+		"  repo add <url>  Add a repository",
+		"  repo remove <url> Remove a repository",
+		"",
+		"Package installation is limited to filesystem-backed packages in Dusk.",
+	].join("\n") + "\n";
 
 const run: HostBinary = async ({ args }: HostBinaryContext): Promise<HostBinaryResult> => {
 	const command = args[0] ?? "help";

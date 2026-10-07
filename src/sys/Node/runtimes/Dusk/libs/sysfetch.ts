@@ -6,19 +6,9 @@ const BOLD = "\x1b[1m";
 const CYAN = "\x1b[36m";
 const DIM = "\x1b[2m";
 const GREEN = "\x1b[32m";
-const LOGO = [
-    "",
-	"@@@@@@@@@@@@@@~ B@@@@@@@@#G?.",
-	"B###&@@@@&####^ #@@@&PPPB@@@G.",
-	" .. ~@@@@J ..  .#@@@P   ~&@@@^",
-	"    ^@@@@?     .#@@@@###&@@&7",
-	"    ^@@@@?     .#@@@#555P&@@B7",
-	"    ^@@@@?     .#@@@P    G@@@@",
-	"    ^@@@@?     .#@@@&GGG#@@@@Y",
-	"    ^&@@@?      B@@@@@@@@&B5~",
-];
+const LOGO = ["", "@@@@@@@@@@@@@@~ B@@@@@@@@#G?.", "B###&@@@@&####^ #@@@&PPPB@@@G.", " .. ~@@@@J ..  .#@@@P   ~&@@@^", "    ^@@@@?     .#@@@@###&@@&7", "    ^@@@@?     .#@@@#555P&@@B7", "    ^@@@@?     .#@@@P    G@@@@", "    ^@@@@?     .#@@@&GGG#@@@@Y", "    ^&@@@?      B@@@@@@@@&B5~"];
 
-const getNumber = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : null;
+const getNumber = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null);
 
 const formatBytes = (value: number | null): string => {
 	if (value === null || value < 0) return "Unknown";
@@ -85,22 +75,14 @@ const label = (name: string, value: string): string => `${BOLD}${CYAN}${name.pad
 
 const visibleLength = (value: string): number => value.replaceAll(/\x1b\[[0-9;]*m/g, "").length;
 
-const usage = (): string => [
-	`${BOLD}sysfetch${RESET} ${VERSION}`,
-	"Usage: sysfetch [options]",
-	"",
-	"  -v, --version  Show version",
-	"  -m, --minimal  Print facts without logo",
-	"  --no-color     Disable ANSI colors",
-	"  -h, --help     Show this help",
-].join("\n") + "\n";
+const usage = (): string => [`${BOLD}sysfetch${RESET} ${VERSION}`, "Usage: sysfetch [options]", "", "  -v, --version  Show version", "  -m, --minimal  Print facts without logo", "  --no-color     Disable ANSI colors", "  -h, --help     Show this help"].join("\n") + "\n";
 
 const run = async ({ args, env }: HostBinaryContext): Promise<HostBinaryResult> => {
 	if (args.includes("-h") || args.includes("--help")) return { status: 0, stdout: usage() };
 	if (args.includes("-v") || args.includes("--version")) return { status: 0, stdout: `sysfetch ${VERSION}\n` };
 
 	const plain = args.includes("--no-color");
-	const color = (value: string): string => plain ? value.replaceAll(/\x1b\[[0-9;]*m/g, "") : value;
+	const color = (value: string): string => (plain ? value.replaceAll(/\x1b\[[0-9;]*m/g, "") : value);
 	const user = env.USER ?? "user";
 	const host = env.HOSTNAME ?? "duskjs";
 	const version = env.TERBIUM_VERSION ?? "unknown";

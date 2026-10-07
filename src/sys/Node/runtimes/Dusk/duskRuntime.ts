@@ -45,7 +45,7 @@ export async function initializeDusk(): Promise<BootReplResult> {
 				hostname,
 				seed: { "/etc/terbium/version": version },
 				skipPidZero: false,
-			via: "startRepl",
+				via: "startRepl",
 			},
 		);
 		serverRegistry = new ServerRegistry(duskInstance.processManager);
