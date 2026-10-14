@@ -153,9 +153,18 @@ export class Anura {
 			throw "Application already installed";
 		}
 		const apps: any = JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/start.json", "utf8"));
-		// @ts-expect-error
-		if (apps.system_apps.some(existingApp => existingApp.title === app.name)) {
-			console.log("Application already installed");
+		const appIndex = apps.system_apps.findIndex((existingApp: any) => String(existingApp.name || existingApp.title || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === app.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase());
+		if (appIndex !== -1) {
+			const refreshedApp = {
+				...apps.system_apps[appIndex],
+				title: app.name,
+				name: app.name,
+				icon: app.icon,
+				// @ts-expect-error
+				src: `${app.source}/${app.manifest.index}`,
+			};
+			apps.system_apps = apps.system_apps.filter((existingApp: any) => String(existingApp.name || existingApp.title || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase() !== app.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase());
+			apps.system_apps.push(refreshedApp);
 		} else {
 			console.log(app);
 			apps.system_apps.push({

@@ -76,10 +76,17 @@ export default async function Api() {
 				const apps: any = JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/start.json", "utf8"));
 				if (!props.name) throw new Error("Name is required");
 				if (!props.icon) throw new Error("Icon is required");
-				if (apps.system_apps.some((app: any) => app.title === props.name)) {
-					throw new Error("App with the same name already exists");
+				if (!Array.isArray(apps.system_apps)) apps.system_apps = [];
+				const normalizeName = (value: unknown) => String(value ?? "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+				const targetName = normalizeName(props.name);
+				const existingIndex = apps.system_apps.findIndex((app: any) => normalizeName(app.name || app.title) === targetName);
+				if (existingIndex !== -1) {
+					const refreshed = { ...apps.system_apps[existingIndex], ...props };
+					apps.system_apps = apps.system_apps.filter((app: any) => normalizeName(app.name || app.title) !== targetName);
+					apps.system_apps.push(refreshed);
+				} else {
+					apps.system_apps.push(props);
 				}
-				apps.system_apps.push(props);
 				await window.tb.fs.promises.writeFile("/system/var/terbium/start.json", JSON.stringify(apps, null, 2));
 				window.dispatchEvent(new Event("updApps"));
 				return true;
@@ -91,12 +98,16 @@ export default async function Api() {
 				const realName = String(name)
 					.replace(/[^a-zA-Z0-9]/g, "")
 					.toLowerCase();
+				if (!Array.isArray(apps)) throw new Error("Launcher app list is invalid");
 				const appIndex = apps.findIndex((app: any) => {
-					const n = app.name ? app.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
+					const n = (app.name || app.title) ? String(app.name || app.title).replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
 					return n === realName;
 				});
 				if (appIndex !== -1) {
-					apps.splice(appIndex, 1);
+					for (let index = apps.length - 1; index >= 0; index--) {
+						const entryName = String(apps[index].name || apps[index].title || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+						if (entryName === realName) apps.splice(index, 1);
+					}
 				} else {
 					throw new Error(`App with name '${name}' not found`);
 				}

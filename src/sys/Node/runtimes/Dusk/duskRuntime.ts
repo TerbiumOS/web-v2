@@ -43,7 +43,7 @@ export async function initializeDusk(): Promise<BootReplResult> {
 				layout: true,
 				user: username,
 				hostname,
-				seed: { "/etc/terbium/version": version },
+				seed: { "/etc/terbium/version": version } as Record<string, string>,
 				skipPidZero: false,
 				via: "startRepl",
 			},
@@ -51,6 +51,7 @@ export async function initializeDusk(): Promise<BootReplResult> {
 		serverRegistry = new ServerRegistry(duskInstance.processManager);
 		duskInstance.processManager.registerHostBinary("/bin/sysfetch", sysfetch);
 		duskInstance.processManager.registerHostBinary("/bin/pkg", pkg);
+		// @ts-expect-error types
 		duskProcessPid = window.tb.process.create("runtime", {
 			name: "Terbium Dusk Runtime",
 			wid: null,

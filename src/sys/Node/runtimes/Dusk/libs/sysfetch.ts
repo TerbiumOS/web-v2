@@ -38,8 +38,10 @@ const readGpu = (): string => {
 		const canvas = document.createElement("canvas");
 		const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
 		if (!gl) return "Unavailable";
+		// @ts-expect-error: WEBGL_debug_renderer_info is not in the TypeScript DOM lib yet
 		const info = gl.getExtension("WEBGL_debug_renderer_info");
 		if (!info) return "Unavailable";
+		// @ts-expect-error: WEBGL_debug_renderer_info is not in the TypeScript DOM lib yet
 		const renderer = gl.getParameter(info.UNMASKED_RENDERER_WEBGL);
 		if (typeof renderer !== "string" || renderer.length === 0) return "Unavailable";
 		const angle = /^ANGLE \(.+?,\s*(.+?) \(/.exec(renderer);
@@ -86,7 +88,7 @@ const run = async ({ args, env }: HostBinaryContext): Promise<HostBinaryResult> 
 	const user = env.USER ?? "user";
 	const host = env.HOSTNAME ?? "duskjs";
 	const version = env.TERBIUM_VERSION ?? "unknown";
-	const shell = env.SHELL ?? "/bin/dsh";
+	const shell = (env.SHELL ?? "/bin/dsh") + " (DuskJS)";
 	const uptime = formatUptime(Math.floor(performance.now() / 1000));
 	const accent = plain ? "" : GREEN;
 	const reset = plain ? "" : RESET;
@@ -96,7 +98,7 @@ const run = async ({ args, env }: HostBinaryContext): Promise<HostBinaryResult> 
 		`${BOLD}${user}@${host}${RESET}`,
 		`${DIM}${"-".repeat(Math.max(12, user.length + host.length + 1))}${RESET}`,
 		label("OS", `TerbiumOS ${version}`),
-		label("Kernel", "Ayla / DuskJS"),
+		label("Kernel", "Ayla v1.5.0"),
 		label("Shell", shell),
 		label("Uptime", uptime),
 		label("CPU", readCpu()),
