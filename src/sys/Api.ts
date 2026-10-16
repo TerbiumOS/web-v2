@@ -77,7 +77,10 @@ export default async function Api() {
 				if (!props.name) throw new Error("Name is required");
 				if (!props.icon) throw new Error("Icon is required");
 				if (!Array.isArray(apps.system_apps)) apps.system_apps = [];
-				const normalizeName = (value: unknown) => String(value ?? "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+				const normalizeName = (value: unknown) =>
+					String(value ?? "")
+						.replace(/[^a-zA-Z0-9]/g, "")
+						.toLowerCase();
 				const targetName = normalizeName(props.name);
 				const existingIndex = apps.system_apps.findIndex((app: any) => normalizeName(app.name || app.title) === targetName);
 				if (existingIndex !== -1) {
@@ -100,12 +103,19 @@ export default async function Api() {
 					.toLowerCase();
 				if (!Array.isArray(apps)) throw new Error("Launcher app list is invalid");
 				const appIndex = apps.findIndex((app: any) => {
-					const n = (app.name || app.title) ? String(app.name || app.title).replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
+					const n =
+						app.name || app.title
+							? String(app.name || app.title)
+									.replace(/[^a-zA-Z0-9]/g, "")
+									.toLowerCase()
+							: "";
 					return n === realName;
 				});
 				if (appIndex !== -1) {
 					for (let index = apps.length - 1; index >= 0; index--) {
-						const entryName = String(apps[index].name || apps[index].title || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+						const entryName = String(apps[index].name || apps[index].title || "")
+							.replace(/[^a-zA-Z0-9]/g, "")
+							.toLowerCase();
 						if (entryName === realName) apps.splice(index, 1);
 					}
 				} else {
