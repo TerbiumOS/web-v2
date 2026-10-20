@@ -1,6 +1,8 @@
 import type { HostBinary, HostBinaryContext, HostBinaryResult } from "@nightnetwork/dusk";
 
+// @ts-expect-error ignore
 type JsonValue = string | number | boolean | null | JsonObject | JsonValue[];
+// @ts-expect-error ignore
 type JsonObject = Record<string, JsonValue>;
 
 type Repository = {
@@ -30,6 +32,7 @@ type InstalledRecord = {
 	version?: string;
 	type?: "tapp" | "anura" | "web";
 	repository?: string;
+	system?: boolean;
 };
 
 type RuntimeApi = {
@@ -39,7 +42,7 @@ type RuntimeApi = {
 			writeFile(path: string, data: unknown, encoding?: string): Promise<void>;
 			mkdir(path: string, options?: { recursive?: boolean }): Promise<void>;
 			unlink(path: string): Promise<void>;
-			rm(path: string, options?: { recursive?: boolean; force?: boolean }): Promise<void>;
+			rmdir(path: string): Promise<void>;
 			readdir(path: string): Promise<string[]>;
 			exists(path: string): Promise<boolean>;
 		};
@@ -51,6 +54,9 @@ type RuntimeApi = {
 	proxy: { get(): Promise<string> };
 	buffer: { from(value: Uint8Array): unknown };
 	fflate: { unzipSync(data: Uint8Array): Record<string, Uint8Array> };
+	dialog?: {
+		Permissions(props: { title: string; message: string; onOk: () => void; onCancel?: () => void }): void;
+	};
 };
 
 const ROOT = "/apps";
@@ -58,6 +64,8 @@ const REPOS_PATH = `${ROOT}/pkg/repos.json`;
 const CACHE_PATH = `${ROOT}/pkg/lists`;
 const STATUS_PATH = `${ROOT}/pkg/status.json`;
 const INSTALLED_PATH = `${ROOT}/installed.json`;
+const SYSTEM_START_PATH = "/system/var/terbium/start.json";
+const PROTECTED_SYSTEM_APPS = new Set(["about", "app store", "files", "calculator", "feedback", "media viewer", "settings", "task manager", "terminal", "text editor"]);
 const DEFAULT_REPOSITORIES: Repository[] = [
 	{ name: "TB App Repo", url: "https://raw.githubusercontent.com/TerbiumOS/tb-repo/refs/heads/main/manifest.json", type: "terbium" },
 	{ name: "XSTARS XTRAS", url: "https://raw.githubusercontent.com/Notplayingallday383/app-repo/refs/heads/main/manifest.json", type: "terbium" },
@@ -115,6 +123,19 @@ const ensureDir = async (api: RuntimeApi, path: string): Promise<void> => {
 	await api.fs.promises.mkdir(path, { recursive: true });
 };
 
+const removeTree = async (api: RuntimeApi, path: string): Promise<void> => {
+	if (!(await api.fs.promises.exists(path))) return;
+	let entries: string[];
+	try {
+		entries = await api.fs.promises.readdir(path);
+	} catch {
+		await api.fs.promises.unlink(path);
+		return;
+	}
+	for (const entry of entries) await removeTree(api, `${path.replace(/\/$/, "")}/${entry}`);
+	await api.fs.promises.rmdir(path);
+};
+
 const writeJson = async (api: RuntimeApi, path: string, value: unknown): Promise<void> => {
 	await ensureDir(api, path.slice(0, path.lastIndexOf("/")) || "/");
 	await api.fs.promises.writeFile(path, JSON.stringify(value, null, 2), "utf8");
@@ -153,6 +174,47 @@ const getInstalled = async (api: RuntimeApi): Promise<InstalledRecord[]> => {
 };
 
 const setInstalled = async (api: RuntimeApi, records: InstalledRecord[]): Promise<void> => writeJson(api, INSTALLED_PATH, records);
+
+const confirmAction = async (api: RuntimeApi, title: string, message: string): Promise<boolean> => {
+	const showConfirmation = api.dialog?.Permissions;
+	if (!showConfirmation) return false;
+	return new Promise(resolve => {
+		let settled = false;
+		const finish = (approved: boolean): void => {
+			if (settled) return;
+			settled = true;
+			resolve(approved);
+		};
+		showConfirmation({ title, message, onOk: () => finish(true), onCancel: () => finish(false) });
+	});
+};
+
+const packageMatchesInstalled = (item: IndexedPackage, record: InstalledRecord): boolean => {
+	const pkgName = item.pkg["pkg-name"] ?? item.pkg.package;
+	return item.pkg.name.toLowerCase() === record.name.toLowerCase() || (item.pkg.package !== undefined && item.pkg.package.toLowerCase() === record.package?.toLowerCase()) || (typeof pkgName === "string" && pkgName.toLowerCase() === record.package?.toLowerCase());
+};
+
+const isManagedPackage = (record: InstalledRecord): boolean => !!record.repository || record.type === "tapp" || record.type === "anura" || record.type === "web";
+
+const isProtectedSystemApp = (record: InstalledRecord): boolean => {
+	const path = record.config.replaceAll("\\", "/");
+	if (path.startsWith("/system/")) return true;
+	const normalizedName = record.name.trim().toLocaleLowerCase();
+	const normalizedPackage = record.package?.trim().toLocaleLowerCase();
+	return PROTECTED_SYSTEM_APPS.has(normalizedName) || (!!normalizedPackage && PROTECTED_SYSTEM_APPS.has(normalizedPackage));
+};
+
+const getSystemAppConfigs = async (api: RuntimeApi): Promise<Set<string>> => {
+	const start = await readJson<JsonObject>(api, SYSTEM_START_PATH, {});
+	const configs = Array.isArray(start.system_apps) ? start.system_apps : [];
+	return new Set(configs.filter((config: any): config is string => typeof config === "string").map((config: any) => config.replaceAll("\\", "/")));
+};
+
+const isProtectedSystemAppAsync = async (api: RuntimeApi, record: InstalledRecord): Promise<boolean> => {
+	if (isProtectedSystemApp(record)) return true;
+	const systemConfigs = await getSystemAppConfigs(api);
+	return systemConfigs.has(record.config.replaceAll("\\", "/"));
+};
 
 const fetchJson = async (api: RuntimeApi, url: string): Promise<JsonObject> => {
 	const response = await api.libcurl.fetch(url);
@@ -283,6 +345,13 @@ const installOne = async (api: RuntimeApi, item: IndexedPackage): Promise<string
 	const incompatible = await versionAllowed(api, pkg);
 	if (incompatible) throw new Error(`${pkg.name} ${incompatible}`);
 	const installed = await getInstalled(api);
+	const existing = installed.find(record => packageMatchesInstalled(item, record));
+	if (existing) {
+		if (await isProtectedSystemAppAsync(api, existing)) throw new Error(`${existing.name} is a protected system app and will not be overwritten`);
+		if (!isManagedPackage(existing)) throw new Error(`${existing.name} already exists as an unmanaged app; refusing to overwrite it`);
+		const approved = await confirmAction(api, "Reinstall package?", `${existing.name} is already installed${existing.version ? ` (version ${existing.version})` : ""}. Reinstall or replace it with ${pkg.version ?? "the repository version"}?`);
+		if (!approved) throw new Error(`${existing.name}: reinstall cancelled`);
+	}
 	const name = safeName(pkg.name);
 	const username = await api.user.username();
 	if (type === "anura" || pkg["anura-pkg"] || pkg.package) {
@@ -290,7 +359,7 @@ const installOne = async (api: RuntimeApi, item: IndexedPackage): Promise<string
 		const target = `${ROOT}/anura/${appName}`;
 		const manifestUrl = pkg["anura-pkg"] ?? `${repo.url.replace(/(?:manifest|list)\.json(?:\?.*)?$/, "")}/apps/${encodeURIComponent(pkg.package ?? appName)}/${pkg.data ?? ""}`;
 		const baseUrl = manifestUrl.replace(/\/$/, "");
-		await api.fs.promises.rm(target, { recursive: true, force: true });
+		await removeTree(api, target);
 		await installArchiveOrDirectory(api, manifestUrl, baseUrl, target);
 		const manifestPath = `${target}/manifest.json`;
 		const manifest = await readJson<JsonObject>(api, manifestPath, {} as JsonObject);
@@ -308,7 +377,7 @@ const installOne = async (api: RuntimeApi, item: IndexedPackage): Promise<string
 
 	if (pkg["pkg-download"]) {
 		const target = `${ROOT}/system/${name}.tapp`;
-		await api.fs.promises.rm(target, { recursive: true, force: true });
+		await removeTree(api, target);
 		await extractZip(api, pkg["pkg-download"], target);
 		const configPath = `${target}/.tbconfig`;
 		const config = await readJson<JsonObject | null>(api, configPath, null);
@@ -387,24 +456,32 @@ const removeOne = async (api: RuntimeApi, query: string): Promise<string> => {
 	const installed = await getInstalled(api);
 	const matches = installed.filter(app => app.name.toLowerCase() === query.toLowerCase() || app.package?.toLowerCase() === query.toLowerCase());
 	if (!matches.length) throw new Error(`package is not installed: ${query}`);
+	let protectedApp: InstalledRecord | undefined;
+	for (const app of matches) {
+		if (await isProtectedSystemAppAsync(api, app)) {
+			protectedApp = app;
+			break;
+		}
+	}
+	if (protectedApp) throw new Error(`${protectedApp.name} is a protected system app and cannot be removed`);
 	for (const app of matches) {
 		const configPath = app.config;
 		if (configPath.endsWith(".tbconfig")) {
 			const directory = configPath.slice(0, -".tbconfig".length).replace(/\/$/, "");
 			await api.launcher.removeApp(app.name).catch(() => {});
-			await api.fs.promises.rm(directory, { recursive: true, force: true });
+			await removeTree(api, directory);
 		} else if (configPath.endsWith("manifest.json")) {
 			const directory = configPath.slice(0, -"manifest.json".length).replace(/\/$/, "");
 			await api.launcher.removeApp(app.name).catch(() => {});
-			await api.fs.promises.rm(directory, { recursive: true, force: true });
+			await removeTree(api, directory);
 			const webApps = (globalThis as typeof globalThis & { window?: { anura?: { apps?: JsonObject } } }).window?.anura?.apps;
 			if (webApps && app.package) delete webApps[app.package];
 		} else if (configPath.endsWith("index.json")) {
 			const directory = configPath.slice(0, -"index.json".length).replace(/\/$/, "");
 			await api.launcher.removeApp(app.name).catch(() => {});
-			await api.fs.promises.rm(directory, { recursive: true, force: true });
+			await removeTree(api, directory);
 			const webIndex = await readJson<JsonObject>(api, `${ROOT}/web_apps.json`, { apps: [] });
-			if (Array.isArray(webIndex.apps) && app.package) webIndex.apps = webIndex.apps.filter((item: string) => item !== app.package);
+			if (Array.isArray(webIndex.apps) && app.package) webIndex.apps = webIndex.apps.filter((item: JsonValue) => item !== app.package);
 			await writeJson(api, `${ROOT}/web_apps.json`, webIndex);
 		}
 	}
@@ -592,8 +669,8 @@ const upgrade = async (api: RuntimeApi, selectedNames: string[]): Promise<HostBi
 };
 
 const clean = async (api: RuntimeApi): Promise<HostBinaryResult> => {
-	await api.fs.promises.rm(CACHE_PATH, { recursive: true, force: true });
-	await api.fs.promises.rm(STATUS_PATH, { force: true });
+	await removeTree(api, CACHE_PATH);
+	if (await api.fs.promises.exists(STATUS_PATH)) await api.fs.promises.unlink(STATUS_PATH);
 	return { status: 0, stdout: "Removed cached package lists.\n" };
 };
 
