@@ -1,3 +1,5 @@
+// @ts-expect-error types
+import type { SpawnOptions } from "@nightnetwork/dusk";
 import * as fflate from "fflate";
 import { libcurl } from "libcurl.js";
 import apps from "../apps.json";
@@ -9,6 +11,9 @@ import { hideFn, isExistingFn, setMusicFn, setVideoFn } from "./apis/Mediaisland
 import { dismissNotifFn, setNotifFn } from "./apis/Notifications";
 import { registry } from "./apis/Registry";
 import { System } from "./apis/System";
+import { addStartupProc, disableProc, enableProc, launchProcs, removeStartupProc } from "./apis/utils/startupHandler";
+import { TSLParser } from "./apis/utils/TSLParser";
+import { auth, getinfo, setinfo } from "./apis/utils/tauth";
 import { XOR } from "./apis/Xor";
 import { type AppIslandProps, clearControls, clearInfo, updateControls } from "./gui/AppIsland";
 import type { TDockItem } from "./gui/Dock";
@@ -20,15 +25,12 @@ import { LocalFS } from "./liquor/api/LocalFS";
 import { ExternalApp } from "./liquor/coreapps/ExternalApp";
 import { ExternalLib } from "./liquor/libs/ExternalLib";
 import { WebContainerShim } from "./Node/compatibility/nodeShim";
-import { initializeDusk, stopDusk, getDuskInstance, getServerRegistry } from "./Node/runtimes/Dusk/duskRuntime";
-import type { SpawnOptions } from "@nightnetwork/dusk";
+import { getDuskInstance, getServerRegistry, initializeDusk, stopDusk } from "./Node/runtimes/Dusk/duskRuntime";
 import { useWindowStore } from "./Store";
+import { ScramjetHandler } from "./scramjet-handler";
 import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig, wispServerUrl } from "./types";
 import { vFS } from "./vFS";
-import { auth, getinfo, setinfo } from "./apis/utils/tauth";
-import { launchProcs, addStartupProc, removeStartupProc, enableProc, disableProc } from "./apis/utils/startupHandler";
-import { TSLParser } from "./apis/utils/TSLParser";
-import { ScramjetHandler } from "./scramjet-handler";
+
 const { Controller } = $scramjetController;
 
 const system = new System();
@@ -66,7 +68,7 @@ export default async function Api() {
 			async canUse() {
 				if ("BatteryManager" in window) {
 					const battery = await navigator.getBattery();
-					return battery ? true : false;
+					return !!battery;
 				}
 				return false;
 			},
@@ -128,12 +130,12 @@ export default async function Api() {
 		},
 		theme: {
 			async get() {
-				return JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"))["theme"];
+				return JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8")).theme;
 			},
 			async set(data: string) {
 				return new Promise(async resolve => {
 					const settings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
-					settings["theme"] = data;
+					settings.theme = data;
 					await window.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(settings), "utf8");
 					resolve(true);
 				});
@@ -145,50 +147,50 @@ export default async function Api() {
 					color.toString().includes('"') ? (color = color.replace(/"/g, "")) : (color = color);
 					document.body.setAttribute("theme", color);
 					const settings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
-					settings["theme"] = color;
+					settings.theme = color;
 					await window.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(settings), "utf8");
 				},
 				async theme() {
 					const settings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
-					return settings["theme"];
+					return settings.theme;
 				},
 				async setAccent(color: string) {
 					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-					settings["accent"] = color;
+					settings.accent = color;
 					await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings), "utf8");
 				},
 				async getAccent() {
-					return JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"))["accent"];
+					return JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8")).accent;
 				},
 			},
 			wallpaper: {
 				async set(path: string) {
 					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-					settings["wallpaper"] = path;
+					settings.wallpaper = path;
 					await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings));
 					window.dispatchEvent(new Event("updWallpaper"));
 				},
 				async contain() {
 					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-					settings["wallpaperMode"] = "contain";
+					settings.wallpaperMode = "contain";
 					await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings), "utf8");
 					window.dispatchEvent(new Event("updWallpaper"));
 				},
 				async stretch() {
 					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-					settings["wallpaperMode"] = "stretch";
+					settings.wallpaperMode = "stretch";
 					await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings), "utf8");
 					window.dispatchEvent(new Event("updWallpaper"));
 				},
 				async cover() {
 					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-					settings["wallpaperMode"] = "cover";
+					settings.wallpaperMode = "cover";
 					await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings), "utf8");
 					window.dispatchEvent(new Event("updWallpaper"));
 				},
 				async fillMode() {
 					return new Promise(async resolve => {
-						resolve(JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"))["wallpaperMode"]);
+						resolve(JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8")).wallpaperMode);
 					});
 				},
 			},
@@ -372,7 +374,7 @@ export default async function Api() {
 		user: {
 			async username() {
 				try {
-					const username = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"))["username"];
+					const username = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8")).username;
 					return username || "Guest";
 				} catch (error) {
 					console.error("Error Fetching username:", error);
@@ -381,7 +383,7 @@ export default async function Api() {
 			},
 			async pfp() {
 				try {
-					return JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"))["pfp"] || "/assets/img/defualt - blue.png";
+					return JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8")).pfp || "/assets/img/defualt - blue.png";
 				} catch (error) {
 					console.error("Error Fetching pfp:", error);
 					return "/assets/img/defualt - blue.png";
@@ -391,11 +393,11 @@ export default async function Api() {
 		proxy: {
 			async get() {
 				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-				return settings["proxy"];
+				return settings.proxy;
 			},
 			async set(proxy: "Ultraviolet" | "Scramjet") {
 				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-				settings["proxy"] = proxy;
+				settings.proxy = proxy;
 				await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
 				window.tb.proxy.updateSWs();
 				return true;
@@ -627,15 +629,15 @@ export default async function Api() {
 				const walk = async (fsPath: string, zipPrefix: string) => {
 					try {
 						const stat = await window.tb.fs.promises.stat(fsPath);
-						if (stat!.type === "DIRECTORY") {
+						if (stat?.type === "DIRECTORY") {
 							const entries = await window.tb.fs.promises.readdir(fsPath);
 							const dirName = normalizeZipPath(zipPrefix);
 							if (entries.length === 0 && dirName) {
-								files[dirName.endsWith("/") ? dirName : dirName + "/"] = new Uint8Array(0);
+								files[dirName.endsWith("/") ? dirName : `${dirName}/`] = new Uint8Array(0);
 							}
 							await Promise.all(
 								entries.map(async entry => {
-									const childFsPath = `${fsPath.endsWith("/") ? fsPath : fsPath + "/"}${entry}`;
+									const childFsPath = `${fsPath.endsWith("/") ? fsPath : `${fsPath}/`}${entry}`;
 									const childZipPath = zipPrefix ? `${zipPrefix}/${entry}` : entry;
 									await walk(childFsPath, childZipPath);
 								}),
@@ -668,7 +670,7 @@ export default async function Api() {
 				}
 			},
 			scanintegrity: async () => {
-				let invalid = [];
+				const invalid = [];
 				for (const path of paths) {
 					if (path.toString().endsWith("/")) continue;
 					if (path.toString().includes("browser.tapp/") && !path.toString().endsWith("browser.tapp/index.json")) continue;
@@ -915,9 +917,9 @@ export default async function Api() {
 				},
 				async renameUser(olduser: string, newuser: string) {
 					const userData = JSON.parse(await window.tb.fs.promises.readFile(`/home/${olduser}/user.json`, "utf8"));
-					userData["username"] = newuser;
+					userData.username = newuser;
 					await window.tb.fs.promises.writeFile(`/home/${olduser}/user.json`, JSON.stringify(userData));
-					let linkpaths = [];
+					const linkpaths = [];
 					for (const item of await window.tb.fs.promises.readdir(`/home/${olduser}/desktop/`)) {
 						const stat = await window.tb.fs.promises.stat(`/home/${olduser}/desktop/${item}`);
 						if (stat && stat.type === "SYMLINK") {
@@ -956,8 +958,8 @@ export default async function Api() {
 					await window.tb.fs.promises.writeFile(`/home/${newuser}/desktop/.desktop.json`, JSON.stringify(desktopItems), "utf8");
 					await window.tb.fs.promises.rename(`/apps/user/${olduser}`, `/apps/user/${newuser}`);
 					const sysSettings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
-					if (sysSettings["defaultUser"] === olduser) {
-						sysSettings["defaultUser"] = newuser;
+					if (sysSettings.defaultUser === olduser) {
+						sysSettings.defaultUser = newuser;
 					}
 					const sudousers = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/sudousers.json", "utf8"));
 					const idx = sudousers.indexOf(olduser);
@@ -971,7 +973,7 @@ export default async function Api() {
 					await window.tb.fs.promises.writeFile(`/apps/user/${newuser}/files/config.json`, JSON.stringify(fcfg));
 					const qcfg = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${newuser}/files/quick-center.json`, "utf8"));
 					for (const key in qcfg.paths) {
-						if (Object.prototype.hasOwnProperty.call(qcfg.paths, key)) {
+						if (Object.hasOwn(qcfg.paths, key)) {
 							qcfg.paths[key] = qcfg.paths[key].replace(olduser, newuser);
 						}
 					}
@@ -1246,7 +1248,7 @@ export default async function Api() {
 													const pathParts = fullPath.split("/");
 													let currentPath = "";
 													for (let i = 0; i < pathParts.length - 1; i++) {
-														currentPath += pathParts[i] + "/";
+														currentPath += `${pathParts[i]}/`;
 														try {
 															await window.tb.fs.promises.mkdir(currentPath);
 														} catch {}
@@ -1318,7 +1320,7 @@ export default async function Api() {
 					const info = await window.tb.tauth.getInfo();
 					if (!info) throw new Error("No TACC info found");
 					window.tb.tauth.sync.isSyncing = true;
-					let settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
+					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
 					const davs = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/files/davs.json`, "utf8"));
 					if (!settings.wallpaper.startsWith("/assets/wallpapers") && !settings.wallpaper.startsWith("data:")) {
 						const res = await fetch(`/fs/${settings.wallpaper}`);
@@ -1692,7 +1694,7 @@ export default async function Api() {
 				openFile: async (path: string, type: string) => {
 					const message = { type: "process", path: path };
 					const settings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
-					const fApps = settings["fileAssociatedApps"];
+					const fApps = settings.fileAssociatedApps;
 					const customHandler = fApps?.[type];
 					if (customHandler) {
 						try {
@@ -1799,7 +1801,7 @@ export default async function Api() {
 					if (extName && fileExts["name-to-path"][extName]) {
 						return fileExts["name-to-path"][extName];
 					}
-					return fileExts["name-to-path"]["Unknown"];
+					return fileExts["name-to-path"].Unknown;
 				},
 				set: async (ext: string, iconPath: string) => {
 					const fileExts = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/file-icons.json", "utf8"));

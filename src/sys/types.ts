@@ -3,17 +3,17 @@
  * @description This file contains all the types and interfaces used in the Terbium system.
  */
 
-import { TFSType, FSType, ShellType } from "@terbiumos/tfs";
-import { System } from "./apis/System";
-import { ServerInfo, vFS } from "./vFS";
-import { ExternalApp } from "./liquor/coreapps/ExternalApp";
-import { WindowInformation } from "./liquor/AliceWM";
-import { createAuthClient } from "better-auth/client";
-import type { HTTPSession, libcurl } from "libcurl.js";
-import * as fflate from "fflate";
-import { TSLParser } from "./apis/utils/TSLParser";
 import type { ProxyTransport } from "@mercuryworkshop/proxy-transports";
 import type * as ScramjetControllerGlobal from "@mercuryworkshop/scramjet-controller";
+import type { FSType, ShellType, TFSType } from "@terbiumos/tfs";
+import type { createAuthClient } from "better-auth/client";
+import * as fflate from "fflate";
+import type { HTTPSession, libcurl } from "libcurl.js";
+import type { System } from "./apis/System";
+import type { TSLParser } from "./apis/utils/TSLParser";
+import type { WindowInformation } from "./liquor/AliceWM";
+import type { ExternalApp } from "./liquor/coreapps/ExternalApp";
+import type { ServerInfo, vFS } from "./vFS";
 
 declare global {
 	namespace React.JSX {
@@ -40,7 +40,7 @@ declare global {
 	}
 }
 
-export const isURL = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+export const isURL = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/;
 export const wispServerUrl = (import.meta.env.VITE_WISP_SERVER_URL as string) || `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`;
 
 export const dirExists = async (path: string): Promise<boolean> => {
@@ -133,10 +133,10 @@ export interface Group {
  * @constant `pub` The public permission. This is the lowest level of permission and is assigned to all users by default.
  */
 export enum Perm {
-	sys,
-	usr,
-	grp,
-	pub,
+	sys = 0,
+	usr = 1,
+	grp = 2,
+	pub = 3,
 }
 
 export enum Errors {

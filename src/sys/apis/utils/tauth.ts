@@ -1,6 +1,6 @@
-import { TAuthReturnType, wispServerUrl } from "../../types";
 import { createAuthClient } from "better-auth/client";
 import { libcurl } from "libcurl.js";
+import { type TAuthReturnType, wispServerUrl } from "../../types";
 
 export const auth = createAuthClient({
 	baseURL: "https://auth.terbiumon.top",

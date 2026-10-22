@@ -1,3 +1,4 @@
+// @ts-expect-error types
 import type { BootReplResult, DuskProcessHandle, SpawnOptions, ProcessManager } from "@nightnetwork/dusk";
 
 export type { BootReplResult, DuskProcessHandle, SpawnOptions, ProcessManager };
@@ -26,7 +27,7 @@ export interface TerbiumDuskAPI {
 	sqlite: {
 		spawn(database?: string, options?: SpawnOptions): Promise<DuskProcessHandle>;
 	};
-
+	command(cmd: string, args?: string[], options?: SpawnOptions): Promise<any>;
 	resizePty(pid: number, cols: number, rows: number): void;
 	killProcess(pid: number): void;
 	listProcesses(): number[];

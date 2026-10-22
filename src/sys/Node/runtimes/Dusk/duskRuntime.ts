@@ -1,8 +1,12 @@
-import { bootRepl, type BootReplResult } from "@nightnetwork/dusk";
+import { type BootReplResult, bootRepl } from "@nightnetwork/dusk";
+import { gitBinary } from "./libs/git";
+import { ping } from "./libs/ping";
+import { pkg } from "./libs/pkg";
+import { killBinary, pkill, taskkill } from "./libs/pkill";
+import { sysfetch } from "./libs/sysfetch";
+import { tb } from "./libs/tb";
 import { setupNetworking } from "./networkConfig";
 import { ServerRegistry } from "./util/serverRegistry";
-import { sysfetch } from "./libs/sysfetch";
-import { pkg } from "./libs/pkg";
 
 let duskInstance: BootReplResult | null = null;
 let serverRegistry: ServerRegistry | null = null;
@@ -51,6 +55,13 @@ export async function initializeDusk(): Promise<BootReplResult> {
 		serverRegistry = new ServerRegistry(duskInstance.processManager);
 		duskInstance.processManager.registerHostBinary("/bin/sysfetch", sysfetch);
 		duskInstance.processManager.registerHostBinary("/bin/pkg", pkg);
+		duskInstance.processManager.registerHostBinary("/bin/git", gitBinary);
+		duskInstance.processManager.registerHostBinary("/bin/ping", ping);
+		duskInstance.processManager.registerHostBinary("/bin/pkill", pkill);
+		duskInstance.processManager.registerHostBinary("/bin/kill", killBinary);
+		duskInstance.processManager.registerHostBinary("/bin/taskkill", taskkill);
+		duskInstance.processManager.registerAlias("/bin/taskill", "/bin/taskkill");
+		duskInstance.processManager.registerHostBinary("/bin/tb", tb);
 		// @ts-expect-error types
 		duskProcessPid = window.tb.process.create("runtime", {
 			name: "Terbium Dusk Runtime",
