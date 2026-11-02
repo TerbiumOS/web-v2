@@ -8,7 +8,7 @@ export const auth = createAuthClient({
 		customFetchImpl: async (input: string | URL | Request, init?: RequestInit | undefined) => {
 			if (!window.libcurlLock) {
 				window.libcurlLock = true;
-				libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm");
+				libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@0.7.5/libcurl.wasm");
 				// @ts-expect-error no types
 				libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
 				console.log("libcurl wasm loaded");

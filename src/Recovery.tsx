@@ -237,7 +237,7 @@ export default function Recovery() {
 	async function download(url: string, location: string) {
 		if (!window.loadLock) {
 			window.loadLock = true;
-			await libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@latest/libcurl.wasm");
+			await libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@0.7.5/libcurl.wasm");
 		}
 		// @ts-expect-error types
 		libcurl.set_websocket(`${window.location.protocol.replace("http", "ws")}//${window.location.hostname}:${window.location.port}/wisp/`);
