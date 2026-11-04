@@ -44,7 +44,12 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	const contentRef = useRef<HTMLDivElement>(null);
 	const titleRef = useRef<HTMLSpanElement>(null);
 	const thtmlref = useRef<HTMLDivElement>(null);
-
+	const framelessDragState = useRef<{
+		isDragging: boolean;
+		offsetX: number;
+		offsetY: number;
+		animationFrameId: number | null;
+	}>({ isDragging: false, offsetX: 0, offsetY: 0, animationFrameId: null });
 	const [zIndex, setZIndex] = useState(config.zIndex);
 	const [isMouseDown, setIsMouseDown] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
@@ -61,9 +66,12 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	const [controls, setControls] = useState(config.controls);
 	const [src, setSrc] = useState(config.src);
 	const originalSize = useRef<{ width: number; height: number } | null>(null);
+	const snapRegionRef = useRef<string | null>(null);
 	const [isSnapped, setIsSnapped] = useState(false);
 	const [accent, setAccent] = useState<string>("#ffffff18");
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+	const isFrameless = config.advanced?.enabled;
+	const titlebarHeight = config.advanced?.titlebar?.height || 40;
 	const mobileCheck = async () => {
 		const platform = await window.tb.platform.getPlatform();
 		const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/settings.json`, "utf8"));
@@ -72,6 +80,9 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		}
 	};
 	mobileCheck();
+	useEffect(() => {
+		snapRegionRef.current = snapRegion;
+	}, [snapRegion]);
 
 	useEffect(() => {
 		const loadOptimizationSettings = async () => {
@@ -296,6 +307,132 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		};
 		updAccent();
 
+		const handleFramelessDragMessage = (e: MessageEvent) => {
+			if (e.data?.type === "tb-frameless-drag-start" && e.data?.wid === config.wid) {
+				windowStore.arrange(config.wid);
+				// @ts-ignore
+				setZIndex(windowStore.getWindow(config.wid)?.zIndex);
+				setIsMouseDown(true);
+				setIsDragging(true);
+				framelessDragState.current = {
+					isDragging: true,
+					offsetX: e.data.parentX - windowRef.current!.offsetLeft,
+					offsetY: e.data.parentY - windowRef.current!.offsetTop,
+					animationFrameId: null,
+				};
+			}
+			if (e.data?.type === "tb-frameless-drag-move" && e.data?.wid === config.wid && framelessDragState.current.isDragging) {
+				const { offsetX, offsetY } = framelessDragState.current;
+				const parentX = e.data.parentX;
+				const parentY = e.data.parentY;
+				if (!optimizationsEnabled) {
+					if (windowRef.current) windowRef.current.style.transform = "";
+					setMaximized(false);
+					const newX = parentX - offsetX;
+					const newY = parentY - offsetY;
+					handleSnap(newX, newY);
+					if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
+					if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
+					return;
+				}
+				if (!framelessDragState.current.animationFrameId) {
+					framelessDragState.current.animationFrameId = requestAnimationFrame(() => {
+						if (windowRef.current) windowRef.current.style.transform = "";
+						setMaximized(false);
+						const newX = parentX - offsetX;
+						const newY = parentY - offsetY;
+						handleSnap(newX, newY);
+						if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
+						if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
+						framelessDragState.current.animationFrameId = null;
+					});
+				}
+			}
+			if (e.data?.type === "tb-frameless-drag-end" && e.data?.wid === config.wid) {
+				if (framelessDragState.current.animationFrameId) {
+					cancelAnimationFrame(framelessDragState.current.animationFrameId);
+				}
+				framelessDragState.current = { isDragging: false, offsetX: 0, offsetY: 0, animationFrameId: null };
+				const currentSnapRegion = snapRegionRef.current;
+				if (windowRef.current) {
+					if (currentSnapRegion === "left") {
+						windowRef.current.style.left = "0";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "100%";
+						windowRef.current.style.top = "0";
+						setIsSnapped(true);
+					} else if (currentSnapRegion === "right") {
+						windowRef.current.style.left = "50%";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "100%";
+						windowRef.current.style.top = "0";
+						setIsSnapped(true);
+					} else if (currentSnapRegion === "top") {
+						setMaximized(true);
+						setIsSnapped(true);
+					} else if (currentSnapRegion === "top-left") {
+						windowRef.current.style.left = "0";
+						windowRef.current.style.top = "0";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "50%";
+						setIsSnapped(true);
+					} else if (currentSnapRegion === "top-right") {
+						windowRef.current.style.left = "50%";
+						windowRef.current.style.top = "0";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "50%";
+						setIsSnapped(true);
+					} else if (currentSnapRegion === "bottom-left") {
+						windowRef.current.style.left = "0";
+						windowRef.current.style.top = "50%";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "50%";
+						setIsSnapped(true);
+					} else if (currentSnapRegion === "bottom-right") {
+						windowRef.current.style.left = "50%";
+						windowRef.current.style.top = "50%";
+						windowRef.current.style.width = "50%";
+						windowRef.current.style.height = "50%";
+						setIsSnapped(true);
+					}
+				}
+				setSnapRegion(null);
+				onSnapDone?.();
+				setIsMouseDown(false);
+				setIsDragging(false);
+			}
+		};
+		/**
+		 * Frameless window double-click handler
+		 * Receives 'tb-frameless-dblclick' messages from apps using TerbiumFrameless helper
+		 * Implements identical maximize behavior to standard windows including:
+		 * - Respects config.maximizable and config.advanced.titlebar.doubleClickMaximize
+		 * - Same 150ms transition animation as standard windows
+		 * - Toggle between maximized and normal states
+		 */
+		const handleFramelessDblClick = (e: MessageEvent) => {
+			if (e.data?.type === "tb-frameless-dblclick" && e.data?.wid === config.wid) {
+				const doubleClickEnabled = config.advanced?.titlebar?.doubleClickMaximize !== false;
+				if (config.maximizable !== false && doubleClickEnabled) {
+					if (windowRef.current) {
+						windowRef.current.style.transitionProperty = "width, height, left, top";
+						windowRef.current.style.transitionDuration = "150ms";
+					}
+					setTimeout(() => {
+						if (windowRef.current) {
+							windowRef.current.style.transitionProperty = "";
+							windowRef.current.style.transitionDuration = "";
+						}
+					}, 150);
+					setMaximized(!maximized);
+				}
+			}
+		};
+		if (isFrameless) {
+			window.addEventListener("message", handleFramelessDragMessage);
+			window.addEventListener("message", handleFramelessDblClick);
+		}
+
 		window.addEventListener("reload-win", reload as EventListener);
 		window.addEventListener("max-win", max as EventListener);
 		window.addEventListener("min-win", min as EventListener);
@@ -322,6 +459,10 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			window.removeEventListener("sel-win", selWin as EventListener);
 			window.removeEventListener("min-wins", minall);
 			window.removeEventListener("upd-accent", updAccent);
+			if (isFrameless) {
+				window.removeEventListener("message", handleFramelessDragMessage);
+				window.removeEventListener("message", handleFramelessDblClick);
+			}
 			if (regionRef.current) regionRef.current.removeEventListener("contextmenu", debugCTX);
 		};
 	}, []);
@@ -390,7 +531,6 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		}
 	}, [isDragging, isSnapped]);
 
-	// Disable pointer events on all iframes when dragging
 	useEffect(() => {
 		if (isDragging || isResizing) {
 			const iframes = document.querySelectorAll("iframe");
@@ -406,6 +546,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	}, [isDragging, isResizing]);
 
 	useEffect(() => {
+		if (isFrameless) return;
 		const snap = () => {
 			setIsMouseDown(false);
 			setIsDragging(false);
@@ -456,19 +597,16 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 		};
 		window.addEventListener("mouseup", snap);
 		return () => window.removeEventListener("mouseup", snap);
-	}, [snapRegion, isDragging, maximized, isResizing]);
+	}, [snapRegion, isDragging, maximized, isResizing, isFrameless]);
 
 	const handleMouseDown = (direction: "top" | "left" | "right" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right") => {
 		let animationFrameId: number | null = null;
 		let lastMouseEvent: MouseEvent | null = null;
-
 		const onMove = (e: MouseEvent) => {
 			if (!optimizationsEnabled) {
-				// Without optimizations: update immediately
 				setIsResizing(true);
 				setMaximized(false);
 				windowRef.current!.style.transform = "";
-
 				if (direction.includes("top")) {
 					const offsetY = e.clientY - 65;
 					const newY = Math.max(offsetY, 0);
@@ -507,19 +645,14 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 				}
 				return;
 			}
-
-			// With optimizations: use requestAnimationFrame
 			lastMouseEvent = e;
-
 			if (!animationFrameId) {
 				animationFrameId = requestAnimationFrame(() => {
 					if (!lastMouseEvent) return;
 					const e = lastMouseEvent;
-
 					setIsResizing(true);
 					setMaximized(false);
 					windowRef.current!.style.transform = "";
-
 					if (direction.includes("top")) {
 						const offsetY = e.clientY - 65;
 						const newY = Math.max(offsetY, 0);
@@ -556,7 +689,6 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 							setY(newY);
 						}
 					}
-
 					animationFrameId = null;
 				});
 			}
@@ -632,7 +764,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			{isSnapped ? (
 				<div
 					ref={focuserRef}
-					className={`absolute rounded-lg ${config.focused ? "inset-x-2 top-[calc(40px+0.5rem)] bottom-2 pointer-events-none opacity-0" : "inset-x-[1px] top-[40px] bottom-[1px] opacity-100"} duration-150`}
+					className={`absolute rounded-lg ${config.focused ? `inset-x-2 top-[calc(${isFrameless ? "0px" : titlebarHeight + "px"}+0.5rem)] bottom-2 pointer-events-none opacity-0` : `inset-x-[1px] top-[${isFrameless ? "0px" : titlebarHeight + "px"}] bottom-[1px] opacity-100`} duration-150`}
 					onMouseDown={() => {
 						windowStore.arrange(config.wid);
 						// @ts-ignore
@@ -642,7 +774,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			) : (
 				<div
 					ref={focuserRef}
-					className={`absolute rounded-lg ${config.focused ? "inset-x-2 top-[calc(40px+0.5rem)] bottom-2 pointer-events-none opacity-0" : "inset-x-[1px] top-[40px] bottom-[1px] backdrop-blur-[4px] opacity-100"} duration-150`}
+					className={`absolute rounded-lg ${config.focused ? `inset-x-2 top-[calc(${isFrameless ? "0px" : titlebarHeight + "px"}+0.5rem)] bottom-2 pointer-events-none opacity-0` : `inset-x-[1px] top-[${isFrameless ? "0px" : titlebarHeight + "px"}] bottom-[1px] backdrop-blur-[4px] opacity-100`} duration-150`}
 					onMouseDown={() => {
 						windowStore.arrange(config.wid);
 						// @ts-ignore
@@ -658,42 +790,23 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 			<div className="absolute top-0 right-0 size-4 cursor-ne-resize z-20" data-resizer="top-right" onMouseDown={() => handleMouseDown("top-right")} />
 			<div className="absolute bottom-0 left-0 size-4 cursor-sw-resize z-20" data-resizer="bottom-left" onMouseDown={() => handleMouseDown("bottom-left")} />
 			<div className="absolute bottom-0 right-0 size-4 cursor-se-resize z-20" data-resizer="bottom-right" onMouseDown={() => handleMouseDown("bottom-right")} />
-			<div
-				ref={regionRef}
-				className="region flex justify-between items-center bg-[#ffffff10] p-2 min-w-[224px] select-none"
-				onMouseDown={(e: React.MouseEvent) => {
-					windowStore.arrange(config.wid);
-					// @ts-ignore
-					setZIndex(windowStore.getWindow(config.wid)?.zIndex);
-					if ((e.target as HTMLElement).classList.contains("no-drag")) return;
-					const offsetX = e.clientX - windowRef.current!.offsetLeft;
-					const offsetY = e.clientY - windowRef.current!.offsetTop;
+			{!isFrameless && (
+				<div
+					ref={regionRef}
+					className="region flex justify-between items-center bg-[#ffffff10] p-2 min-w-[224px] select-none"
+					onMouseDown={(e: React.MouseEvent) => {
+						windowStore.arrange(config.wid);
+						// @ts-ignore
+						setZIndex(windowStore.getWindow(config.wid)?.zIndex);
+						if ((e.target as HTMLElement).classList.contains("no-drag")) return;
+						const offsetX = e.clientX - windowRef.current!.offsetLeft;
+						const offsetY = e.clientY - windowRef.current!.offsetTop;
 
-					let animationFrameId: number | null = null;
-					let lastMouseEvent: MouseEvent | null = null;
+						let animationFrameId: number | null = null;
+						let lastMouseEvent: MouseEvent | null = null;
 
-					const onMove = (e: MouseEvent) => {
-						if (!optimizationsEnabled) {
-							// Without optimizations: update immediately
-							if (windowRef.current) windowRef.current.style.transform = "";
-							setIsDragging(true);
-							setMaximized(false);
-							const newX = e.clientX - offsetX;
-							const newY = e.clientY - offsetY;
-							handleSnap(newX, newY);
-							if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
-							if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
-							return;
-						}
-
-						// With optimizations: use requestAnimationFrame
-						lastMouseEvent = e;
-
-						if (!animationFrameId) {
-							animationFrameId = requestAnimationFrame(() => {
-								if (!lastMouseEvent) return;
-								const e = lastMouseEvent;
-
+						const onMove = (e: MouseEvent) => {
+							if (!optimizationsEnabled) {
 								if (windowRef.current) windowRef.current.style.transform = "";
 								setIsDragging(true);
 								setMaximized(false);
@@ -702,316 +815,331 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 								handleSnap(newX, newY);
 								if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
 								if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
+								return;
+							}
+							lastMouseEvent = e;
+							if (!animationFrameId) {
+								animationFrameId = requestAnimationFrame(() => {
+									if (!lastMouseEvent) return;
+									const e = lastMouseEvent;
+									if (windowRef.current) windowRef.current.style.transform = "";
+									setIsDragging(true);
+									setMaximized(false);
+									const newX = e.clientX - offsetX;
+									const newY = e.clientY - offsetY;
+									handleSnap(newX, newY);
+									if (newY > 0 && newY < window.innerHeight - windowRef.current!.offsetHeight) setY(newY);
+									if (newX > 0 && newX < window.innerWidth - windowRef.current!.offsetWidth) setX(newX);
+									animationFrameId = null;
+								});
+							}
+						};
 
+						const onUp = () => {
+							if (animationFrameId) {
+								cancelAnimationFrame(animationFrameId);
 								animationFrameId = null;
-							});
-						}
-					};
+							}
+							window.removeEventListener("mousemove", onMove);
+							window.removeEventListener("mouseup", onUp);
+							window.removeEventListener("blur", onUp);
+							document.documentElement.removeEventListener("mouseleave", onLeave);
+							setIsMouseDown(false);
+							setIsDragging(false);
+						};
 
-					const onUp = () => {
-						if (animationFrameId) {
-							cancelAnimationFrame(animationFrameId);
-							animationFrameId = null;
-						}
-						window.removeEventListener("mousemove", onMove);
-						window.removeEventListener("mouseup", onUp);
-						window.removeEventListener("blur", onUp);
-						document.documentElement.removeEventListener("mouseleave", onLeave);
+						const onLeave = () => {
+							setIsDragging(false);
+							setIsMouseDown(false);
+							window.removeEventListener("mousemove", onMove);
+							window.removeEventListener("mouseup", onUp);
+							window.removeEventListener("blur", onUp);
+							document.documentElement.removeEventListener("mouseleave", onLeave);
+						};
+
+						window.addEventListener("mousemove", onMove);
+						window.addEventListener("mouseup", onUp);
+						window.addEventListener("blur", onUp);
+						document.documentElement.addEventListener("mouseleave", onLeave);
+
+						setIsMouseDown(true);
+					}}
+					onMouseUp={() => {
 						setIsMouseDown(false);
 						setIsDragging(false);
-					};
-
-					const onLeave = () => {
-						setIsDragging(false);
-						setIsMouseDown(false);
-						window.removeEventListener("mousemove", onMove);
-						window.removeEventListener("mouseup", onUp);
-						window.removeEventListener("blur", onUp);
-						document.documentElement.removeEventListener("mouseleave", onLeave);
-					};
-
-					window.addEventListener("mousemove", onMove);
-					window.addEventListener("mouseup", onUp);
-					window.addEventListener("blur", onUp);
-					document.documentElement.addEventListener("mouseleave", onLeave);
-
-					setIsMouseDown(true);
-				}}
-				onMouseUp={() => {
-					setIsMouseDown(false);
-					setIsDragging(false);
-				}}
-				onMouseLeave={() => {
-					if (isMouseDown) {
-						setIsDragging(false);
-					}
-				}}
-				onMouseEnter={() => {
-					if (isMouseDown) {
-						setIsDragging(true);
-					}
-				}}
-				onDoubleClick={() => {
-					if (config.maximizable !== false)
-						if (windowRef.current) {
-							windowRef.current.style.transitionProperty = "width, height, left, top";
-							windowRef.current.style.transitionDuration = "150ms";
+					}}
+					onMouseLeave={() => {
+						if (isMouseDown) {
+							setIsDragging(false);
 						}
-					setTimeout(() => {
-						if (windowRef.current) {
-							windowRef.current.style.transitionProperty = "";
-							windowRef.current.style.transitionDuration = "";
+					}}
+					onMouseEnter={() => {
+						if (isMouseDown) {
+							setIsDragging(true);
 						}
-					}, 150);
-					setMaximized(!maximized);
-				}}
-			>
-				<div className="flex gap-2 items-center flex-row w-full">
-					<img src={config.icon} alt="icon" className="w-5 h-5 pointer-events-none select-none" draggable={false} />
-					<span ref={titleRef} className="font-[680] pointer-events-none select-none">
-						{title}
-					</span>
-					{titlebarhtml && <div className="w-[80%]" ref={thtmlref} />}
-				</div>
-				{controls ? (
-					<div className="controls flex gap-1">
-						{controls?.map((control, index) => {
-							if (control === "minimize") {
-								return (
-									<svg
-										ref={miniRef}
-										key={index}
-										className={`group size-4 ${config.minimizable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
-										viewBox="0 0 24 24"
-										fill="none"
-										onMouseDown={() => {
-											if (config.minimizable === false) return;
-											if (windowRef.current) {
-												windowRef.current.style.transitionProperty = "transform, opacity";
-												windowRef.current.style.transitionDuration = "150ms";
-											}
-											setTimeout(() => {
+					}}
+					onDoubleClick={() => {
+						if (config.maximizable !== false)
+							if (windowRef.current) {
+								windowRef.current.style.transitionProperty = "width, height, left, top";
+								windowRef.current.style.transitionDuration = "150ms";
+							}
+						setTimeout(() => {
+							if (windowRef.current) {
+								windowRef.current.style.transitionProperty = "";
+								windowRef.current.style.transitionDuration = "";
+							}
+						}, 150);
+						setMaximized(!maximized);
+					}}
+				>
+					<div className="flex gap-2 items-center flex-row w-full">
+						<img src={config.icon} alt="icon" className="w-5 h-5 pointer-events-none select-none" draggable={false} />
+						<span ref={titleRef} className="font-[680] pointer-events-none select-none">
+							{title}
+						</span>
+						{titlebarhtml && <div className="w-[80%]" ref={thtmlref} />}
+					</div>
+					{controls ? (
+						<div className="controls flex gap-1">
+							{controls?.map((control, index) => {
+								if (control === "minimize") {
+									return (
+										<svg
+											ref={miniRef}
+											key={index}
+											className={`group size-4 ${config.minimizable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
+											viewBox="0 0 24 24"
+											fill="none"
+											onMouseDown={() => {
+												if (config.minimizable === false) return;
 												if (windowRef.current) {
-													windowRef.current.style.transitionProperty = "";
-													windowRef.current.style.transitionDuration = "";
+													windowRef.current.style.transitionProperty = "transform, opacity";
+													windowRef.current.style.transitionDuration = "150ms";
 												}
-											}, 150);
-											setMinimized(true);
-										}}
-									>
-										<rect
-											className={`
+												setTimeout(() => {
+													if (windowRef.current) {
+														windowRef.current.style.transitionProperty = "";
+														windowRef.current.style.transitionDuration = "";
+													}
+												}, 150);
+												setMinimized(true);
+											}}
+										>
+											<rect
+												className={`
                                                     ${config.minimizable === false ? "fill-[#ffffff60]" : "fill-[#ffffffbb] group-hover:fill-white"} duration-150 pointer-events-none
                                                 `}
-											x="4"
-											y="10"
-											width="16"
-											height="3"
-											rx="2"
-										/>
-									</svg>
-								);
-							}
-							if (control === "maximize") {
-								return (
-									<svg
-										ref={minMaxRef}
-										key={index}
-										className={`group size-4 ${config.maximizable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
-										viewBox="0 0 24 24"
-										fill="none"
-										onMouseDown={() => {
-											if (config.maximizable === false) return;
-											if (windowRef.current) {
-												windowRef.current.style.transitionProperty = "width, height, left, top";
-												windowRef.current.style.transitionDuration = "150ms";
-											}
-											setTimeout(() => {
+												x="4"
+												y="10"
+												width="16"
+												height="3"
+												rx="2"
+											/>
+										</svg>
+									);
+								}
+								if (control === "maximize") {
+									return (
+										<svg
+											ref={minMaxRef}
+											key={index}
+											className={`group size-4 ${config.maximizable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
+											viewBox="0 0 24 24"
+											fill="none"
+											onMouseDown={() => {
+												if (config.maximizable === false) return;
 												if (windowRef.current) {
-													windowRef.current.style.transitionProperty = "";
-													windowRef.current.style.transitionDuration = "";
+													windowRef.current.style.transitionProperty = "width, height, left, top";
+													windowRef.current.style.transitionDuration = "150ms";
 												}
-											}, 150);
-											setMaximized(!maximized);
-										}}
-									>
-										{maximized ? (
-											<>
-												<path
-													className={`
+												setTimeout(() => {
+													if (windowRef.current) {
+														windowRef.current.style.transitionProperty = "";
+														windowRef.current.style.transitionDuration = "";
+													}
+												}, 150);
+												setMaximized(!maximized);
+											}}
+										>
+											{maximized ? (
+												<>
+													<path
+														className={`
                                                                     ${config.maximizable === false ? "fill-[#ffffff60]" : "fill-[#ffffffbb] group-hover:fill-white"} duration-150 pointer-events-none
                                                                 `}
-													d="M6 6C6 3.79086 7.79086 2 10 2H18C20.2091 2 22 3.79086 22 6V14C22 16.2091 20.2091 18 18 18H16V16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V8H6V6Z"
-												/>
+														d="M6 6C6 3.79086 7.79086 2 10 2H18C20.2091 2 22 3.79086 22 6V14C22 16.2091 20.2091 18 18 18H16V16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V8H6V6Z"
+													/>
+													<path
+														className="fill-[#ffffffbb] group-hover:fill-white duration-150 pointer-events-none"
+														fillRule="evenodd"
+														clipRule="evenodd"
+														d="M6 6C3.79086 6 2 7.79086 2 10V18C2 20.2091 3.79086 22 6 22H14C16.2091 22 18 20.2091 18 18V10C18 7.79086 16.2091 6 14 6H6ZM6 8C4.89543 8 4 8.89543 4 10V18C4 19.1046 4.89543 20 6 20H14C15.1046 20 16 19.1046 16 18V10C16 8.89543 15.1046 8 14 8H6Z"
+													/>
+												</>
+											) : (
 												<path
-													className="fill-[#ffffffbb] group-hover:fill-white duration-150 pointer-events-none"
-													fillRule="evenodd"
-													clipRule="evenodd"
-													d="M6 6C3.79086 6 2 7.79086 2 10V18C2 20.2091 3.79086 22 6 22H14C16.2091 22 18 20.2091 18 18V10C18 7.79086 16.2091 6 14 6H6ZM6 8C4.89543 8 4 8.89543 4 10V18C4 19.1046 4.89543 20 6 20H14C15.1046 20 16 19.1046 16 18V10C16 8.89543 15.1046 8 14 8H6Z"
-												/>
-											</>
-										) : (
-											<path
-												className={`
+													className={`
                                                                 ${config.maximizable === false ? "fill-[#ffffff60]" : "fill-[#ffffffbb] group-hover:fill-white"} duration-150 pointer-events-none
                                                             `}
-												fillRule="evenodd"
-												clipRule="evenodd"
-												d="M8 4C5.79086 4 4 5.79086 4 8V16C4 18.2091 5.79086 20 8 20H16C18.2091 20 20 18.2091 20 16V8C20 5.79086 18.2091 4 16 4H8ZM8 6C6.89543 6 6 6.89543 6 8V16C6 17.1046 6.89543 18 8 18H16C17.1046 18 18 17.1046 18 16V8C18 6.89543 17.1046 6 16 6H8Z"
-											/>
-										)}
-									</svg>
-								);
-							}
-							if (control === "close") {
-								return (
-									<svg
-										ref={closeRef}
-										key={index}
-										className={`group size-4 ${config.closable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
-										viewBox="0 0 24 24"
-										fill="none"
-										onMouseDown={() => {
-											if (config.closable === false) return;
-											if (windowRef.current) {
-												windowRef.current.style.transitionProperty = "transform, opacity";
-												windowRef.current.style.transitionDuration = "150ms";
-												windowRef.current.classList.add("translate-y-3", "opacity-0");
-											}
-											setTimeout(() => {
-												clearInfo();
-												windowStore.removeWindow(config.wid);
-											}, 150);
-										}}
-									>
-										<path
-											className={`
+													fillRule="evenodd"
+													clipRule="evenodd"
+													d="M8 4C5.79086 4 4 5.79086 4 8V16C4 18.2091 5.79086 20 8 20H16C18.2091 20 20 18.2091 20 16V8C20 5.79086 18.2091 4 16 4H8ZM8 6C6.89543 6 6 6.89543 6 8V16C6 17.1046 6.89543 18 8 18H16C17.1046 18 18 17.1046 18 16V8C18 6.89543 17.1046 6 16 6H8Z"
+												/>
+											)}
+										</svg>
+									);
+								}
+								if (control === "close") {
+									return (
+										<svg
+											ref={closeRef}
+											key={index}
+											className={`group size-4 ${config.closable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
+											viewBox="0 0 24 24"
+											fill="none"
+											onMouseDown={() => {
+												if (config.closable === false) return;
+												if (windowRef.current) {
+													windowRef.current.style.transitionProperty = "transform, opacity";
+													windowRef.current.style.transitionDuration = "150ms";
+													windowRef.current.classList.add("translate-y-3", "opacity-0");
+												}
+												setTimeout(() => {
+													clearInfo();
+													windowStore.removeWindow(config.wid);
+												}, 150);
+											}}
+										>
+											<path
+												className={`
                                                     ${config.closable === false ? "stroke-[#ffffff60]" : "stroke-[#ffffffbb] group-hover:stroke-white"} duration-150 pointer-events-none
                                                 `}
-											d="M6 18L18 6M6 6L18 18"
-											stroke="white"
-											strokeWidth="2.5"
-											strokeLinecap="round"
-											strokeLinejoin="round"
-										/>
-									</svg>
-								);
-							}
-						})}
-					</div>
-				) : (
-					<div className="controls flex gap-1">
-						<svg
-							ref={miniRef}
-							className={`group size-4 ${config.minimizable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
-							viewBox="0 0 24 24"
-							fill="none"
-							onMouseDown={() => {
-								if (config.minimizable === false) return;
-								if (windowRef.current) {
-									windowRef.current.style.transitionProperty = "transform, opacity";
-									windowRef.current.style.transitionDuration = "150ms";
+												d="M6 18L18 6M6 6L18 18"
+												stroke="white"
+												strokeWidth="2.5"
+												strokeLinecap="round"
+												strokeLinejoin="round"
+											/>
+										</svg>
+									);
 								}
-								setTimeout(() => {
+							})}
+						</div>
+					) : (
+						<div className="controls flex gap-1">
+							<svg
+								ref={miniRef}
+								className={`group size-4 ${config.minimizable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
+								viewBox="0 0 24 24"
+								fill="none"
+								onMouseDown={() => {
+									if (config.minimizable === false) return;
 									if (windowRef.current) {
-										windowRef.current.style.transitionProperty = "";
-										windowRef.current.style.transitionDuration = "";
+										windowRef.current.style.transitionProperty = "transform, opacity";
+										windowRef.current.style.transitionDuration = "150ms";
 									}
-								}, 150);
-								windowStore.minimize(config.wid);
-								window.dispatchEvent(new CustomEvent("min-win", { detail: config.pid }));
-								setMinimized(true);
-							}}
-						>
-							<rect
-								className={`
+									setTimeout(() => {
+										if (windowRef.current) {
+											windowRef.current.style.transitionProperty = "";
+											windowRef.current.style.transitionDuration = "";
+										}
+									}, 150);
+									windowStore.minimize(config.wid);
+									window.dispatchEvent(new CustomEvent("min-win", { detail: config.pid }));
+									setMinimized(true);
+								}}
+							>
+								<rect
+									className={`
                                     ${config.minimizable === false ? "fill-[#ffffff60]" : "fill-[#ffffffbb] group-hover:fill-white"} duration-150 pointer-events-none
                                 `}
-								x="4"
-								y="10"
-								width="16"
-								height="3"
-								rx="2"
-							/>
-						</svg>
-						<svg
-							ref={minMaxRef}
-							className={`group size-4 ${config.maximizable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
-							viewBox="0 0 24 24"
-							fill="none"
-							onMouseDown={() => {
-								if (config.maximizable === false) return;
-								if (windowRef.current) {
-									windowRef.current.style.transitionProperty = "width, height, left, top";
-									windowRef.current.style.transitionDuration = "150ms";
-								}
-								setTimeout(() => {
+									x="4"
+									y="10"
+									width="16"
+									height="3"
+									rx="2"
+								/>
+							</svg>
+							<svg
+								ref={minMaxRef}
+								className={`group size-4 ${config.maximizable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
+								viewBox="0 0 24 24"
+								fill="none"
+								onMouseDown={() => {
+									if (config.maximizable === false) return;
 									if (windowRef.current) {
-										windowRef.current.style.transitionProperty = "";
-										windowRef.current.style.transitionDuration = "";
+										windowRef.current.style.transitionProperty = "width, height, left, top";
+										windowRef.current.style.transitionDuration = "150ms";
 									}
-								}, 150);
-								setMaximized(!maximized);
-							}}
-						>
-							{maximized ? (
-								<>
-									<path
-										className={`
+									setTimeout(() => {
+										if (windowRef.current) {
+											windowRef.current.style.transitionProperty = "";
+											windowRef.current.style.transitionDuration = "";
+										}
+									}, 150);
+									setMaximized(!maximized);
+								}}
+							>
+								{maximized ? (
+									<>
+										<path
+											className={`
                                                 ${config.maximizable === false ? "fill-[#ffffff60]" : "fill-[#ffffffbb] group-hover:fill-white"} duration-150 pointer-events-none
                                             `}
-										d="M6 6C6 3.79086 7.79086 2 10 2H18C20.2091 2 22 3.79086 22 6V14C22 16.2091 20.2091 18 18 18H16V16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V8H6V6Z"
-									/>
+											d="M6 6C6 3.79086 7.79086 2 10 2H18C20.2091 2 22 3.79086 22 6V14C22 16.2091 20.2091 18 18 18H16V16H18C19.1046 16 20 15.1046 20 14V6C20 4.89543 19.1046 4 18 4H10C8.89543 4 8 4.89543 8 6V8H6V6Z"
+										/>
+										<path
+											className="fill-[#ffffffbb] group-hover:fill-white duration-150 pointer-events-none"
+											fillRule="evenodd"
+											clipRule="evenodd"
+											d="M6 6C3.79086 6 2 7.79086 2 10V18C2 20.2091 3.79086 22 6 22H14C16.2091 22 18 20.2091 18 18V10C18 7.79086 16.2091 6 14 6H6ZM6 8C4.89543 8 4 8.89543 4 10V18C4 19.1046 4.89543 20 6 20H14C15.1046 20 16 19.1046 16 18V10C16 8.89543 15.1046 8 14 8H6Z"
+										/>
+									</>
+								) : (
 									<path
-										className="fill-[#ffffffbb] group-hover:fill-white duration-150 pointer-events-none"
-										fillRule="evenodd"
-										clipRule="evenodd"
-										d="M6 6C3.79086 6 2 7.79086 2 10V18C2 20.2091 3.79086 22 6 22H14C16.2091 22 18 20.2091 18 18V10C18 7.79086 16.2091 6 14 6H6ZM6 8C4.89543 8 4 8.89543 4 10V18C4 19.1046 4.89543 20 6 20H14C15.1046 20 16 19.1046 16 18V10C16 8.89543 15.1046 8 14 8H6Z"
-									/>
-								</>
-							) : (
-								<path
-									className={`
+										className={`
                                             ${config.maximizable === false ? "fill-[#ffffff60]" : "fill-[#ffffffbb] group-hover:fill-white"} duration-150 pointer-events-none
                                         `}
-									fillRule="evenodd"
-									clipRule="evenodd"
-									d="M8 4C5.79086 4 4 5.79086 4 8V16C4 18.2091 5.79086 20 8 20H16C18.2091 20 20 18.2091 20 16V8C20 5.79086 18.2091 4 16 4H8ZM8 6C6.89543 6 6 6.89543 6 8V16C6 17.1046 6.89543 18 8 18H16C17.1046 18 18 17.1046 18 16V8C18 6.89543 17.1046 6 16 6H8Z"
-								/>
-							)}
-						</svg>
-						<svg
-							ref={closeRef}
-							className={`group size-4 ${config.closable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
-							viewBox="0 0 24 24"
-							fill="none"
-							onMouseDown={() => {
-								if (config.closable === false) return;
-								if (windowRef.current) {
-									windowRef.current.style.transitionProperty = "transform, opacity";
-									windowRef.current.style.transitionDuration = "150ms";
-									windowRef.current.classList.add("translate-y-3", "opacity-0");
-								}
-								setTimeout(() => {
-									clearInfo();
-									windowStore.removeWindow(config.wid);
-								}, 150);
-							}}
-						>
-							<path
-								className={`
+										fillRule="evenodd"
+										clipRule="evenodd"
+										d="M8 4C5.79086 4 4 5.79086 4 8V16C4 18.2091 5.79086 20 8 20H16C18.2091 20 20 18.2091 20 16V8C20 5.79086 18.2091 4 16 4H8ZM8 6C6.89543 6 6 6.89543 6 8V16C6 17.1046 6.89543 18 8 18H16C17.1046 18 18 17.1046 18 16V8C18 6.89543 17.1046 6 16 6H8Z"
+									/>
+								)}
+							</svg>
+							<svg
+								ref={closeRef}
+								className={`group size-4 ${config.closable === false ? "cursor-default" : "cursor-pointer"} no-drag`}
+								viewBox="0 0 24 24"
+								fill="none"
+								onMouseDown={() => {
+									if (config.closable === false) return;
+									if (windowRef.current) {
+										windowRef.current.style.transitionProperty = "transform, opacity";
+										windowRef.current.style.transitionDuration = "150ms";
+										windowRef.current.classList.add("translate-y-3", "opacity-0");
+									}
+									setTimeout(() => {
+										clearInfo();
+										windowStore.removeWindow(config.wid);
+									}, 150);
+								}}
+							>
+								<path
+									className={`
                                     ${config.closable === false ? "stroke-[#ffffff60]" : "stroke-[#ffffffbb] group-hover:stroke-white"} duration-150 pointer-events-none
                                 `}
-								d="M6 18L18 6M6 6L18 18"
-								stroke="white"
-								strokeWidth="2.5"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-						</svg>
-					</div>
-				)}
-			</div>
+									d="M6 18L18 6M6 6L18 18"
+									stroke="white"
+									strokeWidth="2.5"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								/>
+							</svg>
+						</div>
+					)}
+				</div>
+			)}
 			<div ref={contentRef} className="w-full h-full" style={optimizationsEnabled ? { contain: "strict" } : {}}>
 				{config.proxy ? (
 					<ScramjetFrame url={config.src} />
@@ -1038,7 +1166,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 							border: "none",
 							all: "initial",
 							width: "100%",
-							height: "calc(100% - 40px)",
+							height: isFrameless ? "100%" : `calc(100% - ${titlebarHeight}px)`,
 							pointerEvents: isMouseDown ? "none" : "auto",
 							userSelect: "none",
 							...(optimizationsEnabled && { contain: "strict" }),
@@ -1050,9 +1178,7 @@ const WindowElement: React.FC<WindowProps> = ({ className, config, onSnapDone, o
 	);
 };
 
-// Memoize WindowElement to prevent unnecessary re-renders
 const MemoizedWindowElement = memo(WindowElement, (prevProps, nextProps) => {
-	// Only re-render if config changes in meaningful ways
 	return prevProps.config.wid === nextProps.config.wid && prevProps.config.zIndex === nextProps.config.zIndex && prevProps.config.focused === nextProps.config.focused && prevProps.className === nextProps.className;
 });
 

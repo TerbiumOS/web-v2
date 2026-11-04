@@ -5,7 +5,7 @@
 This guide covers advanced features in Terbium v2 that go beyond basic application development. These features are available but may not be documented elsewhere.
 
 Table of Contents:
-- [Node.js Subsystem (WebContainers)](#nodejs-subsystem)
+- [Dusk Runtime](#dusk-runtime)
 - [Terbium Cloud Authentication](#terbium-cloud)
 - [Virtual File System (VFS/WebDAV)](#virtual-file-system)
 - [Media Island](#media-island)
@@ -13,81 +13,105 @@ Table of Contents:
 
 ---
 
-## <span style="color: #32ae62;">Node.js Subsystem (WebContainers)</span>
+## <span style="color: #32ae62;">Dusk Runtime</span>
 
-Terbium v2 includes a Node.js runtime powered by [WebContainers](https://webcontainers.io/), allowing you to run Node.js applications directly in the browser.
+Terbium includes a full browser-based runtime powered by [Dusk](https://github.com/Night-N3twork/Dusk), providing Node.js, POSIX shell, Python, and SQLite support without a server.
 
-### API Overview
+### Starting the Runtime
 
 ```javascript
-const tb = parent.window.tb;
+// Start the Dusk runtime
+await tb.dusk.start();
 
-// Check if Node.js subsystem is ready
-if (tb.node.isReady) {
-    console.log('Node.js is available!');
+// Check if ready
+if (tb.dusk.isReady) {
+    console.log("Dusk is running!");
 }
 
-// Access the WebContainer instance
-const container = await tb.node.webContainer;
-
-// Start the Node.js subsystem
-await tb.node.start();
-
-// Stop the Node.js subsystem
-await tb.node.stop();
-
-// Access running servers
-const servers = tb.node.servers; // Map of active servers
+// Stop the runtime
+await tb.dusk.stop();
 ```
 
-### Example: Running a Node.js Server
+### Spawning Processes
 
 ```javascript
-const tb = parent.window.tb;
+await tb.dusk.start();
 
-// Ensure Node subsystem is started
-await tb.node.start();
+// Run Node.js
+const nodeProc = await tb.dusk.node.spawn(['-e', 'console.log("Hello from Node!")']);
+const exitCode = await nodeProc.exit;
 
-// Get WebContainer instance
-const container = await tb.node.webContainer;
+// Run a shell command
+const shellProc = await tb.dusk.shell.spawn('echo hello world');
 
-// Write package.json
-await container.fs.writeFile('/package.json', JSON.stringify({
-    name: 'my-app',
-    type: 'module',
-    dependencies: {
-        express: '^4.18.0'
-    }
-}));
+// Run Python
+const pyProc = await tb.dusk.python.spawn('-c "print(\'hello\')"');
 
-// Install dependencies
-const installProcess = await container.spawn('npm', ['install']);
-await installProcess.exit;
+// Open SQLite database
+const dbProc = await tb.dusk.sqlite.spawn('/home/user/data.db');
 
-// Create server file
-await container.fs.writeFile('/server.js', `
-import express from 'express';
-const app = express();
-app.get('/', (req, res) => res.send('Hello from Terbium!'));
-app.listen(3000, () => console.log('Server running'));
-`);
-
-// Run the server
-const serverProcess = await container.spawn('node', ['server.js']);
+// Low-level spawn (any Dusk binary)
+const proc = await tb.dusk.spawn('/bin/node', ['script.js'], {
+    cwd: '/home/user',
+    env: { HOME: '/home/user', PATH: '/bin' },
+    pty: { cols: 80, rows: 24 }
+});
 ```
 
-### Use Cases
+### Server Tracking
 
-- Running Node.js-based development tools
-- Testing backend code without a separate server
-- Running npm packages that require Node.js
-- Full-stack development in the browser
+```javascript
+// Listen for HTTP servers started inside Dusk processes
+window.addEventListener('dusk-server-ready', (e) => {
+    console.log(`Server on port ${e.detail.port}: ${e.detail.url}`);
+});
 
-### Limitations
+// Or access the map directly
+const servers = tb.dusk.servers; // Map<number, string>
+```
 
-- Not all Node.js APIs are supported (see WebContainers documentation)
-- Performance may be slower than native Node.js
-- File system is sandboxed to WebContainer
+### Process Management
+
+```javascript
+// List running process IDs
+const pids = tb.dusk.listProcesses();
+
+// Kill a process
+tb.dusk.killProcess(pid);
+
+// Resize a PTY
+tb.dusk.resizePty(pid, cols, rows);
+```
+
+### Terminal Commands
+
+The following commands are available in the Terbium terminal:
+
+| Command | Description |
+|---------|-------------|
+| `node` | Node.js REPL and script execution |
+| `dsh` | Dusk shell (POSIX-compatible) |
+| `python` | Python 3 REPL and scripts |
+| `sqlite [db]` | SQLite CLI |
+
+### Notes
+
+- Dusk requires [Cross-Origin Isolation](https://developer.mozilla.org/en-US/docs/Web/API/crossOriginIsolated) — ensure your server sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` headers
+- Each SpiderMonkey engine instance uses ~100MB of RAM
+- Files are shared with Terbium's filesystem (TFS/OPFS) — no mounting needed
+- For outbound HTTP/HTTPS, Dusk uses the configured Wisp server
+
+### Backward Compatibility
+
+The old `tb.node` API still works but is deprecated and will be removed in v3.0:
+
+```javascript
+// Deprecated — use tb.dusk.start() instead
+tb.node.start();
+
+// Deprecated — use tb.dusk.spawn() instead
+const proc = await tb.node.webContainer.spawn('node', ['-e', 'console.log("hi")']);
+```
 
 ---
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { dirExists, fileExists, unzip, UserSettings } from "./sys/types";
+import { dirExists, fileExists, unzip, UserSettings, wispServerUrl } from "./sys/types";
 import { DEFAULT_BOOT_ENTRIES, upgradeLegacyBootEntries } from "./sys/bootentries";
 import { hash } from "./hash.json";
 import paths from "./installer.json";
@@ -221,7 +221,7 @@ export default function Updater() {
 				await window.tb.fs.promises.writeFile("/system/tmp/terb-upd/wisp-servers.json", await window.tb.fs.promises.readFile("/apps/system/settings.tapp/wisp-servers.json"));
 			} else {
 				const stockDat = [
-					{ id: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`, name: "Backend" },
+					{ id: wispServerUrl, name: "Backend" },
 					{ id: "wss://wisp.terbiumon.top/wisp/", name: "TB Wisp Instance" },
 				];
 				await window.tb.fs.promises.writeFile("/system/tmp/terb-upd/wisp-servers.json", JSON.stringify(stockDat));

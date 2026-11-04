@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">API Docs</span>
 
-**Last Updated**: v2.4.0 - 07/02/2026
+**Last Updated**: v2.5.0 - 08/10/2026
 
 So you're looking to use Terbium APIs. Well, you're in the right place! Terbium has a decent amount of components which I will break down below. The pages will include a description of the functions and code examples.
 
@@ -615,38 +615,105 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       });
       ```
 
+## tb.dusk
+
+The Dusk runtime API. Provides Node.js, shell, Python, and SQLite support in the browser via SpiderMonkey WASI.
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `isReady` | `boolean` | Whether the Dusk runtime is initialized |
+| `servers` | `Map<number, string>` | Map of active server ports to URLs |
+| `runtime` | `BootReplResult \| null` | Raw Dusk runtime instance |
+| `processManager` | `ProcessManager \| null` | Raw process manager |
+
+### Methods
+
+#### `tb.dusk.start(): Promise<void>`
+Initialize the Dusk runtime. Must be called before spawning processes.
+
+#### `tb.dusk.stop(): Promise<boolean>`
+Shut down the Dusk runtime and all child processes.
+
+#### `tb.dusk.spawn(cmd, args?, options?): Promise<DuskProcessHandle>`
+Spawn any Dusk binary. Returns a process handle with `stdin`, `stdout`, `stderr`, `exit`, `pid`, and `kill()`.
+
+#### `tb.dusk.spawnSync(cmd, args?, options?): Promise<SpawnSyncResult>`
+Synchronous spawn. Returns `{ stdout, stderr, status }`.
+
+#### `tb.dusk.feed(line): Promise<void>`
+Evaluate JavaScript in the pid-0 REPL engine.
+
+#### `tb.dusk.node.spawn(args?, options?): Promise<DuskProcessHandle>`
+Spawn `/bin/node` with optional arguments.
+
+#### `tb.dusk.shell.spawn(command?, options?): Promise<DuskProcessHandle>`
+Spawn `/bin/dsh`. Pass `command` to run a one-shot shell command.
+
+#### `tb.dusk.python.spawn(script?, options?): Promise<DuskProcessHandle>`
+Spawn `/bin/python3`. Pass a `-c <script>` string or omit for interactive.
+
+#### `tb.dusk.sqlite.spawn(database?, options?): Promise<DuskProcessHandle>`
+Spawn `/bin/sqlite3`. Pass a database path or omit for `:memory:`.
+
+#### `tb.dusk.resizePty(pid, cols, rows): void`
+Resize the PTY attached to a process.
+
+#### `tb.dusk.killProcess(pid): void`
+Kill a process by PID.
+
+#### `tb.dusk.listProcesses(): number[]`
+Return all active PIDs.
+
+### Events
+
+`window.addEventListener('dusk-server-ready', handler)` — fires when a Node.js HTTP server binds a port. `event.detail` contains `{ port: number, url: string }`.
+
+---
+
 ### Node
+  > ⚠️ **DEPRECATED**: The `tb.node` API is deprecated and will be removed in v3.0. Use `tb.dusk` for new code. See [Dusk](#dusk) section for the modern API.
+
   - **webContainer**
-    - Description: The current webContainer instance for the Node Subsystem. Refer to [WebContainers API](https://webcontainers.io/api) for documentation.
-    - Returns: `WebContainer` instance
+    - Description: ⚠️ **DEPRECATED** - Compatibility shim for legacy code. Returns a WebContainer-like API that delegates to `tb.dusk`. Use `tb.dusk.spawn()` directly for new code.
+    - Returns: `WebContainerShim` instance
   
   - **servers**
-    - Description: A Map of ports running on the Node Subsystem
+    - Description: A Map of ports running on the Dusk runtime
     - Returns: `Map<number, string>` - Map of port numbers to server URLs
 
   - **isReady**
-    - Description: Returns whether or not the WebContainer is booted.
+    - Description: Returns whether or not the Dusk runtime is booted.
     - Returns: `boolean` - `true` if ready, `false` otherwise
 
   - **start**
-    - Description: Boots the WebContainer
+    - Description: ⚠️ **DEPRECATED** - Use `tb.dusk.start()` instead. Boots the Dusk runtime.
     - Example:
       ```javascript
+      // Old (deprecated):
       tb.node.start();
-      console.log("WebContainer started");
+      
+      // New (recommended):
+      await tb.dusk.start();
+      console.log("Dusk runtime started");
       ```
  
   - **stop**
-    - Description: Stops the WebContainer
+    - Description: ⚠️ **DEPRECATED** - Use `tb.dusk.stop()` instead. Stops the Dusk runtime.
     - Returns: `boolean` - `true` if stopped successfully
     - Example:
       ```javascript
+      // Old (deprecated):
       try {
         const stopped = tb.node.stop();
-        console.log("WebContainer stopped");
+        console.log("Runtime stopped");
       } catch (err) {
-        console.error("No WebContainer is running");
+        console.error("No runtime is running");
       }
+      
+      // New (recommended):
+      await tb.dusk.stop();
       ```
 
 ### Platform
@@ -702,15 +769,12 @@ So you're looking to use Terbium APIs. Well, you're in the right place! Terbium 
       ```
 
   - **parse**
-    - **build [🧪Experimental]**
-      - Description: Building Process of Custom TML Formatted Apps
+    - **build [❌Deprecated]**
+      - Description: **DEPRECATED in v2.5** - TML (Terbium Markup Language) has been removed. Use `WindowConfig.advanced` for custom window chrome instead.
       - Parameters:
-        - `src: string` - Source string to build
-      - Returns: `void`
-      - Example:
-        ```javascript
-        tb.process.parse.build("<tml>...</tml>");
-        ```
+        - `src: string` - Source string (will throw deprecation error)
+      - Returns: `void` (throws error)
+      - Migration: See https://corporate.terbiumon.top/support/kb/41827563
 
 ### Screen
   - **captureScreen**

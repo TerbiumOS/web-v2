@@ -77,22 +77,22 @@ Lemonade mimics Electron's API structure and provides browser-based implementati
 - Display info includes: bounds, workArea, size, scaleFactor, rotation
 
 #### `process` - Process Information & Node.js Execution
-- `process.platform` - OS platform (always "linux" in WebContainer)
+- `process.platform` - OS platform (always "linux" in Dusk runtime)
 - `process.arch` - Architecture (x64)
-- `process.versions` - Version information (Node.js 18.x)
+- `process.versions` - Version information (Node.js 20.x)
 - `process.env` - Environment variables
 - `process.argv` - Command line arguments
 - `process.cwd()` - Current working directory
 - `process.uptime()` - Process uptime
 - `process.memoryUsage()` - Memory statistics
-- `process.isNodeAvailable` - Check if WebContainer Node.js is ready
-- **`process.exec(command, args, options)`** - Execute Node.js command via WebContainer
-- **`process.spawn(command, args, options)`** - Spawn Node.js process via WebContainer
+- `process.isNodeAvailable` - Check if Dusk Node.js runtime is ready
+- **`process.exec(command, args, options)`** - Execute Node.js command via Dusk runtime
+- **`process.spawn(command, args, options)`** - Spawn Node.js process via Dusk runtime
 - **`process.runScript(scriptPath, args)`** - Run a Node.js script file
 - **`process.evalNode(code)`** - Evaluate JavaScript in Node.js context
 - `process.kill(pid)` - Kill a process by PID
 
-**Note:** This module integrates with Terbium's WebContainer (`tb.node`) to provide real Node.js execution instead of simulation.
+**Note:** This module integrates with Terbium's Dusk runtime (`tb.dusk`) to provide real Node.js execution instead of simulation.
 
 #### `Notification` - System Notifications
 - Constructor with options (title, subtitle, body, icon)

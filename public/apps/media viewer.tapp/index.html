@@ -7,7 +7,13 @@
     <link rel="stylesheet" href="index.css">
 </head>
     <body>
-        <main class="media"></main>
+        <main class="mv-shell">
+            <aside class="mv-sidebar" id="mvSidebar">
+                <nav class="mv-nav" id="mvNav" aria-label="Media Viewer sections"></nav>
+                <div class="mv-cloud-widget" id="mvCloudWidget"></div>
+            </aside>
+            <section class="mv-content" id="mvContent" aria-label="Media content"></section>
+        </main>
         <script src="./index.js" type="module"></script>
         <script src="media.com.js"></script>
     </body>

@@ -1,3 +1,5 @@
+// @ts-expect-error types
+import type { SpawnOptions } from "@nightnetwork/dusk";
 import * as fflate from "fflate";
 import { libcurl } from "libcurl.js";
 import apps from "../apps.json";
@@ -9,6 +11,9 @@ import { hideFn, isExistingFn, setMusicFn, setVideoFn } from "./apis/Mediaisland
 import { dismissNotifFn, setNotifFn } from "./apis/Notifications";
 import { registry } from "./apis/Registry";
 import { System } from "./apis/System";
+import { addStartupProc, disableProc, enableProc, launchProcs, removeStartupProc } from "./apis/utils/startupHandler";
+import { TSLParser } from "./apis/utils/TSLParser";
+import { auth, getinfo, setinfo } from "./apis/utils/tauth";
 import { XOR } from "./apis/Xor";
 import { type AppIslandProps, clearControls, clearInfo, updateControls } from "./gui/AppIsland";
 import type { TDockItem } from "./gui/Dock";
@@ -19,21 +24,19 @@ import { Anura } from "./liquor/Anura";
 import { LocalFS } from "./liquor/api/LocalFS";
 import { ExternalApp } from "./liquor/coreapps/ExternalApp";
 import { ExternalLib } from "./liquor/libs/ExternalLib";
-import { initializeWebContainer } from "./Node/runtimes/Webcontainers/nodeProc";
-import parse from "./Parser";
+import { WebContainerShim } from "./Node/compatibility/nodeShim";
+import { getDuskInstance, getServerRegistry, initializeDusk, stopDusk } from "./Node/runtimes/Dusk/duskRuntime";
 import { useWindowStore } from "./Store";
-import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig } from "./types";
-import { vFS } from "./vFS";
-import { auth, getinfo, setinfo } from "./apis/utils/tauth";
-import { launchProcs, addStartupProc, removeStartupProc, enableProc, disableProc } from "./apis/utils/startupHandler";
-import { TSLParser } from "./apis/utils/TSLParser";
 import { ScramjetHandler } from "./scramjet-handler";
+import { type COM, type cmprops, type dialogProps, fileExists, type launcherProps, type MediaProps, type NotificationProps, type SysSettings, type User, type UserSettings, type WindowConfig, wispServerUrl } from "./types";
+import { vFS } from "./vFS";
+
 const { Controller } = $scramjetController;
 
 const system = new System();
 const pw = new pwd();
-declare const tb: COM;
 declare global {
+	const tb: COM;
 	interface Window {
 		tb: COM;
 		Filer: FilerType;
@@ -65,7 +68,7 @@ export default async function Api() {
 			async canUse() {
 				if ("BatteryManager" in window) {
 					const battery = await navigator.getBattery();
-					return battery ? true : false;
+					return !!battery;
 				}
 				return false;
 			},
@@ -75,10 +78,20 @@ export default async function Api() {
 				const apps: any = JSON.parse(await window.tb.fs.promises.readFile("/system/var/terbium/start.json", "utf8"));
 				if (!props.name) throw new Error("Name is required");
 				if (!props.icon) throw new Error("Icon is required");
-				if (apps.system_apps.some((app: any) => app.title === props.name)) {
-					throw new Error("App with the same name already exists");
+				if (!Array.isArray(apps.system_apps)) apps.system_apps = [];
+				const normalizeName = (value: unknown) =>
+					String(value ?? "")
+						.replace(/[^a-zA-Z0-9]/g, "")
+						.toLowerCase();
+				const targetName = normalizeName(props.name);
+				const existingIndex = apps.system_apps.findIndex((app: any) => normalizeName(app.name || app.title) === targetName);
+				if (existingIndex !== -1) {
+					const refreshed = { ...apps.system_apps[existingIndex], ...props };
+					apps.system_apps = apps.system_apps.filter((app: any) => normalizeName(app.name || app.title) !== targetName);
+					apps.system_apps.push(refreshed);
+				} else {
+					apps.system_apps.push(props);
 				}
-				apps.system_apps.push(props);
 				await window.tb.fs.promises.writeFile("/system/var/terbium/start.json", JSON.stringify(apps, null, 2));
 				window.dispatchEvent(new Event("updApps"));
 				return true;
@@ -90,12 +103,23 @@ export default async function Api() {
 				const realName = String(name)
 					.replace(/[^a-zA-Z0-9]/g, "")
 					.toLowerCase();
+				if (!Array.isArray(apps)) throw new Error("Launcher app list is invalid");
 				const appIndex = apps.findIndex((app: any) => {
-					const n = app.name ? app.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
+					const n =
+						app.name || app.title
+							? String(app.name || app.title)
+									.replace(/[^a-zA-Z0-9]/g, "")
+									.toLowerCase()
+							: "";
 					return n === realName;
 				});
 				if (appIndex !== -1) {
-					apps.splice(appIndex, 1);
+					for (let index = apps.length - 1; index >= 0; index--) {
+						const entryName = String(apps[index].name || apps[index].title || "")
+							.replace(/[^a-zA-Z0-9]/g, "")
+							.toLowerCase();
+						if (entryName === realName) apps.splice(index, 1);
+					}
 				} else {
 					throw new Error(`App with name '${name}' not found`);
 				}
@@ -106,12 +130,12 @@ export default async function Api() {
 		},
 		theme: {
 			async get() {
-				return JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"))["theme"];
+				return JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8")).theme;
 			},
 			async set(data: string) {
 				return new Promise(async resolve => {
 					const settings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
-					settings["theme"] = data;
+					settings.theme = data;
 					await window.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(settings), "utf8");
 					resolve(true);
 				});
@@ -123,50 +147,50 @@ export default async function Api() {
 					color.toString().includes('"') ? (color = color.replace(/"/g, "")) : (color = color);
 					document.body.setAttribute("theme", color);
 					const settings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
-					settings["theme"] = color;
+					settings.theme = color;
 					await window.tb.fs.promises.writeFile("/system/etc/terbium/settings.json", JSON.stringify(settings), "utf8");
 				},
 				async theme() {
 					const settings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
-					return settings["theme"];
+					return settings.theme;
 				},
 				async setAccent(color: string) {
 					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-					settings["accent"] = color;
+					settings.accent = color;
 					await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings), "utf8");
 				},
 				async getAccent() {
-					return JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"))["accent"];
+					return JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8")).accent;
 				},
 			},
 			wallpaper: {
 				async set(path: string) {
 					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-					settings["wallpaper"] = path;
+					settings.wallpaper = path;
 					await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings));
 					window.dispatchEvent(new Event("updWallpaper"));
 				},
 				async contain() {
 					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-					settings["wallpaperMode"] = "contain";
+					settings.wallpaperMode = "contain";
 					await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings), "utf8");
 					window.dispatchEvent(new Event("updWallpaper"));
 				},
 				async stretch() {
 					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-					settings["wallpaperMode"] = "stretch";
+					settings.wallpaperMode = "stretch";
 					await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings), "utf8");
 					window.dispatchEvent(new Event("updWallpaper"));
 				},
 				async cover() {
 					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-					settings["wallpaperMode"] = "cover";
+					settings.wallpaperMode = "cover";
 					await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings), "utf8");
 					window.dispatchEvent(new Event("updWallpaper"));
 				},
 				async fillMode() {
 					return new Promise(async resolve => {
-						resolve(JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"))["wallpaperMode"]);
+						resolve(JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8")).wallpaperMode);
 					});
 				},
 			},
@@ -350,7 +374,7 @@ export default async function Api() {
 		user: {
 			async username() {
 				try {
-					const username = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"))["username"];
+					const username = JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8")).username;
 					return username || "Guest";
 				} catch (error) {
 					console.error("Error Fetching username:", error);
@@ -359,7 +383,7 @@ export default async function Api() {
 			},
 			async pfp() {
 				try {
-					return JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8"))["pfp"] || "/assets/img/defualt - blue.png";
+					return JSON.parse(await window.tb.fs.promises.readFile(`/home/${sessionStorage.getItem("currAcc")}/user.json`, "utf8")).pfp || "/assets/img/defualt - blue.png";
 				} catch (error) {
 					console.error("Error Fetching pfp:", error);
 					return "/assets/img/defualt - blue.png";
@@ -369,11 +393,11 @@ export default async function Api() {
 		proxy: {
 			async get() {
 				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-				return settings["proxy"];
+				return settings.proxy;
 			},
 			async set(proxy: "Ultraviolet" | "Scramjet") {
 				const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
-				settings["proxy"] = proxy;
+				settings.proxy = proxy;
 				await window.tb.fs.promises.writeFile(`/home/${await window.tb.user.username()}/settings.json`, JSON.stringify(settings, null, 2), "utf8");
 				window.tb.proxy.updateSWs();
 				return true;
@@ -394,7 +418,7 @@ export default async function Api() {
 				window.scramjetTb = scramjetHandler;
 				if (settings.wispServer === null) {
 					// @ts-expect-error
-					window.tb.libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
+					window.tb.libcurl.set_websocket(wispServerUrl);
 				} else {
 					window.tb.libcurl.set_websocket(settings.wispServer);
 				}
@@ -605,15 +629,15 @@ export default async function Api() {
 				const walk = async (fsPath: string, zipPrefix: string) => {
 					try {
 						const stat = await window.tb.fs.promises.stat(fsPath);
-						if (stat!.type === "DIRECTORY") {
+						if (stat?.type === "DIRECTORY") {
 							const entries = await window.tb.fs.promises.readdir(fsPath);
 							const dirName = normalizeZipPath(zipPrefix);
 							if (entries.length === 0 && dirName) {
-								files[dirName.endsWith("/") ? dirName : dirName + "/"] = new Uint8Array(0);
+								files[dirName.endsWith("/") ? dirName : `${dirName}/`] = new Uint8Array(0);
 							}
 							await Promise.all(
 								entries.map(async entry => {
-									const childFsPath = `${fsPath.endsWith("/") ? fsPath : fsPath + "/"}${entry}`;
+									const childFsPath = `${fsPath.endsWith("/") ? fsPath : `${fsPath}/`}${entry}`;
 									const childZipPath = zipPrefix ? `${zipPrefix}/${entry}` : entry;
 									await walk(childFsPath, childZipPath);
 								}),
@@ -646,7 +670,7 @@ export default async function Api() {
 				}
 			},
 			scanintegrity: async () => {
-				let invalid = [];
+				const invalid = [];
 				for (const path of paths) {
 					if (path.toString().endsWith("/")) continue;
 					if (path.toString().includes("browser.tapp/") && !path.toString().endsWith("browser.tapp/index.json")) continue;
@@ -702,7 +726,7 @@ export default async function Api() {
 						animations: true,
 						proxy: "Scramjet",
 						transport: "Default (Libcurl)",
-						wispServer: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`,
+						wispServer: wispServerUrl,
 						"battery-percent": false,
 						accent: "#32ae62",
 						times: {
@@ -893,9 +917,9 @@ export default async function Api() {
 				},
 				async renameUser(olduser: string, newuser: string) {
 					const userData = JSON.parse(await window.tb.fs.promises.readFile(`/home/${olduser}/user.json`, "utf8"));
-					userData["username"] = newuser;
+					userData.username = newuser;
 					await window.tb.fs.promises.writeFile(`/home/${olduser}/user.json`, JSON.stringify(userData));
-					let linkpaths = [];
+					const linkpaths = [];
 					for (const item of await window.tb.fs.promises.readdir(`/home/${olduser}/desktop/`)) {
 						const stat = await window.tb.fs.promises.stat(`/home/${olduser}/desktop/${item}`);
 						if (stat && stat.type === "SYMLINK") {
@@ -934,8 +958,8 @@ export default async function Api() {
 					await window.tb.fs.promises.writeFile(`/home/${newuser}/desktop/.desktop.json`, JSON.stringify(desktopItems), "utf8");
 					await window.tb.fs.promises.rename(`/apps/user/${olduser}`, `/apps/user/${newuser}`);
 					const sysSettings: SysSettings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
-					if (sysSettings["defaultUser"] === olduser) {
-						sysSettings["defaultUser"] = newuser;
+					if (sysSettings.defaultUser === olduser) {
+						sysSettings.defaultUser = newuser;
 					}
 					const sudousers = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/sudousers.json", "utf8"));
 					const idx = sudousers.indexOf(olduser);
@@ -949,7 +973,7 @@ export default async function Api() {
 					await window.tb.fs.promises.writeFile(`/apps/user/${newuser}/files/config.json`, JSON.stringify(fcfg));
 					const qcfg = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${newuser}/files/quick-center.json`, "utf8"));
 					for (const key in qcfg.paths) {
-						if (Object.prototype.hasOwnProperty.call(qcfg.paths, key)) {
+						if (Object.hasOwn(qcfg.paths, key)) {
 							qcfg.paths[key] = qcfg.paths[key].replace(olduser, newuser);
 						}
 					}
@@ -1180,16 +1204,123 @@ export default async function Api() {
 					await window.tb.fs.promises.writeFile(`/home/${info.username}/settings.json`, JSON.stringify(data.settings[0].settings, null, 2), "utf8");
 					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/files/davs.json`, JSON.stringify(data.settings[0].davs, null, 2), "utf8");
 					await window.tb.fs.promises.writeFile(`/apps/user/${info.username}/app store/repos.json`, JSON.stringify(data.settings[0].apps.repos || [], null, 2), "utf8");
+					if (data.settings[0].apps.installed && Array.isArray(data.settings[0].apps.installed)) {
+						const cloudAppUrls = data.settings[0].apps.installed;
+						console.log("[TAUTH] Cloud app URLs:", cloudAppUrls);
+						const installedApps = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
+						const installedUrls: string[] = [];
+						for (const app of installedApps) {
+							try {
+								const config = JSON.parse(await window.tb.fs.promises.readFile(app.config, "utf8"));
+								if (config["pkg-download"]) {
+									installedUrls.push(config["pkg-download"]);
+								} else if (config["anura-pkg"]) {
+									installedUrls.push(config["anura-pkg"]);
+								}
+							} catch (err) {
+								console.error(err);
+							}
+						}
+						const appsToInstall = cloudAppUrls.filter((url: string) => !installedUrls.includes(url));
+						if (appsToInstall.length > 0) {
+							console.log("[TAUTH] Installing missing apps from cloud:", appsToInstall);
+							await window.tb.notification.Installing(
+								{
+									message: `Syncing ${appsToInstall.length} app${appsToInstall.length > 1 ? "s" : ""} from Terbium Cloud`,
+									application: "System",
+									iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+								},
+								async () => {
+									for (const appUrl of appsToInstall) {
+										try {
+											const fileName = appUrl.split("/").pop() || "app.zip";
+											const appName = fileName.replace(/\.(zip|tapp)$/, "");
+											await window.tb.system.download(appUrl, `/apps/system/${appName}.zip`);
+											const response = await fetch(`/fs/apps/system/${appName}.zip`);
+											const zipFileContent = await response.arrayBuffer();
+											const targetDir = `/apps/system/${appName}.tapp/`;
+											// @ts-expect-error
+											await window.tb.fs.promises.mkdir(targetDir, { recursive: true });
+											const compressedFiles = window.tb.fflate.unzipSync(new Uint8Array(zipFileContent));
+											for (const [relativePath, content] of Object.entries(compressedFiles)) {
+												const fullPath = `${targetDir}${relativePath}`;
+												if (!relativePath.endsWith("/")) {
+													const pathParts = fullPath.split("/");
+													let currentPath = "";
+													for (let i = 0; i < pathParts.length - 1; i++) {
+														currentPath += `${pathParts[i]}/`;
+														try {
+															await window.tb.fs.promises.mkdir(currentPath);
+														} catch {}
+													}
+													await window.tb.fs.promises.writeFile(fullPath, window.tb.buffer.from(content));
+												}
+											}
+											await window.tb.fs.promises.unlink(`/apps/system/${appName}.zip`);
+											const appData = JSON.parse(await window.tb.fs.promises.readFile(`${targetDir}.tbconfig`, "utf8"));
+											await window.tb.launcher.addApp({
+												// @ts-expect-error
+												title:
+													typeof appData.wmArgs.title === "object"
+														? {
+																text: appData.wmArgs.title.text,
+																weight: appData.wmArgs.title.weight,
+																html: appData.wmArgs.title.html,
+															}
+														: appData.wmArgs.title,
+												name: appData.title,
+												icon: `/fs/apps/system/${appName}.tapp/${appData.icon}`,
+												src: `/fs/apps/system/${appName}.tapp/${appData.wmArgs.src}`,
+												size: {
+													width: appData.wmArgs.size.width,
+													height: appData.wmArgs.size.height,
+												},
+												single: appData.wmArgs.single,
+												resizable: appData.wmArgs.resizable,
+												controls: appData.wmArgs.controls,
+												message: appData.wmArgs.message,
+												snapable: appData.wmArgs.snapable,
+												advanced: appData.wmArgs.advanced,
+											});
+											installedApps.push({
+												name: appData.title,
+												user: await window.tb.user.username(),
+												config: `${targetDir}.tbconfig`,
+											});
+											console.log(`[TAUTH] Installed ${appData.title} from cloud`);
+										} catch (err) {
+											console.error(`[TAUTH] Failed to install app from ${appUrl}:`, err);
+										}
+									}
+									await window.tb.fs.promises.writeFile("/apps/installed.json", JSON.stringify(installedApps, null, 2));
+								},
+								{
+									message: "Synced apps from Terbium Cloud",
+									application: "System",
+									iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+									time: 3000,
+								},
+								{
+									message: "Failed to sync apps from cloud",
+									application: "System",
+									iconSrc: "/fs/apps/system/about.tapp/icon.svg",
+									time: 3000,
+								},
+							);
+						} else {
+							console.log("[TAUTH] All cloud apps are already installed");
+						}
+					}
 					window.dispatchEvent(new Event("updWallpaper"));
 					window.dispatchEvent(new CustomEvent("proxy-change"));
 					window.dispatchEvent(new Event("upd-accent"));
 					window.tb.tauth.sync.isSyncing = false;
 				},
-				upload: async () => {
+				upload: async (force = false) => {
 					const info = await window.tb.tauth.getInfo();
 					if (!info) throw new Error("No TACC info found");
 					window.tb.tauth.sync.isSyncing = true;
-					let settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
+					const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${info.username}/settings.json`, "utf8"));
 					const davs = JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/files/davs.json`, "utf8"));
 					if (!settings.wallpaper.startsWith("/assets/wallpapers") && !settings.wallpaper.startsWith("data:")) {
 						const res = await fetch(`/fs/${settings.wallpaper}`);
@@ -1210,12 +1341,42 @@ export default async function Api() {
 						reader.readAsDataURL(blob);
 						settings.wallpaper = await dataURL;
 					}
+					const installedApps = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
+					const appUrls: string[] = [];
+					for (const app of installedApps) {
+						try {
+							const configContent = await window.tb.fs.promises.readFile(app.config, "utf8");
+							const config = JSON.parse(configContent);
+							if (config["pkg-download"]) {
+								appUrls.push(config["pkg-download"]);
+							} else if (config["anura-pkg"]) {
+								appUrls.push(config["anura-pkg"]);
+							}
+						} catch (err) {
+							console.warn(`[TAUTH] Could not read config for ${app.name}:`, err);
+						}
+					}
+					if (!force) {
+						try {
+							const cloudData = await getinfo(null, null, "tbs");
+							const cloudAppUrls = cloudData.settings[0]?.apps?.installed || [];
+							const localSorted = [...appUrls].sort();
+							const cloudSorted = [...cloudAppUrls].sort();
+							if (JSON.stringify(localSorted) === JSON.stringify(cloudSorted)) {
+								console.log("[TAUTH] App list unchanged, skipping upload");
+								window.tb.tauth.sync.isSyncing = false;
+								return;
+							}
+						} catch (err) {
+							console.warn("[TAUTH] Could not check cloud state, uploading anyway:", err);
+						}
+					}
 					const toupload = [
 						{
 							settings: settings,
 							apps: {
 								repos: JSON.parse(await window.tb.fs.promises.readFile(`/apps/user/${info.username}/app store/repos.json`, "utf8")),
-								installed: [],
+								installed: appUrls,
 							},
 							davs: davs,
 						},
@@ -1236,20 +1397,147 @@ export default async function Api() {
 			},
 		},
 		node: {
-			webContainer: {},
-			servers: new Map<number, string>(),
-			isReady: false,
-			start: () => {
-				initializeWebContainer();
-			},
-			stop: () => {
-				if (window.tb.node.isReady) {
-					// @ts-expect-error
-					window.tb.node.webContainer.teardown();
-					window.tb.node.isReady = false;
-					return true;
+			// @ts-expect-error
+			_shimInstance: null as WebContainerShim | null,
+			get webContainer() {
+				if (!window.tb.dusk.isReady) {
+					return {};
 				}
-				throw new Error("No WebContainer is running");
+				// @ts-expect-error
+				if (!this._shimInstance) {
+					// @ts-expect-error
+					this._shimInstance = new WebContainerShim();
+				}
+				// @ts-expect-error
+				return this._shimInstance;
+			},
+			get servers(): Map<number, string> {
+				return window.tb.dusk.servers;
+			},
+			get isReady(): boolean {
+				return window.tb.dusk.isReady;
+			},
+			start() {
+				console.warn("[tb.node] DEPRECATED: Use tb.dusk.start() instead. tb.node will be removed in v3.0.");
+				return window.tb.dusk.start();
+			},
+			stop() {
+				console.warn("[tb.node] DEPRECATED: Use tb.dusk.stop() instead. tb.node will be removed in v3.0.");
+				return window.tb.dusk.stop();
+			},
+		},
+		dusk: {
+			get runtime() {
+				return getDuskInstance();
+			},
+			get processManager() {
+				return getDuskInstance()?.processManager ?? null;
+			},
+			get isReady() {
+				return getDuskInstance() !== null;
+			},
+			get servers() {
+				return getServerRegistry()?.getAll() ?? new Map<number, string>();
+			},
+			async start() {
+				try {
+					await initializeDusk();
+				} catch (error) {
+					console.error("[Dusk] start failed:", error);
+					throw new Error(`Dusk start failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+			async stop() {
+				try {
+					return await stopDusk();
+				} catch (error) {
+					console.error("[Dusk] stop failed:", error);
+					throw new Error(`Dusk stop failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+			async spawn(cmd: string, args?: string[], options?: SpawnOptions) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				try {
+					return await instance.processManager.spawn(cmd, args, options);
+				} catch (error) {
+					console.error(`[Dusk] Failed to spawn ${cmd}:`, error);
+					throw new Error(`Process spawn failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+			async spawnSync(cmd: string, args?: string[], options?: SpawnOptions) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				try {
+					return await instance.processManager.spawnSync(cmd, args, options);
+				} catch (error) {
+					console.error(`[Dusk] Failed to spawnSync ${cmd}:`, error);
+					throw new Error(`Process spawnSync failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+			async command(cmd: string, args: string[] = [], options?: SpawnOptions) {
+				return await window.tb.dusk.spawnSync(cmd, args, options);
+			},
+			async feed(line: string) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				try {
+					return await instance.feed(line);
+				} catch (error) {
+					console.error("[Dusk] feed failed:", error);
+					throw new Error(`feed failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+				}
+			},
+			node: {
+				async spawn(args?: string[], options?: SpawnOptions) {
+					return await window.tb.dusk.spawn("/bin/node", args, options);
+				},
+			},
+			shell: {
+				async spawn(command?: string, options?: SpawnOptions) {
+					const shellArgs = command ? ["-c", command] : [];
+					return await window.tb.dusk.spawn("/bin/dsh", shellArgs, options);
+				},
+			},
+			python: {
+				async spawn(script?: string, options?: SpawnOptions) {
+					const pythonArgs = script ? ["-c", script] : [];
+					return await window.tb.dusk.spawn("/bin/python3", pythonArgs, options);
+				},
+			},
+			sqlite: {
+				async spawn(database?: string, options?: SpawnOptions) {
+					const sqliteArgs = database ? [database] : [];
+					return await window.tb.dusk.spawn("/bin/sqlite3", sqliteArgs, options);
+				},
+			},
+			resizePty(pid: number, cols: number, rows: number) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				instance.processManager.resizePty(pid, cols, rows);
+			},
+			killProcess(pid: number) {
+				const instance = getDuskInstance();
+				if (!instance) {
+					throw new Error("Dusk runtime not initialized. Call tb.dusk.start() first.");
+				}
+				const proc = instance.processManager.getProcess(pid);
+				if (proc) {
+					proc.kill();
+				}
+			},
+			listProcesses() {
+				const instance = getDuskInstance();
+				if (!instance) return [];
+				return instance.processManager.activePids();
 			},
 		},
 		crypto: async (pass: string, file?: string) => {
@@ -1311,7 +1599,6 @@ export default async function Api() {
 					if (proc.type === "window") {
 						clearInfo();
 						useWindowStore.getState().killWindow(String(pd));
-						delete window.tb.process.procs[proc.pid];
 					} else if (proc.type === "runtime") {
 						delete window.tb.process.procs[proc.pid];
 						if (proc.onKill) proc.onKill();
@@ -1324,8 +1611,8 @@ export default async function Api() {
 				return window.tb.process.procs;
 			},
 			parse: {
-				build(src: string) {
-					parse.build(src);
+				build(_src: string) {
+					throw new Error("TML (Terbium Markup Language) has been deprecated and removed in Terbium v2.5. Please use the new WindowConfig.advanced system for custom window chrome. For more information, visit: https://corporate.terbiumon.top/support/kb/41827563");
 				},
 			},
 			create(type: "window" | "runtime", config: any) {
@@ -1407,7 +1694,7 @@ export default async function Api() {
 				openFile: async (path: string, type: string) => {
 					const message = { type: "process", path: path };
 					const settings = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8"));
-					const fApps = settings["fileAssociatedApps"];
+					const fApps = settings.fileAssociatedApps;
 					const customHandler = fApps?.[type];
 					if (customHandler) {
 						try {
@@ -1464,13 +1751,16 @@ export default async function Api() {
 						case "audio":
 						case "pdf":
 							createWindow({
-								title: "Media Viewer",
+								title: {
+									text: "Media Viewer",
+									html: '<div id="mv-titlebar-search" style="display:flex;align-items:center;gap:8px;height:34px;width:100%;max-width:520px;padding:0 2px;margin-left:auto;"><div style="flex:1;display:flex;align-items:center;gap:8px;padding:0 10px;height:28px;border-radius:8px;background:#ffffff1e;box-shadow:inset 0 0 0 1px #ffffff10;"><input id="mv-search-input" type="search" placeholder="Search Gallery" style="width:100%;background:transparent;border:none;outline:none;color:#ffffffd9;font-size:12px;font-weight:700;text-align:center;" /><span id="mv-search-icon" style="display:inline-flex;align-items:center;justify-content:center;color:#ffffff72;font-size:14px;">&#8981;</span></div></div>',
+								},
 								src: "/fs/apps/system/media viewer.tapp/index.html",
 								size: {
-									width: 460,
-									height: 460,
-									minWidth: 160,
-									minHeight: 160,
+									width: 1000,
+									height: 650,
+									minWidth: 640,
+									minHeight: 420,
 								},
 								icon: "/fs/apps/system/media viewer.tapp/icon.svg",
 								message: JSON.stringify(message),
@@ -1511,7 +1801,7 @@ export default async function Api() {
 					if (extName && fileExts["name-to-path"][extName]) {
 						return fileExts["name-to-path"][extName];
 					}
-					return fileExts["name-to-path"]["Unknown"];
+					return fileExts["name-to-path"].Unknown;
 				},
 				set: async (ext: string, iconPath: string) => {
 					const fileExts = JSON.parse(await window.tb.fs.promises.readFile("/system/etc/terbium/file-icons.json", "utf8"));
@@ -1675,7 +1965,7 @@ export default async function Api() {
 	const wsld = async () => {
 		const settings: UserSettings = JSON.parse(await window.tb.fs.promises.readFile(`/home/${await window.tb.user.username()}/settings.json`, "utf8"));
 		if (settings.wispServer === null) {
-			libcurlload(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
+			libcurlload(wispServerUrl);
 		} else {
 			libcurlload(settings.wispServer);
 		}
@@ -1739,5 +2029,5 @@ export default async function Api() {
 	}
 	launchProcs();
 	document.addEventListener("libcurl_load", wsld);
-	window.tb.node.webContainer = await initializeWebContainer();
+	window.tb.dusk.start();
 }

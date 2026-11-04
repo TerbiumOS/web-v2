@@ -1,15 +1,15 @@
 # <span style="color: #32ae62;">Liquor Compatibility</span>
 
-**Last Updated**: v2.4.0 - 07/16/2026  
-**Targets**: Anura v2.2.0-alpha APIs
+**Last Updated**: v2.5.0 - 08/07/2026  
+**Targets**: Anura v2.2.0 APIs
 
 Liquor is Terbium's compatibility layer for Anura applications. The name "Liquor" follows the tradition of compatibility layers like Wine (Wine Is Not an Emulator).
 
-Liquor provides compatibility with Anura v2.2.0-alpha APIs, allowing most Anura applications to run on Terbium with minimal or no modifications. While we aim for high compatibility, some features differ due to architectural differences between Terbium and Anura.
+Liquor provides compatibility with Anura v2.2.0 APIs, allowing most Anura applications to run on Terbium with minimal or no modifications. While we aim for high compatibility, some features differ due to architectural differences between Terbium and Anura.
 
 ## <span style="color: #32ae62;">API Support</span>
 
-The table below compares Liquor's API support against the actual Anura v2.2.0-alpha implementation. APIs marked as "Full" are functionally complete and should work identically to Anura. "Partial" indicates working functionality with some limitations. "NO" indicates the API is not implemented.
+The table below compares Liquor's API support against the actual Anura v2.2.0 implementation. APIs marked as "Full" are functionally complete and should work identically to Anura. "Partial" indicates working functionality with some limitations. "NO" indicates the API is not implemented.
 
 | Anura API | Liquor Support | Notes |
 | :--: | :---: | :--- |
@@ -25,7 +25,7 @@ The table below compares Liquor's API support against the actual Anura v2.2.0-al
 | anura.config | Full | Configuration access |
 | anura.files (FilesAPI) | Full | File handler system |
 | anura.dialog | Full | Dialog system fully implemented |
-| anura.platform | Full | Platform detection APIs |
+| anura.platform | Full | Platform detection APIs with fullscreen state tracking |
 | anura.processes | Partial | Process management with some stubs |
 | anura.ui (AnuraUI) | Partial | UI system working, some features stubbed |
 | anura.libs | Full | Library registry access |
@@ -35,6 +35,24 @@ The table below compares Liquor's API support against the actual Anura v2.2.0-al
 | anura.settings | Full | Settings management API |
 | anura.logger | Full | Logging utilities |
 | anura.ContextMenu | Full | Context menu system |
+
+## <span style="color: #32ae62;">What's New in v2.2.0</span>
+
+Liquor has been updated to target Anura v2.2.0, which includes several improvements and new features:
+
+### Platform API Enhancements
+- **Fullscreen State Tracking**: The Platform API now includes a `state` object with `fullscreen` property for tracking fullscreen state changes
+- **Settings Integration**: Support for `force-platform` and `force-touch-input` settings to override automatic platform detection
+- **Improved Touch Detection**: Better detection for touch-enabled devices, especially tablets like iPad
+
+### Networking Improvements
+- **Localhost Loopback**: Full support for localhost networking with port-based routing
+- **V86 Integration**: Enhanced networking support for V86 Linux emulation with loopback capabilities
+- **Better Error Handling**: Improved error messages for unbound localhost ports
+
+### Architecture Updates
+- **Version**: Updated from v2.1.0 to v2.2.0 to match Anura's latest stable release
+- **API Compatibility**: All existing Anura v2.2.0 APIs are supported in Liquor
 
 ## <span style="color: #32ae62;">Important Notes</span>
 

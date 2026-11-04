@@ -4,12 +4,22 @@ export class Processes {
 		this.processesDiv = document.querySelector("window-area");
 	}
 	get procs() {
-		const wins = window.anura.wm.windows;
-		const arr: WeakRef<any>[] = wins.reduce((out: WeakRef<any>[], w: any) => {
-			if (!w) return out;
-			out.push(typeof w?.deref === "function" ? (w as WeakRef<any>) : new WeakRef(w));
-			return out;
-		}, []);
+		const tbProcs = window.tb.process.list();
+		const arr: WeakRef<any>[] = [];
+		for (const [pid, proc] of Object.entries(tbProcs)) {
+			const procObj = {
+				pid: Number(pid),
+				title: proc.name,
+				kill() {
+					window.tb.process.kill(pid);
+				},
+				get alive() {
+					return window.tb.process.list()[Number(pid)] != null;
+				},
+				...proc,
+			};
+			arr.push(new WeakRef(procObj));
+		}
 		const s1 = Symbol();
 		const s2 = Symbol();
 		(arr as any)[s1] = [];

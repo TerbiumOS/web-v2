@@ -1,6 +1,6 @@
-import { TAuthReturnType } from "../../types";
 import { createAuthClient } from "better-auth/client";
 import { libcurl } from "libcurl.js";
+import { type TAuthReturnType, wispServerUrl } from "../../types";
 
 export const auth = createAuthClient({
 	baseURL: "https://auth.terbiumon.top",
@@ -10,7 +10,7 @@ export const auth = createAuthClient({
 				window.libcurlLock = true;
 				libcurl.load_wasm("https://cdn.jsdelivr.net/npm/libcurl.js@0.7.5/libcurl.wasm");
 				// @ts-expect-error no types
-				libcurl.set_websocket(`${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`);
+				libcurl.set_websocket(wispServerUrl);
 				console.log("libcurl wasm loaded");
 			}
 			const savedCookies = localStorage.getItem("libcurl_cookies") || "";

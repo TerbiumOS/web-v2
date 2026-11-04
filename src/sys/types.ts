@@ -3,17 +3,17 @@
  * @description This file contains all the types and interfaces used in the Terbium system.
  */
 
-import { TFSType, FSType, ShellType } from "@terbiumos/tfs";
-import { System } from "./apis/System";
-import { ServerInfo, vFS } from "./vFS";
-import { ExternalApp } from "./liquor/coreapps/ExternalApp";
-import { WindowInformation } from "./liquor/AliceWM";
-import { createAuthClient } from "better-auth/client";
-import type { HTTPSession, libcurl } from "libcurl.js";
-import * as fflate from "fflate";
-import { TSLParser } from "./apis/utils/TSLParser";
 import type { ProxyTransport } from "@mercuryworkshop/proxy-transports";
 import type * as ScramjetControllerGlobal from "@mercuryworkshop/scramjet-controller";
+import type { FSType, ShellType, TFSType } from "@terbiumos/tfs";
+import type { createAuthClient } from "better-auth/client";
+import * as fflate from "fflate";
+import type { HTTPSession, libcurl } from "libcurl.js";
+import type { System } from "./apis/System";
+import type { TSLParser } from "./apis/utils/TSLParser";
+import type { WindowInformation } from "./liquor/AliceWM";
+import type { ExternalApp } from "./liquor/coreapps/ExternalApp";
+import type { ServerInfo, vFS } from "./vFS";
 
 declare global {
 	namespace React.JSX {
@@ -21,7 +21,6 @@ declare global {
 			"window-area": React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
 			window: React.HTMLAttributes<HTMLDivElement>;
 			region: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
-			"window-body": React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
 			"dock-item": React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
 		}
 	}
@@ -41,7 +40,8 @@ declare global {
 	}
 }
 
-export const isURL = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/;
+export const isURL = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/;
+export const wispServerUrl = (import.meta.env.VITE_WISP_SERVER_URL as string) || `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`;
 
 export const dirExists = async (path: string): Promise<boolean> => {
 	return new Promise(resolve => {
@@ -133,10 +133,10 @@ export interface Group {
  * @constant `pub` The public permission. This is the lowest level of permission and is assigned to all users by default.
  */
 export enum Perm {
-	sys,
-	usr,
-	grp,
-	pub,
+	sys = 0,
+	usr = 1,
+	grp = 2,
+	pub = 3,
 }
 
 export enum Errors {
@@ -257,6 +257,43 @@ export interface WindowConfig {
 	wid?: string;
 	zIndex?: number;
 	focused?: boolean;
+
+	/**
+	 * Advanced window customization (experimental, opt-in)
+	 * Enables custom window chrome and behaviors
+	 */
+	advanced?: {
+		enabled: boolean;
+		/**
+		 * Window mode determines chrome behavior
+		 * - frameless: App provides full titlebar in iframe
+		 * - hybrid: App provides titlebar, OS provides controls
+		 * - themed: OS chrome with custom styling
+		 * - standard: Default Alexa chrome (fallback)
+		 */
+		titlebar?: {
+			/**
+			 * Height of custom titlebar area (px)
+			 * Default: 40 (matches current chrome)
+			 */
+			height?: number;
+			/**
+			 * Whether OS should provide drag handler
+			 * Default: true (makes titlebar draggable)
+			 */
+			draggable?: boolean;
+			/**
+			 * Whether double-click should maximize the window
+			 * Default: true (enables double-click to maximize)
+			 * Only applies to frameless windows
+			 */
+			doubleClickMaximize?: boolean;
+			/**
+			 * CSS classes to apply to titlebar region
+			 */
+			className?: string;
+		};
+	};
 }
 
 declare let props: any;
@@ -646,12 +683,13 @@ export interface COM {
 		};
 	};
 	node: {
-		webContainer: import("@webcontainer/api").WebContainer | {};
+		webContainer: object;
 		servers: Map<number, string>;
 		isReady: boolean;
 		start: () => void;
-		stop(): boolean;
+		stop(): Promise<boolean>;
 	};
+	dusk: import("./Node/runtimes/Dusk/types").TerbiumDuskAPI;
 }
 
 export interface AnuraWMWeakRef {

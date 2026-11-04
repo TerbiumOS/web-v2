@@ -17,6 +17,7 @@ export default function Login() {
 	const [profilePictures, setProfilePictures] = useState<{ [key: string]: string | null }>({});
 	const [wallpaper, setWallpaper] = useState<string | null>(null);
 	const [changingpw, setChangepw] = useState(false);
+	const [bgSize, setBgSize] = useState<"stretch" | "contain" | "cover">("cover");
 	const passwordRef = useRef<HTMLInputElement>(null);
 	const passwordErrorResetRef = useRef<((e: KeyboardEvent) => void) | null>(null);
 	useEffect(() => {
@@ -53,6 +54,7 @@ export default function Login() {
 			const data = await window.tb.fs.promises.readFile("/system/etc/terbium/settings.json", "utf8");
 			const res = JSON.parse(data);
 			setWallpaper(JSON.parse(await window.tb.fs.promises.readFile(`/home/${res.defaultUser}/settings.json`)).wallpaper);
+			setBgSize(JSON.parse(await window.tb.fs.promises.readFile(`/home/${res.defaultUser}/settings.json`)).wallpaperMode || "cover");
 			setSelectedUser(res.defaultUser);
 		};
 		getDefUsr();
@@ -167,7 +169,7 @@ export default function Login() {
 				className="absolute inset-0"
 				style={{
 					backgroundImage: `url("${wallpaper?.includes("/system/etc/") ? `/fs/${wallpaper}` : wallpaper || ""}")`,
-					backgroundSize: "cover",
+					backgroundSize: bgSize,
 					backgroundRepeat: "no-repeat",
 					backgroundPosition: "center",
 				}}
@@ -205,6 +207,7 @@ export default function Login() {
 								style={{ backgroundImage: `url("${profilePictures[account] || ""}")`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }}
 								onMouseDown={async () => {
 									setSelectedUser(account);
+									setBgSize(JSON.parse(await window.tb.fs.promises.readFile(`/home/${account}/settings.json`)).wallpaperMode || "cover");
 									setWallpaper(JSON.parse(await window.tb.fs.promises.readFile(`/home/${account}/settings.json`)).wallpaper);
 								}}
 							></div>

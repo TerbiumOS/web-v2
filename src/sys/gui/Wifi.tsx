@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./styles/wifi.css";
-import { fileExists } from "../types";
+import { fileExists, wispServerUrl } from "../types";
 
 interface Server {
 	id: string;
@@ -143,9 +143,9 @@ export function WispMenu({ isOpen }: WispMenuProps) {
 		const fetchServers = async (): Promise<void> => {
 			const exists = await fileExists("//apps/system/settings.tapp/wisp-servers.json");
 			if (!exists) {
-				await window.tb.fs.promises.mkdir("//apps/system/settings.tapp/", { recursive: true } as any);
+				await window.tb.fs.promises.mkdir("//apps/system/settings.tapp/");
 				const stockDat: Server[] = [
-					{ id: `${location.protocol.replace("http", "ws")}//${location.hostname}:${location.port}/wisp/`, name: "Backend" },
+					{ id: wispServerUrl, name: "Backend" },
 					{ id: "wss://wisp.terbiumon.top/wisp/", name: "TB Wisp Instance" },
 				];
 				await window.tb.fs.promises.writeFile("//apps/system/settings.tapp/wisp-servers.json", JSON.stringify(stockDat));

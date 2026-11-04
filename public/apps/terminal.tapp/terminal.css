@@ -24,6 +24,7 @@ body {
 
 .term-session {
 	flex: 1 1 auto;
+	width: 100%;
 	min-height: 0;
 	display: flex;
 	position: relative;
@@ -32,6 +33,7 @@ body {
 
 .xterm {
 	flex: 1 1 auto;
+	min-width: 0;
 	height: 100%;
 	width: 100%;
 }

@@ -18,8 +18,6 @@ body {
 	margin: 0;
 	padding: 0;
 	overflow: hidden;
-	border-bottom-left-radius: 10px;
-	border-bottom-right-radius: 10px;
 }
 
 body,
@@ -32,10 +30,57 @@ html {
 	display: flex;
 	flex-direction: column;
 	background-color: #000000a3;
+	position: relative;
+	border-top-left-radius: 8px;
+	border-top-right-radius: 8px;
+}
+
+.window-controls {
+	position: absolute;
+	top: 0;
+	right: 0;
+	display: flex;
+	gap: 0;
+	z-index: 100;
+	height: 46px;
+	align-items: center;
+	padding-right: 8px;
+}
+
+.win-control {
+	width: 32px;
+	height: 68%;
+	border: none;
+	background: transparent;
+	color: #ffffff;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background-color 0.15s ease;
+	position: relative;
+	z-index: 40;
+}
+
+.win-control:hover {
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+.win-control.win-close:hover {
+	background-color: #e81123;
+}
+
+.win-control svg {
+	opacity: 0.8;
+}
+
+.win-control:hover svg {
+	opacity: 1;
 }
 
 .topbar .tab-container {
 	padding: 4px;
+	padding-right: 148px;
 	display: flex;
 	align-items: center;
 	width: calc(100% - 8px);

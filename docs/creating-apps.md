@@ -1,6 +1,6 @@
 # <span style="color: #32ae62;">Creating new applications</span>
 
-**Last Updated**: v2.4.0 - 07/02/2026
+**Last Updated**: v2.5.0 - 08/10/2026
 
 Table of Contents:
 
@@ -365,6 +365,116 @@ Use `wmArgs` to describe window behaviour and initial state. Example shape:
 ```json
 ["minimize", "maximize", "close"]
 ```
+
+## <span style="color: #32ae62;">Custom Window Chrome (v2.5+)</span>
+
+Terbium v2.5 allows apps to create custom titlebars for browser-style or IDE-style interfaces. Custom windows behave identically to standard windows (drag, snap, maximize, etc.) but give you full control over the titlebar appearance.
+
+### Configuration
+
+Add the `advanced` property to `wmArgs` in your `.tbconfig`:
+
+```json
+{
+    "title": "My App",
+    "wmArgs": {
+        "title": { "text": "My App" },
+        "src": "index.html",
+        "size": { "width": 900, "height": 650 },
+        "advanced": {
+            "enabled": true,
+            "titlebar": {
+                "height": 46
+            }
+        }
+    }
+}
+```
+
+**Options:**
+- `enabled`: Set to `true` to enable custom chrome (default: `false`)
+- `titlebar.height`: Height of your custom titlebar in pixels (default: `40`)
+
+### Implementation
+
+**1. Include the helper script:**
+
+```html
+<script src="/terbium-frameless.js"></script>
+```
+
+**2. Create your titlebar HTML:**
+
+```html
+<div class="my-titlebar">
+    <div class="window-controls">
+        <button onclick="TerbiumFrameless.minimize()">−</button>
+        <button onclick="TerbiumFrameless.maximize()">□</button>
+        <button onclick="TerbiumFrameless.close()">×</button>
+    </div>
+    <span>My App Title</span>
+</div>
+```
+
+**3. Initialize drag handling:**
+
+```javascript
+TerbiumFrameless.init({
+    dragSelector: '.my-titlebar',
+    noDragSelectors: ['.window-controls', 'button', 'input'],
+    enableDoubleClick: true
+});
+```
+
+**That's it!** Your window now has custom chrome with full drag, snap, and maximize support.
+
+### Helper API Reference
+
+**TerbiumFrameless.init(options)**
+- `dragSelector` - CSS selector for draggable area
+- `noDragSelectors` - Array of selectors that should NOT trigger drag
+- `enableDoubleClick` - Enable double-click to maximize (default: `true`)
+
+**Window Control Methods:**
+- `TerbiumFrameless.minimize()` - Minimize window
+- `TerbiumFrameless.maximize()` - Toggle maximize/restore
+- `TerbiumFrameless.close()` - Close window
+
+**Advanced - Canvas-based UIs:**
+
+For apps that render to canvas (like emulators), use `startDragInBounds()`:
+
+```javascript
+canvas.addEventListener('mousedown', (e) => {
+    // Only drag if clicking in top 40px
+    TerbiumFrameless.startDragInBounds(e, { top: 0, bottom: 40 });
+});
+```
+
+### Example Apps
+
+See the built-in Browser app (`/apps/browser.tapp/`) for a complete Chrome-style implementation.
+
+### Migration from TML
+
+TML (Terbium Markup Language) was deprecated in v2.5 due to security concerns. To migrate:
+
+**Old (TML):**
+```javascript
+tb.process.parse.build(`<window><titlebar>My App</titlebar>...</window>`);
+```
+
+**New (Advanced Windows):**
+```json
+// .tbconfig
+{
+    "wmArgs": {
+        "advanced": { "enabled": true, "titlebar": { "height": 40 } }
+    }
+}
+```
+
+Then use the TerbiumFrameless helper as shown above.
 
 ### Accessing the Terbium API
 
