@@ -14,7 +14,8 @@
 		"vite": "vite",
 		"preview": "vite preview",
 		"check": "biome check . --write",
-		"fmt": "biome format --write . && npx @terbiumos/tsl-linter ./public/apps/settings.tapp/"
+		"fmt": "biome format --write . && npx @terbiumos/tsl-linter ./public/apps/settings.tapp/",
+		"ci": "npm run build-static"
 	},
 	"dependencies": {
 		"@heroicons/react": "^2.2.0",
@@ -25,7 +26,7 @@
 		"@nightnetwork/dusk": "http://cdn.terbiumon.top/tb-dusk.tgz",
 		"@nightnetwork/nova": "^1.0.0",
 		"@paralleldrive/cuid2": "^3.3.0",
-		"@terbiumos/tfs": "1.1.0-dev.1",
+		"@terbiumos/tfs": "1.1.0",
 		"better-auth": "^1.7.12",
 		"compressorjs": "^1.4.0",
 		"crypto-js": "^4.2.0",
@@ -43,7 +44,7 @@
 		"zustand": "5.0.15"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.5.15",
+		"@biomejs/biome": "2.6.4",
 		"@eslint/js": "^10.0.1",
 		"@tailwindcss/postcss": "^4.3.2",
 		"@terbiumos/tsl-linter": "1.0.1",
