@@ -71,7 +71,7 @@
 		"vite-plugin-static-copy": "^3.4.0"
 	},
 	"engines": {
-		"node": ">=20.19.0"
+		"node": ">=22.19.0"
 	},
 	"overrides": {
 		"typescript": "^7.0.2"
