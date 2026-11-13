@@ -133,6 +133,7 @@ class TerminalSession {
 			await this.process.stdin.write(new TextEncoder().encode(data));
 		} catch (error) {
 			console.error("[Terbium DSH] Input error:", error);
+			this.term.write(`\r\n\x1b[31m[terminal input error: ${String(error)}]\x1b[0m\r\n`);
 		}
 	}
 
@@ -199,7 +200,6 @@ class TerminalSession {
 			const cols = Math.max(2, Math.floor(rect.width / cell.width));
 			const rows = Math.max(2, Math.floor(rect.height / cell.height));
 			if (cols !== this.term.cols || rows !== this.term.rows) this.term.resize(cols, rows);
-			this.process?.master?.resize(cols, rows);
 		} catch (error) {
 			console.error("[Terbium DSH] Resize error:", error);
 		}

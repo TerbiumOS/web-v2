@@ -79,7 +79,8 @@ export async function getinfo(user?: string | null, pass?: string | null, settin
 						// @ts-expect-error no
 						return JSON.parse(settings.value);
 					} catch (e) {
-						window.tb.notification.Toast({
+						if (window.tb.notification) {
+							window.tb.notification.Toast({
 							message: "Your session is out of date. Click OK to sign in to Terbium Cloud again",
 							application: "System",
 							iconSrc: "/fs/apps/system/about.tapp/icon.svg",
@@ -88,6 +89,7 @@ export async function getinfo(user?: string | null, pass?: string | null, settin
 							},
 							time: 6000,
 						});
+						}
 						return null;
 					}
 				})()
