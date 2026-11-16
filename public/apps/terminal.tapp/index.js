@@ -158,7 +158,7 @@ class TerminalSession {
 					TERBIUM_VERSION: getTerbiumVersion(),
 					SHELL: "/bin/sh",
 				},
-				pty: { cols: this.term.cols, rows: this.term.rows },
+				pty: { cols: this.term.cols, rows: this.term.rows, raw: true },
 			});
 
 			this.process.master?.onMasterData(bytes => {
