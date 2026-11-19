@@ -366,7 +366,7 @@ Use `wmArgs` to describe window behaviour and initial state. Example shape:
 ["minimize", "maximize", "close"]
 ```
 
-## <span style="color: #32ae62;">Custom Window Chrome (v2.5+)</span>
+## <span style="color: #32ae62;">Custom Window Designs (v2.5+)</span>
 
 Terbium v2.5 allows apps to create custom titlebars for browser-style or IDE-style interfaces. Custom windows behave identically to standard windows (drag, snap, maximize, etc.) but give you full control over the titlebar appearance.
 

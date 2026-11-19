@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"start": "npm run build && tsx bootstrap.ts",
+		"start:noupdate": "npm run build && tsx bootstrap.ts --no-updates",
 		"start:nobuild": "tsx bootstrap.ts",
 		"build-apps-json": "tsx bootstrap.ts --apps-only",
 		"build-static": "touch .env && tsx bootstrap.ts --apps-only && vite build",

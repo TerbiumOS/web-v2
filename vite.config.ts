@@ -11,6 +11,9 @@ config.config();
 
 // https://vitejs.dev/config/
 export default defineConfig({
+	define: {
+		"import.meta.env.VITE_EDITION": JSON.stringify(process.env.Edition?.toLowerCase() === "lite" ? "lite" : "normal"),
+	},
 	json: {
 		namedExports: true,
 		stringify: false,

@@ -558,6 +558,7 @@ export default async function Api() {
 				return system.version("string");
 			},
 			instance: system.instance,
+			edition: system.edition,
 			openApp: async (pkg: string, options?: Partial<WindowConfig>) => {
 				const apps = JSON.parse(await window.tb.fs.promises.readFile("/apps/installed.json", "utf8"));
 				const app = apps.find((a: any) => a.name.toLowerCase() === pkg.toLowerCase());
@@ -1832,7 +1833,7 @@ export default async function Api() {
 		return;
 	window.loadLock = true;
 
-	const anura = await Anura.new({
+	const anura = import.meta.env.VITE_EDITION === "lite" ? null : await Anura.new({
 		milestone: 5,
 		FileExts: {
 			txt: { handler_type: "module", id: "anura.fileviewer" },
@@ -1921,9 +1922,9 @@ export default async function Api() {
 			},
 		},
 	});
-	window.anura = anura;
+	if (anura) window.anura = anura;
 	// @ts-expect-error For backwards compatibility
-	window.anura.fs.Shell = window.tfs.sh;
+	if (anura) window.anura.fs.Shell = window.tfs.sh;
 	window.AliceWM = AliceWM;
 	window.LocalFS = LocalFS;
 	window.ExternalApp = ExternalApp;

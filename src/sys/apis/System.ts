@@ -10,4 +10,7 @@ export class System {
 		repo: repository,
 		hash: hash,
 	};
+	edition() {
+		return import.meta.env.VITE_EDITION === "lite" ? "lite" : "normal";
+	}
 }

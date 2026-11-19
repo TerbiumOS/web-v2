@@ -18,7 +18,7 @@
             <section id="about" class="section-panel flex min-h-full flex-col items-center justify-center gap-6 text-center overflow-auto">
                 <img src="/assets/img/logo.png" alt="TB Logo" class="w-64 h-auto -mt-10" />
                 <div class="space-y-3 -mt-4">
-                    <h1 class="text-5xl">Terbium WebOS</h1>
+                    <h1 id="branding" class="text-5xl">Terbium WebOS</h1>
                     <h4 class="text-2xl" id="version"></h4>
                     <h4 class="text-2xl" id="liquor"></h4>
                 </div>
@@ -109,8 +109,13 @@
 
         const licensePackageList = document.getElementById('license-package-list');
         const licenseText = document.getElementById('license-text');
+        const branding = document.getElementById('branding');
         const productTitle = document.getElementById('product-title');
         const productSummary = document.getElementById('product-summary');
+
+        if (branding) {
+            branding.innerText = `Terbium WebOS${parent.tb.system.edition() === 'lite' ? ' Lite' : ''}`;
+        }
 
         const licenseState = {
             packages: [],

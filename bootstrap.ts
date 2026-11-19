@@ -7,8 +7,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { version } from "./package.json";
 import { TServer } from "./server";
+import dotenv from "dotenv";
 
 consola.info("Bootstrapping TerbiumOS [v" + version + "]");
+dotenv.config();
+
+const LITE_APPS = new Set(["About", "Calculator", "Feedback", "Files", "Settings", "Task Manager", "Terminal", "Text Editor"]);
+const FRACITAL_URL = "https://github.com/TerbiumOS/vendored-assets/raw/refs/heads/main/apps/fracital.zip";
+const TBROWSE_URL = "https://github.com/TerbiumOS/vendored-assets/raw/refs/heads/main/apps/tbrowse.zip";
 
 export default async function Bootstrap() {
 	const args = process.argv;
@@ -16,14 +22,64 @@ export default async function Bootstrap() {
 	if (process.version < nodever) {
 		consola.warn("Your version of Node.JS is not supported. Please update node to use Terbium. (Current version: " + process.version + ", Required version: " + nodever + " or higher)");
 	}
+	if (!fs.existsSync(".env")) await CreateEnv();
+	dotenv.config({ override: true });
+	await InstallBrowser();
 	await BuildApps();
 	await CreateAppsPaths();
-	if (!fs.existsSync(".env")) await CreateEnv();
-	await Updater();
+	if (args.includes("--no-updates")) {
+		consola.warn("Update checking has been skipped (--no-updates). This is discouraged; keep update checking enabled when possible.");
+	} else {
+		await Updater();
+	}
 	consola.success("TerbiumOS bootstrapped successfully");
 	if (!(args.includes("--apps-only") || args.includes("--dev"))) {
 		TServer();
 	}
+}
+
+function edition(): "normal" | "lite" {
+	return process.env.Edition?.toLowerCase() === "lite" ? "lite" : "normal";
+}
+
+async function InstallBrowser() {
+	const __dirname = path.dirname(fileURLToPath(import.meta.url));
+	const browserDir = path.join(__dirname, "public/apps/browser.tapp");
+	const marker = path.join(browserDir, ".terbium-edition");
+	const selectedEdition = edition();
+
+	if (fs.existsSync(marker) && fs.readFileSync(marker, "utf-8").trim() === selectedEdition) return;
+	consola.start(`Installing ${selectedEdition} browser...`);
+
+	const isCloudflare = process.env.CF_PAGES === "1" || process.env.WORKERS_CI === "1";
+	if (isCloudflare) {
+		consola.info("Detected Cloudflare environment; using TBrowse browser for compatibility.");
+	}
+
+	let archive: AdmZip;
+	const url = isCloudflare ? "https://github.com/TerbiumOS/vendored-assets/raw/refs/heads/main/apps/tbrowse.zip" : (selectedEdition === "lite" ? "https://github.com/TerbiumOS/vendored-assets/raw/refs/heads/main/apps/tbrowse.zip" : "https://github.com/TerbiumOS/vendored-assets/raw/refs/heads/main/apps/fracital.zip");
+	try {
+		const response = await fetch(url);
+		if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+		archive = new AdmZip(Buffer.from(await response.arrayBuffer()));
+	} catch (error) {
+		if (fs.existsSync(browserDir)) fs.rmSync(browserDir, { recursive: true, force: true });
+		consola.error(`The ${selectedEdition} browser could not be downloaded (${url}): ${error}. The browser is not included, but it can be downloaded again later.`);
+		return;
+	}
+
+	if (fs.existsSync(browserDir)) fs.rmSync(browserDir, { recursive: true, force: true });
+	const prefix = selectedEdition === "lite" ? "public/apps/browser.tapp/" : "";
+	for (const entry of archive.getEntries()) {
+		if (entry.isDirectory || !entry.entryName.startsWith(prefix)) continue;
+		const relative = entry.entryName.slice(prefix.length);
+		if (!relative || relative.includes("..")) continue;
+		const target = path.join(browserDir, relative);
+		fs.mkdirSync(path.dirname(target), { recursive: true });
+		fs.writeFileSync(target, entry.getData());
+	}
+	fs.writeFileSync(marker, selectedEdition);
+	consola.success(`Installed ${selectedEdition} browser`);
 }
 
 export async function BuildApps() {
@@ -41,11 +97,13 @@ export async function BuildApps() {
 					try {
 						const data = JSON.parse(fs.readFileSync(indexFilePath, "utf-8"));
 						if (data.name && data.config) {
+							const appName = data.name === "Fracital" ? "Browser" : data.name;
+							if (edition() === "lite" && !LITE_APPS.has(appName)) return;
 							if (data.name !== "Browser") {
 								data.config.src = data.config.src.replace(`/apps/${data.name.toLowerCase()}.tapp/`, `/fs/apps/system/${data.name.toLowerCase()}.tapp/`);
 								data.config.icon = data.config.icon.replace(`/apps/${data.name.toLowerCase()}.tapp/`, `/fs/apps/system/${data.name.toLowerCase()}.tapp/`);
 							}
-							result.push({ name: data.name, config: data.config });
+							result.push({ name: appName, config: data.config });
 						}
 					} catch (t) {
 						consola.error(`Error parsing ${indexFilePath}:`, t instanceof Error ? t.message : String(t));
@@ -58,7 +116,7 @@ export async function BuildApps() {
 					const configEntry = zip.getEntry(".tbconfig");
 					if (configEntry) {
 						const configData = JSON.parse(configEntry.getData().toString("utf-8"));
-						if (configData.title && configData.wmArgs) {
+						if (configData.title && configData.wmArgs && (edition() !== "lite" || LITE_APPS.has(configData.title))) {
 							result.push({ name: configData.title, config: configData.wmArgs });
 						}
 					}
@@ -146,6 +204,12 @@ export async function CreateAppsPaths() {
 }
 
 export async function CreateEnv() {
+	const selectedEdition = await consola.prompt("Choose an edition (normal): ", {
+		type: "select",
+		options: ["normal", "lite"],
+		initial: "normal",
+		cancel: "default",
+	});
 	const port =
 		(await consola.prompt("Enter a port for the server to run on (3000): ", {
 			type: "text",
@@ -179,7 +243,7 @@ export async function CreateEnv() {
 		cancel: "default",
 	});
 
-	let envContent = "";
+	let envContent = `Edition=${selectedEdition || "normal"}\n`;
 
 	if (reputation) {
 		envContent += `REPUTATION_STORE=${reputation}\n`;

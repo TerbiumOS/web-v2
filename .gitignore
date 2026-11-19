@@ -32,3 +32,4 @@ pnpm-workspace.yaml
 src/apps.json
 src/hash.json
 src/installer.json
+public/apps/browser.tapp/

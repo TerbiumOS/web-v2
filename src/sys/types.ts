@@ -605,6 +605,7 @@ export interface COM {
 	system: {
 		version(): string | number | unknown;
 		instance: System["instance"];
+		edition(): "normal" | "lite";
 		openApp(pkg: string, options?: Partial<WindowConfig>): Promise<void>;
 		download(url: string, location: string): Promise<void>;
 		exportfs(): void;
